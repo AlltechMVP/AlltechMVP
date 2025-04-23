@@ -9,7 +9,8 @@ async function signUp() {
             email,
             password,
             options: {
-                data: { role }
+                data: { role },
+                emailRedirectTo: window.location.origin
             }
         });
 
