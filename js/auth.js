@@ -10,25 +10,29 @@ async function signUp() {
             password,
             options: {
                 data: { role },
-                emailRedirectTo: "https://" + window.location.hostname
+                emailRedirectTo: window.location.origin
             }
         });
 
         if (error) throw error;
         
-        // Check if the user needs email confirmation
-        if (data?.user?.identities?.length === 0) {
-            const { error: resendError } = await window.supabaseClient.auth.resend({
-                type: 'signup',
-                email: email,
-                options: {
-                    emailRedirectTo: "https://" + window.location.hostname
+        if (data) {
+            alert('Please check your email for the confirmation link!');
+            
+            // Add a retry option after 5 seconds if email hasn't arrived
+            setTimeout(async () => {
+                try {
+                    await window.supabaseClient.auth.resend({
+                        type: 'signup',
+                        email: email,
+                        options: {
+                            emailRedirectTo: window.location.origin
+                        }
+                    });
+                } catch (resendError) {
+                    console.error('Error resending email:', resendError);
                 }
-            });
-            if (resendError) throw resendError;
-            alert('Confirmation email has been resent. Please check your inbox!');
-        } else {
-            alert('Check your email for the confirmation link!');
+            }, 5000);
         }
     } catch (error) {
         alert(error.message);
