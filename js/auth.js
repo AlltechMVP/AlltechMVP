@@ -1,13 +1,11 @@
 
-import { supabase } from './supabase.js';
-
-window.signUp = async function() {
+async function signUp() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const role = document.getElementById('role').value;
 
     try {
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await window.supabaseClient.auth.signUp({
             email,
             password,
             options: {
@@ -22,12 +20,12 @@ window.signUp = async function() {
     }
 }
 
-window.login = async function() {
+async function login() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
 
     try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await window.supabaseClient.auth.signInWithPassword({
             email,
             password
         });
@@ -38,3 +36,6 @@ window.login = async function() {
         alert(error.message);
     }
 }
+
+window.signUp = signUp;
+window.login = login;
