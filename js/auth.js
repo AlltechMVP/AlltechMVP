@@ -10,29 +10,28 @@ async function signUp() {
             password,
             options: {
                 data: { role },
-                emailRedirectTo: window.location.origin
+                emailRedirectTo: "https://" + window.location.hostname
             }
         });
 
         if (error) throw error;
         
-        if (data) {
-            alert('Please check your email for the confirmation link!');
-            
-            // Add a retry option after 5 seconds if email hasn't arrived
-            setTimeout(async () => {
-                try {
-                    await window.supabaseClient.auth.resend({
-                        type: 'signup',
-                        email: email,
-                        options: {
-                            emailRedirectTo: window.location.origin
-                        }
-                    });
-                } catch (resendError) {
-                    console.error('Error resending email:', resendError);
-                }
-            }, 5000);
+        alert('Please check your email for the confirmation link!');
+        
+        // Immediately resend verification email
+        const { error: resendError } = await window.supabaseClient.auth.resend({
+            type: 'signup',
+            email: email,
+            options: {
+                emailRedirectTo: "https://" + window.location.hostname
+            }
+        });
+        
+        if (resendError) {
+            console.error('Error resending email:', resendError);
+            alert('Error sending verification email. Please try signing up again.');
+        } else {
+            alert('Verification email has been sent. Please check your inbox and spam folder.');
         }
     } catch (error) {
         alert(error.message);
