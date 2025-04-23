@@ -12,7 +12,8 @@ window.signUp = async function() {
       options: {
         data: {
           role: role
-        }
+        },
+        emailRedirectTo: window.location.origin
       }
     });
 
