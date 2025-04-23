@@ -10,7 +10,7 @@ async function signUp() {
             password,
             options: {
                 data: { role },
-                emailRedirectTo: "https://" + window.location.host
+                emailRedirectTo: window.location.origin
             }
         });
 
@@ -23,7 +23,7 @@ async function signUp() {
             type: 'signup',
             email: email,
             options: {
-                emailRedirectTo: "https://" + window.location.hostname
+                emailRedirectTo: window.location.origin
             }
         });
         
