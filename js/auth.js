@@ -3,18 +3,21 @@ async function signUp() {
   const password = document.getElementById("password").value;
   const role = document.getElementById("role").value;
 
-  const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: email,
+      password: password,
       options: {
-          data: { role }
+        data: {
+          role: role
+        }
       }
-  });
+    });
 
-  if (error) {
-      alert(error.message);
-  } else {
-      alert("Sign up successful! Please verify your email.");
+    if (error) throw error;
+    alert('Check your email for the confirmation link!');
+  } catch (error) {
+    alert(error.message);
   }
 }
 
