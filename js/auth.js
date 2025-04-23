@@ -1,6 +1,6 @@
 import { supabase } from './supabase.js';
 
-async function signUp() {
+window.signUp = async function() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   const role = document.getElementById("role").value;
@@ -23,7 +23,7 @@ async function signUp() {
   }
 }
 
-async function login() {
+window.login = async function() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
