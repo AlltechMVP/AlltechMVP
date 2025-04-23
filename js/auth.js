@@ -10,7 +10,7 @@ async function signUp() {
             password,
             options: {
                 data: { role },
-                emailRedirectTo: window.location.origin
+                emailRedirectTo: "https://" + window.location.hostname
             }
         });
 
