@@ -1,45 +1,31 @@
-<!--
-  Hit RUN to see this project in action!
-  
-  This project will auto-refresh as you edit the HTML, CSS and JS. See README.md for more info (including how to disable auto-refresh and install packages).
--->
-
 <!DOCTYPE html>
 <html>
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width">
-  <title>Replit</title>
-  <link href="style.css" rel="stylesheet" type="text/css" />
+    <title>Alltech Login</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <link href="style.css" rel="stylesheet" type="text/css" />
 </head>
-
 <body>
-  <main>
-    <h1 class="title">Welcome to HTML on Replit!</h1>
-    <p class="description">Get started by editing
-      <code class="code">index.html</code>. The webview will auto-refresh as you edit! (See <code
-        class="code">README.md</code> if you want to
-      disable auto-refresh.)
-    </p>
-
-    <section class="grid">
-      <a href="https://replit.com/learn" class='card'>
-        <h2>Learn &rarr;</h2>
-        <p>Find tutorials on Replit to learn more.</p>
-      </a>
-
-      <a href="https://docs.replit.com/category/deployments" class='card'>
-        <h2>Deploy &rarr;</h2>
-        <p>
-          After you are happy with this app, deploy it on Replit!
-        </p>
-      </a>
-    </section>
-  </main>
-
-  <script type="module" src="script.js"></script>
-
+    <main class="login-container">
+        <h2>Login or Sign Up</h2>
+        <input type="email" id="email" placeholder="Email" class="input-field"><br>
+        <input type="password" id="password" placeholder="Password" class="input-field"><br>
+        <select id="role" class="input-field">
+            <option value="recruiter">Recruiter</option>
+            <option value="candidate">Candidate</option>
+            <option value="sales_rep">Sales Rep</option>
+            <option value="sales_manager">Sales Manager</option>
+            <option value="branch_manager">Branch Manager</option>
+            <option value="director">Director</option>
+            <option value="cfo">CFO</option>
+            <option value="ceo">CEO</option>
+            <option value="client">Client</option>
+        </select><br>
+        <div class="button-group">
+            <button onclick="signUp()" class="auth-button">Sign Up</button>
+            <button onclick="login()" class="auth-button">Login</button>
+        </div>
+    </main>
+    <script src="script.js"></script>
 </body>
-
 </html>
