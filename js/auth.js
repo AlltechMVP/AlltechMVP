@@ -15,7 +15,21 @@ async function signUp() {
         });
 
         if (error) throw error;
-        alert('Check your email for the confirmation link!');
+        
+        // Check if the user needs email confirmation
+        if (data?.user?.identities?.length === 0) {
+            const { error: resendError } = await window.supabaseClient.auth.resend({
+                type: 'signup',
+                email: email,
+                options: {
+                    emailRedirectTo: "https://" + window.location.hostname
+                }
+            });
+            if (resendError) throw resendError;
+            alert('Confirmation email has been resent. Please check your inbox!');
+        } else {
+            alert('Check your email for the confirmation link!');
+        }
     } catch (error) {
         alert(error.message);
     }
