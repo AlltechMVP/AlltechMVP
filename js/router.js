@@ -6,15 +6,17 @@ window.onload = async () => {
         const { data, error } = await supabase.auth.getUser();
         console.log("Supabase getUser result:", data);
 
+        const roleContent = document.getElementById("roleContent");
+
         if (error) {
             console.error("Auth error:", error);
-            document.getElementById("roleContent").innerText = "Error: " + error.message;
+            if (roleContent) roleContent.innerText = "Error: " + error.message;
             return;
         }
 
         if (!data.user) {
             console.log("No user found");
-            document.getElementById("roleContent").innerText = "Not logged in.";
+            if (roleContent) roleContent.innerText = "Not logged in.";
             window.location.href = '/index.html';
             return;
         }
@@ -23,11 +25,13 @@ window.onload = async () => {
         const role = user.user_metadata?.role || "unknown";
 
         console.log("User Role:", role);
-        document.getElementById("roleContent").innerHTML = `
-            <strong>Logged in as:</strong> ${user.email}<br>
-            <strong>Role:</strong> ${role}<br><br>
-            This is your dashboard for the <em>${role}</em> role.
-        `;
+        if (roleContent) {
+            roleContent.innerHTML = `
+                <strong>Logged in as:</strong> ${user.email}<br>
+                <strong>Role:</strong> ${role}<br><br>
+                This is your dashboard for the <em>${role}</em> role.
+            `;
+        }
     } catch (err) {
     console.error("Full error caught:", err); // Add this
         alert("DEBUG: " + err.message); // Optional popup
