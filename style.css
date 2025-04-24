@@ -148,3 +148,10 @@ body {
 .auth-button:hover {
     background-color: #0051cc;
 }
+
+.back-link {
+    display: block;
+    margin-bottom: 1rem;
+    color: #0070f3;
+    text-decoration: underline;
+}
