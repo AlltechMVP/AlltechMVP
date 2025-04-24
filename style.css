@@ -173,6 +173,40 @@ button {
     text-decoration: underline;
 }
 
+/* CEO Dashboard Styles */
+.dashboard-section {
+    background: white;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.metrics-list {
+    list-style: none;
+    padding: 0;
+}
+
+.metrics-list li {
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+.metrics-list strong {
+    color: #0070f3;
+    font-size: 18px;
+}
+
+.data-list {
+    list-style: none;
+    padding: 0;
+}
+
+.data-list li {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
 /* Recruiter Dashboard Styles */
 table {
     width: 100%;

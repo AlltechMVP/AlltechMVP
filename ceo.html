@@ -1,0 +1,46 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Alltech CEO Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js" type="module"></script>
+    <script src="js/ceo.js" type="module"></script>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <main>
+        <h2>Welcome, CEO</h2>
+
+        <section class="dashboard-section">
+            <h3>Company Overview</h3>
+            <ul class="metrics-list">
+                <li>Total Candidates: <strong id="totalCandidates">-</strong></li>
+                <li>Total Jobs: <strong id="totalJobs">-</strong></li>
+                <li>Total Clients: <strong id="totalClients">-</strong></li>
+                <li>Total Placements: <strong id="totalPlacements">-</strong></li>
+            </ul>
+        </section>
+
+        <section class="dashboard-section">
+            <h3>Financial Metrics</h3>
+            <ul class="metrics-list">
+                <li>Average Bill Rate: $<strong id="avgBillRate">-</strong></li>
+                <li>Average Pay Rate: $<strong id="avgPayRate">-</strong></li>
+                <li>Gross Margin: <strong id="grossMargin">-</strong>%</li>
+                <li>Estimated Weekly Revenue: $<strong id="weeklyRevenue">-</strong></li>
+            </ul>
+        </section>
+
+        <section class="dashboard-section">
+            <h3>Top Recruiters</h3>
+            <ul id="recruiterList" class="data-list"></ul>
+        </section>
+
+        <section class="dashboard-section">
+            <h3>Client Snapshot</h3>
+            <ul id="clientList" class="data-list"></ul>
+        </section>
+    </main>
+</body>
+</html>
