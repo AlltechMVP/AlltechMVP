@@ -25,14 +25,44 @@ window.onload = async () => {
         const role = user.user_metadata?.role || "unknown";
 
         console.log("User Role:", role);
-        if (role === "ceo") {
-            window.location.href = "ceo.html";
-        } else if (roleContent) {
-            roleContent.innerHTML = `
-                <strong>Logged in as:</strong> ${user.email}<br>
-                <strong>Role:</strong> ${role}<br><br>
-                This is your dashboard for the <em>${role}</em> role.
-            `;
+
+        switch (role) {
+            case "ceo":
+                window.location.href = "ceo.html";
+                break;
+            case "cfo":
+                window.location.href = "cfo.html";
+                break;
+            case "director":
+                window.location.href = "director.html";
+                break;
+            case "branch_manager":
+                window.location.href = "branch-manager.html";
+                break;
+            case "sales_manager":
+                window.location.href = "sales-manager.html";
+                break;
+            case "sales_rep":
+                window.location.href = "sales-rep.html";
+                break;
+            case "recruiter":
+                window.location.href = "recruiter.html";
+                break;
+            case "client":
+                window.location.href = "client.html";
+                break;
+            case "candidate":
+                window.location.href = "candidate.html";
+                break;
+            default:
+                if (roleContent) {
+                    roleContent.innerHTML = `
+                        <strong>Logged in as:</strong> ${user.email}<br>
+                        <strong>Role:</strong> ${role}<br><br>
+                        This role does not have a dashboard assigned yet.
+                    `;
+                }
+                break;
         }
     } catch (err) {
     console.error("Full error caught:", err); // Add this
