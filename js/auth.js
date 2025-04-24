@@ -1,4 +1,7 @@
-window.signUp = async function () {
+
+import supabase from './supabase.js';
+
+export async function signUp() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
     const role = document.getElementById("role").value;
@@ -16,9 +19,9 @@ window.signUp = async function () {
     } else {
         alert("Sign up successful! Please verify your email.");
     }
-};
+}
 
-window.login = async function () {
+export async function login() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
@@ -32,4 +35,8 @@ window.login = async function () {
     } else {
         window.location.href = "dashboard.html";
     }
-};
+}
+
+// Make functions available globally
+window.signUp = signUp;
+window.login = login;
