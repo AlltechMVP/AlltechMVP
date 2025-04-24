@@ -67,5 +67,4 @@ async function login() {
     }
 }
 
-window.signUp = signUp;
-window.login = login;
+export { signUp, login };

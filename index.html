@@ -31,7 +31,11 @@
             <button onclick="login()" class="auth-button">Login</button>
         </div>
     </main>
-    <script type="module" src="js/supabase.js"></script>
-    <script type="module" src="js/auth.js"></script>
+    <script type="module">
+        import supabase from './js/supabase.js';
+        import { signUp, login } from './js/auth.js';
+        window.signUp = signUp;
+        window.login = login;
+    </script>
 </body>
 </html>
