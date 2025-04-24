@@ -149,6 +149,20 @@ body {
     background-color: #0051cc;
 }
 
+#onboardingForm label {
+    display: block;
+    margin: 15px 0;
+    text-align: left;
+}
+
+#onboardingForm input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+#onboardingForm input[type="file"] {
+    margin: 10px 0;
+}
+
 .back-link {
     display: block;
     margin-bottom: 1rem;
