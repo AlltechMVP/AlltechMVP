@@ -44,7 +44,27 @@ export async function logout() {
     window.location.href = '/index.html';
 }
 
+export async function resetPassword() {
+    const email = document.getElementById("email").value;
+    if (!email) {
+        alert("Please enter your email address");
+        return;
+    }
+
+    try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + '/reset-success.html',
+        });
+
+        if (error) throw error;
+        alert("Password reset email sent. Please check your inbox.");
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
 // Make functions available globally
 window.signUp = signUp;
 window.login = login;
 window.logout = logout;
+window.resetPassword = resetPassword;

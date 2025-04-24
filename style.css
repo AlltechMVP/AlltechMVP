@@ -149,7 +149,7 @@ button {
 }
 
 .auth-button:hover {
-    background-color: #0051cc;
+    background-color: #0056b3;
 }
 
 #onboardingForm label {
@@ -204,4 +204,18 @@ tr:hover {
     margin: 10px 0;
     border: 1px solid #ddd;
     border-radius: 4px;
+}
+
+.reset-text {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.reset-text a {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+.reset-text a:hover {
+    text-decoration: underline;
 }
