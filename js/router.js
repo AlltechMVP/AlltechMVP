@@ -1,5 +1,3 @@
-import { supabase } from './supabase.js';
-
 window.onload = async () => {
     const { data: { user }, error } = await supabase.auth.getUser();
 
@@ -15,10 +13,3 @@ window.onload = async () => {
         This is your dashboard for the <em>${role}</em> role.
     `;
 };
-
-async function logout() {
-    await supabase.auth.signOut();
-    window.location.href = 'index.html';
-}
-
-window.logout = logout;
