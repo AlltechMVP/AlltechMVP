@@ -1,8 +1,7 @@
 
-const { createClient } = supabase;
+const SUPABASE_URL = "your-supabase-url-here"
+const SUPABASE_ANON_KEY = "your-anon-key-here"
 
-const supabaseUrl = "https://bpxvixyogbvvhykfeyqj.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJweHZpeHlvZ2J2dmh5a2ZleXFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0MzY1NTIsImV4cCI6MjA2MTAxMjU1Mn0.ogMhQJcWe5qFF3ULOcHR3GO7quVGaE4RhaRA_AnRWDA";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-const client = createClient(supabaseUrl, supabaseKey);
-window.supabaseClient = client;
+export { supabase }
