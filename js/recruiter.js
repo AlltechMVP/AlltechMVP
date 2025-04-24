@@ -36,4 +36,4 @@ async function loadCandidates() {
 window.onload = loadCandidates;
 
 // Make function available globally
-window.loadCandidates = loadCandidates;
+window.loadCandidates = loadCandidates;s;
