@@ -16,14 +16,14 @@ export async function submitApplication() {
         // Upload resume
         const fileExt = resumeFile.name.split('.').pop();
         const filePath = `resumes/${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from("resumes").upload(filePath, resumeFile);
+        const { error: uploadError } = await serviceClient.storage.from("resumes").upload(filePath, resumeFile);
 
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage.from("resumes").getPublicUrl(filePath);
 
         // Insert candidate
-        const { error: insertError } = await supabase.from("candidates").insert({
+        const { error: insertError } = await serviceClient.from("candidates").insert({
             name,
             email,
             phone,
