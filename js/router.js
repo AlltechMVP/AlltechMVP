@@ -22,7 +22,14 @@ window.onload = async () => {
         }
 
         const user = data.user;
-        const role = user.user_metadata?.role || "unknown";
+        let role = user.user_metadata?.role || "unknown";
+
+        // Check for role override
+        const override = document.getElementById("overrideRole");
+        if (override && override.value) {
+            role = override.value;
+            console.log("Role override activated:", role);
+        }
 
         console.log("User Role:", role);
 
