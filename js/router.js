@@ -25,7 +25,9 @@ window.onload = async () => {
         const role = user.user_metadata?.role || "unknown";
 
         console.log("User Role:", role);
-        if (roleContent) {
+        if (role === "ceo") {
+            window.location.href = "ceo.html";
+        } else if (roleContent) {
             roleContent.innerHTML = `
                 <strong>Logged in as:</strong> ${user.email}<br>
                 <strong>Role:</strong> ${role}<br><br>
