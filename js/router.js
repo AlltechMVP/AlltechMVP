@@ -27,7 +27,8 @@ window.onload = async () => {
             This is your dashboard for the <em>${role}</em> role.
         `;
     } catch (err) {
-        console.error('Error:', err);
+    console.error("Full error caught:", err); // Add this
+        alert("DEBUG: " + err.message); // Optional popup
         document.getElementById("roleContent").innerText = "An error occurred while loading user data.";
     }
 };
