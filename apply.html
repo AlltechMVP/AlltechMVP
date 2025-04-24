@@ -1,0 +1,19 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Apply - Alltech</title>
+    <script type="module" src="js/application.js"></script>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <main class="login-container">
+        <h2>Submit Application</h2>
+        <input type="text" id="name" placeholder="Full Name" class="input-field" required><br>
+        <input type="email" id="email" placeholder="Email" class="input-field" required><br>
+        <input type="tel" id="phone" placeholder="Phone Number" class="input-field" required><br>
+        <input type="file" id="resume" accept=".pdf,.doc,.docx" class="input-field" required><br>
+        <button onclick="submitApplication()" class="auth-button">Submit Application</button>
+    </main>
+</body>
+</html>
