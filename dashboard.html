@@ -5,17 +5,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script type="module" src="js/router.js"></script>
     <link href="style.css" rel="stylesheet" type="text/css" />
-    <script>
-        const unlockDevTools = () => {
-            const passcode = prompt("Dev Mode: Enter override passcode");
-            if (passcode === "alltechadmin") {
-                document.getElementById("devOverride").style.display = "block";
-                alert("Override enabled!");
-            } else {
-                alert("Invalid passcode.");
-            }
-        };
-    </script>
+    <script src="js/dev-tools.js" type="module"></script>
 </head>
 <body>
     <button onclick="unlockDevTools()" class="dev-button">Dev Tools</button>
