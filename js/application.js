@@ -1,7 +1,10 @@
 
-import supabase, { serviceClient } from './supabase.js';
+import { serviceClient } from './supabase.js';
 
 export async function submitApplication() {
+    if (!serviceClient) {
+        throw new Error("Supabase client not initialized");
+    }
     const name = document.getElementById("name").value;
     const email = document.getElementById("email").value;
     const phone = document.getElementById("phone").value;
@@ -35,7 +38,11 @@ export async function submitApplication() {
         window.location.href = "onboard.html";
     } catch (error) {
         console.error("Error:", error);
-        alert("Error submitting application: " + error.message);
+        if (error.message.includes("invalid signature")) {
+            alert("Authentication error. Please try logging out and logging back in.");
+        } else {
+            alert("Error submitting application: " + error.message);
+        }
     }
 }
 
