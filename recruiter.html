@@ -1,0 +1,36 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Recruiter Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js" type="module"></script>
+    <script src="js/recruiter.js" type="module"></script>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <main>
+        <h2>Recruiter Dashboard – Candidate Tracker</h2>
+        <label>Filter by status:
+            <select id="statusFilter" onchange="loadCandidates()">
+                <option value="">All</option>
+                <option value="Applied">Applied</option>
+                <option value="Ready for Placement">Ready for Placement</option>
+            </select>
+        </label>
+        <table border="1" cellpadding="8" id="candidatesTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Resume</th>
+                    <th>ID Upload</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </main>
+</body>
+</html>
