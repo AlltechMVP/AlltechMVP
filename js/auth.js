@@ -1,11 +1,13 @@
 
+import supabase from './supabase.js'
+
 async function signUp() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const role = document.getElementById('role').value;
 
     try {
-        const { data, error } = await window.supabaseClient.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
