@@ -13,12 +13,6 @@ export async function submitApplication() {
     }
 
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            alert("Please log in to submit your application");
-            return;
-        }
-
         const fileExt = resumeFile.name.split('.').pop();
         const filePath = `resumes/${Date.now()}.${fileExt}`;
 
