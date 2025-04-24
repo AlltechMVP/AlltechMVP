@@ -186,6 +186,18 @@ button {
     opacity: 1;
 }
 
+.dev-link {
+    font-size: 12px;
+    color: #666;
+    text-decoration: none;
+    margin-top: 20px;
+    display: inline-block;
+}
+
+.dev-link:hover {
+    text-decoration: underline;
+}
+
 #onboardingForm label {
     display: block;
     margin: 15px 0;
