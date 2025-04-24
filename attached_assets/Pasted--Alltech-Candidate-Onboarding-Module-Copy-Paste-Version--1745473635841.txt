@@ -1,0 +1,101 @@
+
+===========================
+Alltech Candidate Onboarding Module (Copy-Paste Version)
+===========================
+
+----------------------------------------
+1. onboard.html
+----------------------------------------
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Candidate Onboarding</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js" defer></script>
+    <script src="js/onboard.js" defer></script>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <main>
+        <h2>Electronic Onboarding</h2>
+        <form id="onboardingForm">
+            <label><input type="checkbox" id="ack_policy"> I acknowledge the company policies.</label><br>
+            <label><input type="checkbox" id="ack_handbook"> I acknowledge the employee handbook.</label><br>
+            <label>ID Upload: <input type="file" id="id_upload"></label><br>
+            <label><input type="checkbox" id="e_sign"> I agree and electronically sign this onboarding form.</label><br>
+            <button type="button" onclick="submitOnboarding()">Complete Onboarding</button>
+        </form>
+    </main>
+</body>
+</html>
+
+----------------------------------------
+2. js/supabase.js
+----------------------------------------
+
+const SUPABASE_URL = "https://bpxvixyogbvvhykfeyqj.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR_ANON_KEY_HERE"; // Replace with your actual key
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+----------------------------------------
+3. js/onboard.js
+----------------------------------------
+
+async function submitOnboarding() {
+    const policy = document.getElementById("ack_policy").checked;
+    const handbook = document.getElementById("ack_handbook").checked;
+    const eSign = document.getElementById("e_sign").checked;
+    const idFile = document.getElementById("id_upload").files[0];
+
+    if (!policy || !handbook || !eSign || !idFile) {
+        alert("Please complete all onboarding steps.");
+        return;
+    }
+
+    const fileExt = idFile.name.split('.').pop();
+    const filePath = `id_uploads/${Date.now()}.${fileExt}`;
+    let { error: uploadError } = await supabase.storage.from("id_uploads").upload(filePath, idFile);
+
+    if (uploadError) {
+        alert("Error uploading ID.");
+        console.error(uploadError);
+        return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from("id_uploads").getPublicUrl(filePath);
+
+    const email = prompt("Enter your email to confirm identity:");
+    if (!email) return;
+
+    const { error: updateError } = await supabase
+        .from("candidates")
+        .update({ status: "Ready for Placement", id_uploaded: publicUrl })
+        .eq("email", email);
+
+    if (updateError) {
+        alert("Error updating onboarding status.");
+        console.error(updateError);
+        return;
+    }
+
+    alert("Onboarding complete! You are ready for placement.");
+    window.location.href = "/index.html";
+}
+
+----------------------------------------
+4. css/styles.css
+----------------------------------------
+
+body {
+    font-family: sans-serif;
+    padding: 2rem;
+}
+input {
+    margin: 0.5rem 0;
+    display: block;
+}
+button {
+    padding: 0.5rem 1rem;
+    font-weight: bold;
+}
