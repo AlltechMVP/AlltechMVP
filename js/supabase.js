@@ -10,7 +10,7 @@ const supabase = createClient(
 // Service role client for applications
 export const serviceClient = createClient(
     'https://bpxvixyogbvvhykfeyqj.supabase.co',
-    'YOUR_SERVICE_ROLE_KEY' // Replace with your service role key from Supabase dashboard
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJweHZpeHlvZ2J2dmh5a2ZleXFqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NTQzNjU1MiwiZXhwIjoyMDYxMDEyNTUyfQ.tVEGsIEHBEsAFomIQCcmGkc6JmUmHFSt_Rb1Qj7b5Lw'
 )
 
 export default supabase;
