@@ -36,8 +36,12 @@ async function login() {
         
         if (error) throw error
         alert('Login successful!')
-        // Redirect or update UI based on successful login
+        window.location.href = "dashboard.html"
     } catch (error) {
         alert(error.message)
     }
 }
+
+// Make functions available globally
+window.signUp = signUp
+window.login = login
