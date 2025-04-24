@@ -1,5 +1,5 @@
 
-import supabase from './supabase.js';
+import supabase, { serviceClient } from './supabase.js';
 
 export async function submitApplication() {
     const name = document.getElementById("name").value;
@@ -13,16 +13,14 @@ export async function submitApplication() {
     }
 
     try {
-        // Upload resume
         const fileExt = resumeFile.name.split('.').pop();
         const filePath = `resumes/${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await serviceClient.storage.from("resumes").upload(filePath, resumeFile);
 
+        let { error: uploadError } = await serviceClient.storage.from("resumes").upload(filePath, resumeFile);
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage.from("resumes").getPublicUrl(filePath);
 
-        // Insert candidate
         const { error: insertError } = await serviceClient.from("candidates").insert({
             name,
             email,
@@ -36,7 +34,7 @@ export async function submitApplication() {
         alert("Application submitted! Proceeding to onboarding...");
         window.location.href = "onboard.html";
     } catch (error) {
-        console.error(error);
+        console.error("Error:", error);
         alert("Error submitting application: " + error.message);
     }
 }
