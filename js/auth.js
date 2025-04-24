@@ -1,5 +1,5 @@
 
-import supabase from './supabase.js';
+import { supabase } from './supabase.js';
 
 export async function signUp() {
     const email = document.getElementById("email").value;
