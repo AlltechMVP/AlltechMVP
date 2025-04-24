@@ -1,10 +1,7 @@
 
-import { serviceClient } from './supabase.js';
+import { supabase } from './supabase.js';
 
 export async function submitApplication() {
-    if (!serviceClient) {
-        throw new Error("Supabase client not initialized");
-    }
     const name = document.getElementById("name").value;
     const email = document.getElementById("email").value;
     const phone = document.getElementById("phone").value;
@@ -16,15 +13,21 @@ export async function submitApplication() {
     }
 
     try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            alert("Please log in to submit your application");
+            return;
+        }
+
         const fileExt = resumeFile.name.split('.').pop();
         const filePath = `resumes/${Date.now()}.${fileExt}`;
 
-        let { error: uploadError } = await serviceClient.storage.from("resumes").upload(filePath, resumeFile);
+        let { error: uploadError } = await supabase.storage.from("resumes").upload(filePath, resumeFile);
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage.from("resumes").getPublicUrl(filePath);
 
-        const { error: insertError } = await serviceClient.from("candidates").insert({
+        const { error: insertError } = await supabase.from("candidates").insert({
             name,
             email,
             phone,
@@ -38,11 +41,7 @@ export async function submitApplication() {
         window.location.href = "onboard.html";
     } catch (error) {
         console.error("Error:", error);
-        if (error.message.includes("invalid signature")) {
-            alert("Authentication error. Please try logging out and logging back in.");
-        } else {
-            alert("Error submitting application: " + error.message);
-        }
+        alert("Error submitting application: " + error.message);
     }
 }
 
