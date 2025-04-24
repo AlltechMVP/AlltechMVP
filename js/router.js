@@ -1,4 +1,6 @@
 
+import supabase from './supabase.js';
+
 window.onload = async () => {
     try {
         const { data, error } = await supabase.auth.getUser();
