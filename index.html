@@ -34,8 +34,13 @@
     <script type="module">
         import supabase from './js/supabase.js';
         import { signUp, login } from './js/auth.js';
-        window.signUp = signUp;
-        window.login = login;
+        
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', () => {
+            // Expose functions to window object
+            window.signUp = signUp;
+            window.login = login;
+        });
     </script>
 </body>
 </html>
