@@ -1,7 +1,7 @@
-// Import auth functions from auth.js
-import { signUp, login, logout } from './js/auth.js';
 
-// Make functions available globally
+import { signUp, login, resetPassword } from './js/auth.js';
+
+// Make auth functions available globally
 window.signUp = signUp;
 window.login = login;
-window.logout = logout;
+window.resetPassword = resetPassword;
