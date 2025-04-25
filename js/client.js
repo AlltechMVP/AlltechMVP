@@ -1,81 +1,63 @@
-
 import { supabase } from './supabase.js';
 
-async function loadJobs() {
-    const { data: jobs, error } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('client_id', localStorage.getItem('clientId'));
+const mockJobs = [
+    { id: "1", title: "Warehouse Associate" },
+    { id: "2", title: "Forklift Driver" },
+];
 
-    if (error) {
-        console.error('Error loading jobs:', error);
-        return;
-    }
+const mockCandidates = [
+    { name: "Jordan Miles", status: "Submitted", job_id: "1", resume: "#", email: "jm@a.com" },
+    { name: "Lena James", status: "Submitted", job_id: "2", resume: "#", email: "lj@a.com" },
+    { name: "Ray Chen", status: "Approved", job_id: "1", resume: "#", email: "rc@a.com" }
+];
 
-    const select = document.getElementById('jobFilter');
-    select.innerHTML = '<option value="">All Jobs</option>';
-    jobs.forEach(job => {
-        select.innerHTML += `<option value="${job.id}">${job.title}</option>`;
-    });
-}
+function loadCandidates() {
+    const selectedJob = document.getElementById("jobFilter").value;
+    const tbody = document.querySelector("#candidateTable tbody");
+    tbody.innerHTML = "";
 
-async function loadCandidates() {
-    const jobId = document.getElementById('jobFilter').value;
-    let query = supabase.from('candidates')
-        .select('*')
-        .eq('status', 'Ready for Placement');
+    const filtered = selectedJob
+        ? mockCandidates.filter(c => c.job_id === selectedJob)
+        : mockCandidates;
 
-    if (jobId) {
-        query = query.eq('job_id', jobId);
-    }
-
-    const { data: candidates, error } = await query;
-    if (error) {
-        console.error('Error loading candidates:', error);
-        return;
-    }
-
-    const tbody = document.querySelector('#candidateTable tbody');
-    tbody.innerHTML = '';
-    candidates.forEach(candidate => {
-        const row = document.createElement('tr');
+    filtered.forEach(candidate => {
+        const row = document.createElement("tr");
         row.innerHTML = `
             <td>${candidate.name}</td>
-            <td>${candidate.job_title || 'Not assigned'}</td>
-            <td>${candidate.status}</td>
-            <td><a href="${candidate.resume_url}" target="_blank">View Resume</a></td>
+            <td>${getJobTitle(candidate.job_id)}</td>
+            <td id="status-${candidate.email}">${candidate.status}</td>
+            <td><a href="${candidate.resume}" target="_blank">View</a></td>
             <td>
-                <button onclick="reviewCandidate('${candidate.id}')" class="auth-button">Review</button>
+                <button onclick="updateStatus('${candidate.email}', 'Approved')">Approve</button>
+                <button onclick="updateStatus('${candidate.email}', 'Rejected')">Reject</button>
             </td>
         `;
         tbody.appendChild(row);
     });
 }
 
-async function reviewCandidate(candidateId) {
-    const decision = confirm('Would you like to schedule an interview with this candidate?');
-    if (decision) {
-        const { error } = await supabase
-            .from('candidates')
-            .update({ status: 'Interview Requested' })
-            .eq('id', candidateId);
+function getJobTitle(job_id) {
+    const job = mockJobs.find(j => j.id === job_id);
+    return job ? job.title : "Unknown";
+}
 
-        if (error) {
-            alert('Error updating candidate status');
-            console.error(error);
-            return;
-        }
-
-        alert('Interview request sent!');
-        loadCandidates();
-    }
+function updateStatus(email, newStatus) {
+    const cell = document.getElementById(`status-${email}`);
+    if (cell) cell.innerText = newStatus;
+    alert(`${email} marked as ${newStatus}`);
 }
 
 window.onload = () => {
-    loadJobs();
+    const jobSelect = document.getElementById("jobFilter");
+    mockJobs.forEach(job => {
+        const option = document.createElement("option");
+        option.value = job.id;
+        option.textContent = job.title;
+        jobSelect.appendChild(option);
+    });
     loadCandidates();
 };
 
 // Make functions available globally
 window.loadCandidates = loadCandidates;
-window.reviewCandidate = reviewCandidate;
+window.updateStatus = updateStatus;
