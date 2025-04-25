@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadUsers } from './users';
+import { loadUsers } from '../../data/users';
 
 export default function Login() {
   const [users, setUsers] = useState([]);
@@ -22,7 +22,7 @@ export default function Login() {
 
     const roleRoutes = {
       admin: '/admin-dashboard',
-      recruiter: '/recruiter-dashboard',
+      recruiter: '/recruiter-dashboard', 
       sales_rep: '/sales-dashboard',
       client: '/client-approvals',
       executive: '/executive-dashboard'
