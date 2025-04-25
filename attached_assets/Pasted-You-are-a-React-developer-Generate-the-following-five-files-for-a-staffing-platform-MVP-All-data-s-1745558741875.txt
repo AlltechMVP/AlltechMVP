@@ -1,0 +1,82 @@
+You are a React developer. Generate the following five files for a staffing platform MVP. All data should persist using localStorage, and all components should use Tailwind CSS for styling. This will simulate job management and sales operations. Include all content inline below.
+
+---
+
+✅ FILE 1: jobOrders.js
+
+- Stores job orders using localStorage.
+- Include functions:
+  - loadJobOrders()
+  - saveJobOrders()
+  - updateJobOrder(id, updates)
+  - addNoteToJob(id, note)
+  - removeCandidateFromJob(id, candidateId)
+  - markJobFilled(id)
+
+- Each job should include:
+  - id, title, location, payRate, client, description
+  - totalOpenings, currentFilled, urgency (e.g., “High”)
+  - recruiterIds[], submittedCandidates[], notes[]
+
+Provide 2 default job examples.
+
+---
+
+✅ FILE 2: salesData.js
+
+- Stores sales contacts using localStorage.
+- Include functions:
+  - loadSalesData()
+  - saveSalesData()
+  - updateSalesContact(id, updates)
+  - addFollowUpNote(id, note)
+  - updateContactPerson(id, newContact)
+  - closeLostAccount(id)
+
+- Each sales contact should include:
+  - id, company, contact, stage, lastTouch, type, nextFollowUp, notes[]
+
+Provide 2 default sales examples.
+
+---
+
+✅ FILE 3: job-orders.jsx
+
+- Display list of job orders
+- For each job, show:
+  - Title, location, payRate, client
+  - Urgency label
+  - Openings remaining (e.g. 4 of 10 filled)
+- Buttons:
+  - “View Details” → navigates to `/job-details/:id`
+  - “Mark as Filled” → sets currentFilled = totalOpenings
+  - “Assign Recruiter” → simulates adding ID 1 to recruiterIds
+
+---
+
+✅ FILE 4: job-details.jsx
+
+- Load job order by ID from route
+- Show job description, assigned recruiters, submitted candidates, and job notes
+- Buttons:
+  - “Submit Candidate” → simulate adding a random candidate ID
+  - “Remove Candidate” → remove most recent from submittedCandidates[]
+  - “Add Note” → use window.prompt, timestamp it, and store in job.notes
+
+---
+
+✅ FILE 5: sales-dashboard.jsx
+
+- Show list of sales accounts
+- Each card includes:
+  - Company name, contact, stage, lastTouch, type, nextFollowUp
+  - Notes (timestamped list)
+- Buttons:
+  - “Advance Pipeline” → cycle through Lead → Demo → Proposal → Closed
+  - “Add Follow-up Note” → use prompt, timestamp and store in notes[]
+  - “Change Contact” → prompt to replace contact name
+  - “Close Lost” → set stage to “Closed Lost”
+
+---
+
+All data should update in localStorage and reflect instantly. No modals or backend — use prompts or simple buttons. Style everything cleanly using Tailwind CSS. This integrates with candidate, recruiter, and client dashboards previously built.
