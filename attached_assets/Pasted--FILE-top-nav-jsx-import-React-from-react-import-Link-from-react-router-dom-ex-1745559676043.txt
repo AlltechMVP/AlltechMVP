@@ -1,0 +1,218 @@
+// ✅ FILE: top-nav.jsx
+
+import React from "react";
+import { Link } from "react-router-dom";
+
+export default function TopNav() {
+  const user = JSON.parse(localStorage.getItem("currentUser"));
+
+  return (
+    <div className="flex items-center justify-between bg-gray-800 text-white p-4 shadow">
+      <div className="font-bold text-lg">AllTech Platform</div>
+      <div className="flex items-center space-x-4">
+        <Link to="/global-search" className="hover:underline">Search</Link>
+        <Link to="/notification-center" className="hover:underline">Alerts</Link>
+        <span className="text-sm">{user?.name} ({user?.role})</span>
+      </div>
+    </div>
+  );
+}
+
+// ✅ FILE: global-search.jsx
+
+import React, { useState, useEffect } from "react";
+import { loadJobOrders } from "./jobOrders";
+import { loadUsers } from "./users";
+
+export default function GlobalSearch() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+
+  useEffect(() => {
+    const jobs = loadJobOrders();
+    const users = loadUsers();
+    const q = query.toLowerCase();
+    const matches = [
+      ...jobs.filter(j => j.title.toLowerCase().includes(q)),
+      ...users.filter(u => u.name.toLowerCase().includes(q))
+    ];
+    setResults(matches);
+  }, [query]);
+
+  return (
+    <div className="p-4">
+      <h2 className="text-xl font-bold mb-2">Global Search</h2>
+      <input
+        className="w-full border p-2 mb-4 rounded"
+        placeholder="Search across jobs, users, candidates..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {results.map((item, i) => (
+        <div key={i} className="border-b p-2 text-sm">
+          {item.title || item.name} – {item.client || item.role || "N/A"}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ✅ FILE: role-home.jsx
+
+import React from "react";
+import { useNavigate } from "react-router-dom";
+
+export default function RoleHome() {
+  const user = JSON.parse(localStorage.getItem("currentUser"));
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!user) return navigate("/login");
+    const map = {
+      Admin: "/admin-dashboard",
+      Recruiter: "/recruiter-dashboard",
+      "Sales Rep": "/sales-dashboard",
+      Client: "/client-approvals",
+      Executive: "/executive-dashboard"
+    };
+    navigate(map[user.role] || "/job-orders");
+  }, [user, navigate]);
+
+  return null;
+}
+
+// ✅ FILE: resume-generator.jsx
+
+import React, { useState } from "react";
+
+export default function ResumeGenerator() {
+  const [form, setForm] = useState({ name: "", summary: "", skills: "", experience: "" });
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <h2 className="text-xl font-bold">AI Resume Generator</h2>
+      <input name="name" value={form.name} onChange={handleChange} className="w-full p-2 border rounded" placeholder="Full Name" />
+      <textarea name="summary" value={form.summary} onChange={handleChange} className="w-full p-2 border rounded" placeholder="Professional Summary" />
+      <textarea name="skills" value={form.skills} onChange={handleChange} className="w-full p-2 border rounded" placeholder="Skills (comma-separated)" />
+      <textarea name="experience" value={form.experience} onChange={handleChange} className="w-full p-2 border rounded" placeholder="Work Experience" />
+      <div className="p-4 border rounded bg-gray-50">
+        <h3 className="font-bold">Generated Resume</h3>
+        <p><strong>{form.name}</strong></p>
+        <p className="italic">{form.summary}</p>
+        <p><strong>Skills:</strong> {form.skills}</p>
+        <p><strong>Experience:</strong> {form.experience}</p>
+      </div>
+    </div>
+  );
+}
+
+// ✅ FILE: smart-matching.jsx
+
+import React, { useEffect, useState } from "react";
+import { loadJobOrders } from "./jobOrders";
+
+export default function SmartMatching() {
+  const [query, setQuery] = useState("");
+  const [matches, setMatches] = useState([]);
+
+  useEffect(() => {
+    const jobs = loadJobOrders();
+    const q = query.toLowerCase();
+    setMatches(jobs.filter(j => j.description.toLowerCase().includes(q) || j.title.toLowerCase().includes(q)));
+  }, [query]);
+
+  return (
+    <div className="p-4">
+      <h2 className="text-xl font-bold">Smart Matching</h2>
+      <input
+        className="border p-2 w-full mb-4 rounded"
+        placeholder="Enter skill or keyword..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {matches.map((j) => (
+        <div key={j.id} className="border-b p-2">
+          {j.title} – {j.client}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ✅ FILE: gl-mapping-assistant.jsx
+
+import React, { useState } from "react";
+
+export default function GLMappingAssistant() {
+  const [lineItem, setLineItem] = useState("");
+  const [glCode, setGLCode] = useState(null);
+
+  const mockMap = {
+    "Payroll": "6001",
+    "Office Supplies": "7100",
+    "Contractor Fees": "6210"
+  };
+
+  const handleMatch = () => {
+    const match = Object.entries(mockMap).find(([k]) => lineItem.toLowerCase().includes(k.toLowerCase()));
+    setGLCode(match ? match[1] : "No match found");
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <h2 className="text-xl font-bold">GL Mapping Assistant</h2>
+      <input
+        className="w-full border p-2 rounded"
+        placeholder="Enter invoice line item..."
+        value={lineItem}
+        onChange={(e) => setLineItem(e.target.value)}
+      />
+      <button onClick={handleMatch} className="bg-blue-600 text-white px-4 py-2 rounded">Map</button>
+      {glCode && <div className="mt-2 text-sm">Suggested GL Code: <strong>{glCode}</strong></div>}
+    </div>
+  );
+}
+
+// ✅ FILE: roi-calculator.jsx
+
+import React, { useState } from "react";
+
+export default function ROICalculator() {
+  const [current, setCurrent] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const [savings, setSavings] = useState(null);
+
+  const calculate = () => {
+    const diff = parseFloat(current) - parseFloat(newValue);
+    setSavings(diff);
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <h2 className="text-xl font-bold">ROI Calculator</h2>
+      <input
+        className="w-full border p-2 rounded"
+        placeholder="Current weekly cost"
+        value={current}
+        onChange={(e) => setCurrent(e.target.value)}
+      />
+      <input
+        className="w-full border p-2 rounded"
+        placeholder="New weekly cost (after AllTech)"
+        value={newValue}
+        onChange={(e) => setNewValue(e.target.value)}
+      />
+      <button onClick={calculate} className="bg-green-600 text-white px-4 py-2 rounded">Calculate</button>
+      {savings !== null && (
+        <div className="text-sm">
+          Weekly Savings: <strong>${savings.toFixed(2)}</strong><br />
+          Annual Savings: <strong>${(savings * 52).toFixed(2)}</strong>
+        </div>
+      )}
+    </div>
+  );
+}
