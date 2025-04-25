@@ -38,6 +38,8 @@ window.onload = () => {
         li.innerText = `${p.week} – Payroll: ${p.payroll}, Revenue: ${p.revenue}`;
         payrollList.appendChild(li);
     });
+}li);
+    });
 
     const marginList = document.getElementById("marginSummary");
     for (const [key, value] of Object.entries(margins)) {
