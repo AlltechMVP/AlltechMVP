@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -17,8 +16,9 @@
             <label><input type="checkbox" id="ack_handbook" class="input-field"> I acknowledge the employee handbook.</label><br>
             <label>ID Upload: <input type="file" id="id_upload" class="input-field" accept=".pdf,.jpg,.jpeg,.png"></label><br>
             <label><input type="checkbox" id="e_sign" class="input-field"> I agree and electronically sign this onboarding form.</label><br>
-            <button type="button" onclick="submitOnboarding()" class="auth-button">Complete Onboarding</button>
+            <button type="submit" class="auth-button">Complete Onboarding</button>
         </form>
+        <div id="onboardingSummary" style="display: none;" class="dashboard-section"></div>
     </main>
 </body>
 </html>

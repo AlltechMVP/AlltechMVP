@@ -1,46 +1,57 @@
 
 import { supabase } from './supabase.js';
 
-export async function submitOnboarding() {
-    const policy = document.getElementById("ack_policy").checked;
-    const handbook = document.getElementById("ack_handbook").checked;
-    const eSign = document.getElementById("e_sign").checked;
-    const idFile = document.getElementById("id_upload").files[0];
+document.getElementById("onboardingForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
 
-    if (!policy || !handbook || !eSign || !idFile) {
+    const policies = document.getElementById("ack_policy").checked;
+    const handbook = document.getElementById("ack_handbook").checked;
+    const idUpload = document.getElementById("id_upload").files[0];
+    const eSign = document.getElementById("e_sign").checked;
+
+    if (!policies || !handbook || !idUpload || !eSign) {
         alert("Please complete all onboarding steps.");
         return;
     }
 
-    const fileExt = idFile.name.split('.').pop();
-    const filePath = `id_uploads/${Date.now()}.${fileExt}`;
-    let { error: uploadError } = await supabase.storage.from("id_uploads").upload(filePath, idFile);
+    try {
+        // Upload ID
+        const fileExt = idUpload.name.split('.').pop();
+        const filePath = `id_uploads/${Date.now()}.${fileExt}`;
+        let { error: uploadError } = await supabase.storage.from("id_uploads").upload(filePath, idUpload);
 
-    if (uploadError) {
-        alert("Error uploading ID.");
-        console.error(uploadError);
-        return;
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage.from("id_uploads").getPublicUrl(filePath);
+
+        // Hide form and show summary
+        document.getElementById("onboardingForm").style.display = "none";
+        const summary = document.getElementById("onboardingSummary");
+        summary.style.display = "block";
+        summary.innerHTML = `
+            <h3>Onboarding Complete</h3>
+            <p>Policies: ✓</p>
+            <p>Handbook: ✓</p>
+            <p>ID Uploaded: ✓</p>
+            <p>E-Signature: ✓</p>
+            <br>
+            <a href="candidate.html" class="auth-button">Go to Dashboard</a>
+        `;
+
+        // Update candidate status
+        const { user } = await supabase.auth.getUser();
+        if (user) {
+            await supabase.from("candidates")
+                .update({
+                    status: "Ready for Placement",
+                    id_uploaded: publicUrl,
+                    onboarding_completed: true
+                })
+                .eq("email", user.email);
+        }
+
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Error completing onboarding: " + error.message);
     }
-
-    const { data: { publicUrl } } = supabase.storage.from("id_uploads").getPublicUrl(filePath);
-
-    const email = prompt("Enter your email to confirm identity:");
-    if (!email) return;
-
-    const { error: updateError } = await supabase
-        .from("candidates")
-        .update({ status: "Ready for Placement", id_uploaded: publicUrl })
-        .eq("email", email);
-
-    if (updateError) {
-        alert("Error updating onboarding status.");
-        console.error(updateError);
-        return;
-    }
-
-    alert("Onboarding complete! You are ready for placement.");
-    window.location.href = "/index.html";
-}
-
-// Make function available globally
-window.submitOnboarding = submitOnboarding;
+});
