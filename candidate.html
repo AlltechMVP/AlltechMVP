@@ -1,0 +1,20 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Alltech Candidate Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js" type="module"></script>
+    <script src="js/candidate.js" type="module"></script>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <main>
+        <button onclick="logout()" class="auth-button" style="float: right;">Logout</button>
+        <h2>Welcome, Candidate</h2>
+        <div id="candidateInfo" class="dashboard-section"></div>
+        <h3>Onboarding Progress</h3>
+        <ul id="onboardingChecklist" class="metrics-list"></ul>
+    </main>
+</body>
+</html>
