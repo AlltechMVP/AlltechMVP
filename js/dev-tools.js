@@ -1,8 +1,12 @@
+
 // Dev override unlock using localStorage
 export function unlockDevTools() {
-    const passcode = prompt("Enter dev override passcode:");
+    const passcode = prompt("Dev Mode: Enter override passcode");
+    
     if (passcode === "alltechadmin") {
         document.getElementById("devOverride").style.display = "block";
+        localStorage.setItem("alltechDevOverride", "true");
+        alert("Dev override enabled.");
     } else {
         alert("Invalid passcode");
     }
