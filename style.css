@@ -479,6 +479,76 @@ button:disabled {
     background: rgba(0,0,0,0.5);
 }
 
+.candidates-grid {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.candidate-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    background: white;
+}
+
+.candidate-name {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 0.5rem;
+}
+
+.job-title {
+    color: #666;
+    font-size: 0.9em;
+    margin: 0.5rem 0;
+}
+
+.progress-bar {
+    background: #eee;
+    border-radius: 10px;
+    height: 8px;
+    margin: 1rem 0;
+}
+
+.progress {
+    background: #4CAF50;
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.status-select {
+    width: 100%;
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.notes-field {
+    width: 100%;
+    min-height: 80px;
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 0.5rem;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.submit-btn:hover {
+    background: #45a049;
+}
+
 .modal-content {
     background: white;
     margin: 10% auto;
