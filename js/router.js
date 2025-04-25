@@ -22,9 +22,13 @@ window.onload = async () => {
 
         // Check for role override
         const override = document.getElementById("overrideRole");
-        if (override && override.value) {
+        if (override && override.value !== "") {
             role = override.value;
             console.log("Role override activated:", role);
+        } else if (override && override.value === "") {
+            // Use stored role when "Use my actual role" is selected
+            role = user.user_metadata?.role;
+            console.log("Using stored role:", role);
         }
 
         if (!role) {
