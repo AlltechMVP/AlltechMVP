@@ -1,7 +1,8 @@
+
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Candidate Onboarding</title>
+    <title>Alltech Onboarding</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js" type="module"></script>
     <script src="js/onboard.js" type="module"></script>
@@ -10,7 +11,7 @@
 <body>
     <main class="login-container">
         <button onclick="logout()" class="auth-button" style="float: right;">Logout</button>
-        <h2>Electronic Onboarding</h2>
+        <h2>Candidate Onboarding</h2>
         <div id="progressBar" style="margin-bottom: 1.5rem;">
             <strong>Progress:</strong>
             <div style="background: #ddd; height: 16px; border-radius: 8px; width: 100%; max-width: 400px;">
@@ -18,13 +19,15 @@
             </div>
             <p id="progressText">0 of 4 steps completed</p>
         </div>
-        <form id="onboardingForm">
-            <label><input type="checkbox" id="ack_policy" class="input-field"> I acknowledge the company policies.</label><br>
-            <label><input type="checkbox" id="ack_handbook" class="input-field"> I acknowledge the employee handbook.</label><br>
-            <label>ID Upload: <input type="file" id="id_upload" class="input-field" accept=".pdf,.jpg,.jpeg,.png"></label><br>
-            <label><input type="checkbox" id="e_sign" class="input-field"> I agree and electronically sign this onboarding form.</label><br>
-            <button type="submit" class="auth-button">Complete Onboarding</button>
-        </form>
+        <div id="stepContainer">
+            <form id="onboardingForm">
+                <label><input type="checkbox" id="ack_policy" class="input-field"> I acknowledge the company policies.</label><br>
+                <label><input type="checkbox" id="ack_handbook" class="input-field"> I acknowledge the employee handbook.</label><br>
+                <label>ID Upload: <input type="file" id="id_upload" class="input-field" accept=".pdf,.jpg,.jpeg,.png"></label><br>
+                <label><input type="checkbox" id="e_sign" class="input-field"> I agree and electronically sign this onboarding form.</label><br>
+                <button type="submit" class="auth-button">Complete Onboarding</button>
+            </form>
+        </div>
         <div id="onboardingSummary" style="display: none;" class="dashboard-section"></div>
     </main>
 </body>
