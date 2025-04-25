@@ -1,7 +1,7 @@
 
 import { supabase } from './supabase.js';
 
-export async function signUp() {
+async function signUp() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
     const role = document.getElementById("role").value;
@@ -22,7 +22,7 @@ export async function signUp() {
     }
 }
 
-export async function login() {
+async function login() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
@@ -43,21 +43,17 @@ export async function login() {
     }
 }
 
-// Auto-fill last used email
-window.onload = () => {
-    const lastEmail = localStorage.getItem('lastLoginEmail');
-    if (lastEmail) {
-        const emailInput = document.getElementById("email");
-        if (emailInput) emailInput.value = lastEmail;
+async function logout() {
+    try {
+        await supabase.auth.signOut();
+        window.location.href = '/index.html';
+    } catch (error) {
+        console.error("Logout error:", error);
+        alert("Error during logout");
     }
-};
-
-export async function logout() {
-    await supabase.auth.signOut();
-    window.location.href = '/index.html';
 }
 
-export async function resetPassword() {
+async function resetPassword() {
     const email = document.getElementById("email").value;
     if (!email) {
         alert("Please enter your email address");
@@ -76,7 +72,7 @@ export async function resetPassword() {
     }
 }
 
-// Make functions available globally
+// Make functions globally available
 window.signUp = signUp;
 window.login = login;
 window.logout = logout;
