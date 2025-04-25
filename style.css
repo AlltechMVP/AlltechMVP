@@ -161,6 +161,11 @@ button {
     border-bottom: 1px solid #eee;
 }
 
+#progressContainer h3,
+#progressText {
+    margin-top: 0.5rem;
+}
+
 #onboardingForm label {
     display: block;
     margin: 15px 0;
