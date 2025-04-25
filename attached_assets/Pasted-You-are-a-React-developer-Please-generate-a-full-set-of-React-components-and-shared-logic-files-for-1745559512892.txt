@@ -1,0 +1,116 @@
+You are a React developer. Please generate a full set of React components and shared logic files for a staffing platform MVP. All data should be stored in localStorage. Style everything using Tailwind CSS. Each section below represents a full file. Include all code inline.
+
+---
+
+✅ FILE: data-store.js
+
+(Shared candidate storage, onboarding updates, localStorage persistence)
+
+✅ FILE: users.js
+
+Manages users and roles (Admin, Recruiter, Sales Rep, Client)
+
+✅ FILE: jobOrders.js
+
+Stores job orders with support for:
+- load/save/update
+- addNoteToJob
+- removeCandidateFromJob
+- markJobFilled
+- approveJobByClient
+- rejectJobByClient
+- tagJobWithVMS
+
+✅ FILE: salesData.js
+
+Manages sales contacts, stages, and updates with:
+- addFollowUpNote
+- updateContactPerson
+- closeLostAccount
+
+---
+
+✅ FILE: recruiter-dashboard.jsx
+
+Shows candidates, onboarding progress, status dropdown, notes, submit-to-client
+
+✅ FILE: client-dashboard.jsx
+
+Client view to approve/reject submitted candidates
+
+✅ FILE: candidate-dashboard.jsx
+
+Candidate view showing application status and onboarding progress
+
+✅ FILE: onboarding-flow.jsx
+
+Multi-step onboarding (personal info → direct deposit → e-sign)
+
+✅ FILE: job-orders.jsx
+
+List of job orders with urgency, remaining openings, assign recruiter, mark filled
+
+✅ FILE: job-details.jsx
+
+View job details, add/remove candidates, recruiter list, job notes
+
+✅ FILE: sales-dashboard.jsx
+
+Track leads by pipeline stage with add note, advance stage, update contact
+
+✅ FILE: admin-dashboard.jsx
+
+Summary stats: total jobs, filled, recruiters, buttons for job creation and export
+
+✅ FILE: user-manager.jsx
+
+Add/edit/delete users with role selection dropdowns
+
+✅ FILE: executive-dashboard.jsx
+
+KPI snapshot: placements, avg time-to-fill, win rate, pipeline charts (simulated)
+
+✅ FILE: client-approvals.jsx
+
+Client views pending job orders, approves/rejects, adds feedback
+
+✅ FILE: job-search-filter.jsx
+
+Live filter/search by job title, client, location, urgency
+
+✅ FILE: import-export.jsx
+
+Simulate upload/preview for job/candidate CSV import, export to console
+
+✅ FILE: vms-aggregator.jsx
+
+Simulate job feeds from VMS sources (Beeline, Fieldglass), import into job orders
+
+✅ FILE: app-shell.jsx
+
+Side nav shell, mobile-first layout, user info at top, nested route outlet
+
+✅ FILE: login.jsx
+
+User selector login screen → stores selected user → routes by role:
+- Admin → /admin-dashboard
+- Recruiter → /recruiter-dashboard
+- Sales Rep → /sales-dashboard
+- Client → /client-approvals
+- Executive → /executive-dashboard
+
+✅ FILE: candidate-job-search.jsx
+
+Candidate can search jobs, view descriptions, and apply (persist to localStorage)
+
+✅ FILE: timesheet-entry.jsx
+
+Candidate adds hours per day, entries saved as (Pending), localStorage-persisted
+
+✅ FILE: notification-center.jsx
+
+Displays timestamped alerts, auto-loads welcome message, add test alert
+
+---
+
+All logic should use localStorage. No backend. Everything should be styled with Tailwind and mobile responsive. Ensure clean component structure. This is a working MVP to simulate front-to-back staffing workflows.
