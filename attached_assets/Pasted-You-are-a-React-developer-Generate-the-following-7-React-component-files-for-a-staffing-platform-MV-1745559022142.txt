@@ -1,0 +1,86 @@
+You are a React developer. Generate the following 7 React component files for a staffing platform MVP. All components should use Tailwind CSS for styling and persist data using localStorage. This UI integrates with shared files like `users.js` and `jobOrders.js`.
+
+---
+
+✅ FILE: admin-dashboard.jsx
+
+- Display overview metrics:
+  - Total open job orders
+  - Total filled roles
+  - Number of candidates in pipeline
+  - Recruiter count (from `users.js`)
+- Buttons:
+  - “Create New Job Order” → dummy button
+  - “Assign Recruiter” → simulated
+  - “Export Snapshot to CSV” → dummy button
+
+---
+
+✅ FILE: user-manager.jsx
+
+- Load users from localStorage (`users.js`)
+- Show table with: ID, Name, Role
+- Buttons:
+  - “Add User” → prompt name & role
+  - “Edit” → prompt and update
+  - “Delete” → remove user
+
+---
+
+✅ FILE: executive-dashboard.jsx
+
+- Display KPIs:
+  - Placements this month
+  - Avg time to fill
+  - Sales Win Rate (accounts closed vs. total)
+  - Gross margin per job (mock calc)
+- Buttons:
+  - “Export Report”
+  - “Print View”
+
+---
+
+✅ FILE: client-approvals.jsx
+
+- Load jobOrders
+- Show jobs where `clientApprovalStatus === 'Pending'`
+- For each job:
+  - Show title, client, description
+  - Buttons:
+    - “Approve” → calls `approveJobByClient(id, feedback)`
+    - “Reject” → calls `rejectJobByClient(id, feedback)`
+    - Prompt feedback text via `window.prompt()`
+
+---
+
+✅ FILE: job-search-filter.jsx
+
+- Load jobOrders
+- Render:
+  - Search input for title/description
+  - Dropdown filters: Location, Client, Urgency
+- Dynamically filter and display job cards
+
+---
+
+✅ FILE: import-export.jsx
+
+- Button: “Export Jobs to CSV” → simulate with console.log
+- Button: “Export Candidates” → simulate
+- Simulate CSV upload:
+  - Show hardcoded preview table of fields
+  - Button: “Confirm Import” → dummy logic
+
+---
+
+✅ FILE: vms-aggregator.jsx
+
+- Simulate fetching from external VMS sources (hardcoded array)
+- Each row includes:
+  - Job title, source system (e.g. Fieldglass, Beeline), location
+- Button: “Import Job” → adds to `jobOrders` via `tagJobWithVMS(id, sourceVMS)`
+- Set `sourceVMS` field accordingly
+
+---
+
+Make sure all components are mobile-first and fully integrated with prior localStorage-based logic. Avoid external dependencies. Use dummy actions where backend would normally apply.
