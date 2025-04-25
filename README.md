@@ -1,27 +1,65 @@
-# HTML, CSS, JS (Auto Refresh)
 
-This template is a starter for building a website with HTML, CSS and JS, powered by [Vite](https://vitejs.dev/). HTML provides the basic structure, CSS controls formatting, and JavaScript controls the behavior of different elements.
+# Alltech Staffing Platform MVP
 
-Hit run to see this project in action. It will auto-refresh as you edit the HTML, CSS and JS files.
+A React-based staffing platform built in Replit using localStorage for data persistence.
 
-## Disable Auto Refresh
+## Quick Start
 
-If you find the auto refresh getting in your way, go to [vite.config.js](./vite.config.js) and update it set `hmr` to false to disable hot module reloading (HMR). The full config will look like this:
+1. Open in Replit
+2. Click the "Run" button
+3. Application will start at port 5000
 
-```js
-export default defineConfig({
-  plugins: [],
-  server: {
-    host: '0.0.0.0',
-    hmr: false, // Change this line to `false` disable auto-refreshing.
-  }
-})
-```
+## User Roles & Capabilities
 
-## Packages
+### Admin
+- Manage users and permissions
+- View all dashboards
+- Access system settings
 
-Because this template uses Vite to build your code, you can add install and use npm packages. Simple open the Packager tool to search and manage your packages.
+### Recruiter
+- Post and manage job orders
+- Review candidate applications
+- Track candidate pipeline
+- Generate reports
 
-## Learn More
+### Sales Representative
+- View and manage client accounts
+- Track job order status
+- Access ROI calculator
+- View pipeline metrics
 
-Check out [the vite docs](https://vitejs.dev) to learn more about configuring a frontend application.
+### Client
+- Review candidate submissions
+- Approve/reject candidates
+- View active placements
+- Access timecard summaries
+
+### Candidate
+- Apply for positions
+- Complete onboarding
+- Upload documents
+- Track application status
+
+## Core Features
+
+- Smart job matching
+- Document generation
+- GL code mapping
+- ROI calculations
+- Multi-role dashboards
+- Candidate onboarding
+
+## Technical Stack
+
+- React + Vite
+- Tailwind CSS
+- localStorage for data persistence
+- React Router for navigation
+
+## Demo Access
+
+For testing, use the role selector on the login page to access different user perspectives.
+
+## Development
+
+The project uses a component-based architecture with role-based routing and shared utilities.
