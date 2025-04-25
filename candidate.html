@@ -12,9 +12,20 @@
     <main>
         <button onclick="logout()" class="auth-button" style="float: right;">Logout</button>
         <h2>Welcome, Candidate</h2>
-        <div id="candidateInfo" class="dashboard-section"></div>
-        <h3>Onboarding Progress</h3>
-        <ul id="onboardingChecklist" class="metrics-list"></ul>
+        <div id="profileInfo" class="dashboard-section"></div>
+        <h3>Job Applications</h3>
+        <table id="applicationsTable" class="data-table">
+            <thead>
+                <tr>
+                    <th>Job Title</th>
+                    <th>Status</th>
+                    <th>Resume</th>
+                    <th>ID</th>
+                    <th>Onboarding Progress</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </main>
 </body>
 </html>
