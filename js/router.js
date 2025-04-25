@@ -18,13 +18,18 @@ window.onload = async () => {
         }
 
         const user = data.user;
-        let role = user.user_metadata?.role || "unknown";
+        let role = user.user_metadata?.role;
 
         // Check for role override
         const override = document.getElementById("overrideRole");
         if (override && override.value) {
             role = override.value;
             console.log("Role override activated:", role);
+        }
+
+        if (!role) {
+            window.location.href = '/index.html';
+            return;
         }
 
         console.log("User Role:", role);
