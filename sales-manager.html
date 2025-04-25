@@ -1,0 +1,32 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Alltech Sales Manager Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js" type="module"></script>
+    <script src="js/sales-manager.js" type="module"></script>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <main>
+        <button onclick="logout()" class="auth-button" style="float: right;">Logout</button>
+        <h2>Welcome, Sales Manager</h2>
+
+        <section class="dashboard-section">
+            <h3>Team Activity Summary</h3>
+            <ul id="activityList" class="metrics-list"></ul>
+        </section>
+
+        <section class="dashboard-section">
+            <h3>Pipeline by Sales Rep</h3>
+            <ul id="pipelineList" class="data-list"></ul>
+        </section>
+
+        <section class="dashboard-section">
+            <h3>Top Performers</h3>
+            <ul id="topReps" class="data-list"></ul>
+        </section>
+    </main>
+</body>
+</html>
