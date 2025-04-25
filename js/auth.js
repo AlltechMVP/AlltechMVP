@@ -30,10 +30,14 @@ export async function login() {
     try {
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
-            password
+            password,
+            options: {
+                persistSession: true
+            }
         });
 
         if (error) throw error;
+        localStorage.setItem('lastLoginEmail', email);
         window.location.href = '/dashboard.html';
     } catch (err) {
         alert("Error logging in: " + err.message);
@@ -70,7 +74,9 @@ async function resetPassword() {
 }
 
 // Make functions globally available
-window.signUp = signUp;
-window.login = login;
-window.logout = logout;
-window.resetPassword = resetPassword;
+document.addEventListener('DOMContentLoaded', () => {
+    window.signUp = signUp;
+    window.login = login;
+    window.logout = logout;
+    window.resetPassword = resetPassword;
+});
