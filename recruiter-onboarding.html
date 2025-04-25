@@ -1,0 +1,34 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Alltech | Onboarding Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js" type="module"></script>
+    <script src="js/recruiter-onboarding.js" type="module"></script>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <main>
+        <button onclick="logout()" class="auth-button" style="float: right;">Logout</button>
+        <h2>Candidate Onboarding Tracker</h2>
+
+        <table border="1" cellpadding="8" id="onboardingTable">
+            <thead>
+                <tr>
+                    <th>Candidate</th>
+                    <th>Email</th>
+                    <th>Job</th>
+                    <th>Status</th>
+                    <th>Policies</th>
+                    <th>Handbook</th>
+                    <th>ID Upload</th>
+                    <th>E-Signed</th>
+                    <th>Progress</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </main>
+</body>
+</html>
