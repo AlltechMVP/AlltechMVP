@@ -21,10 +21,10 @@ window.login = async () => {
     const { data: userData } = await supabase.auth.getUser();
     let role = userData.user?.user_metadata?.role || "unknown";
 
-    // Dev override (if enabled)
-    const override = document.getElementById("overrideRole");
-    if (override && override.value) {
-        role = override.value;
+    // Check for role override
+    const overrideRole = localStorage.getItem("roleOverride");
+    if (overrideRole) {
+        role = overrideRole;
         console.log("Dev override activated:", role);
     }
 
