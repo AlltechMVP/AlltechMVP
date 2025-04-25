@@ -7,10 +7,21 @@ let onboardingData = {
     eSigned: false
 };
 
+function updateStepIndicators() {
+    for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById(`s${i}`);
+        if (el) {
+            el.classList.toggle("active", i === step);
+        }
+    }
+}
+
 function renderStep() {
     const container = document.getElementById("stepContainer");
     const progressText = document.getElementById("progressText");
     const fill = document.getElementById("progressFill");
+    
+    updateStepIndicators();
 
     const totalSteps = 4;
     progressText.innerText = `Step ${step} of ${totalSteps}`;
