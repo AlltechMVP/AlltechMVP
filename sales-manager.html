@@ -7,6 +7,16 @@
     <script src="js/supabase.js" type="module"></script>
     <script src="js/sales-manager.js" type="module"></script>
     <link href="style.css" rel="stylesheet" type="text/css" />
+    <script type="module">
+        import { supabase } from './js/supabase.js';
+
+        const { data } = await supabase.auth.getUser();
+        const role = data?.user?.user_metadata?.role;
+
+        if (!data?.user || role !== "sales-manager") {
+            window.location.href = "index.html";
+        }
+    </script>
 </head>
 <body>
     <main>
