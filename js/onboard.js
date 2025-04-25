@@ -1,6 +1,4 @@
 
-import { supabase } from './supabase.js';
-
 let step = 1;
 let onboardingData = {
     policies: false,
@@ -22,14 +20,14 @@ function renderStep() {
         case 1:
             container.innerHTML = `
                 <p><strong>Step 1:</strong> Acknowledge company policies.</p>
-                <label><input type="checkbox" id="policies"> I acknowledge company policies.</label><br><br>
+                <label><input type="checkbox" id="policies" class="input-field"> I acknowledge company policies.</label><br><br>
                 <button onclick="nextStep()" class="auth-button">Next</button>
             `;
             break;
         case 2:
             container.innerHTML = `
                 <p><strong>Step 2:</strong> Acknowledge employee handbook.</p>
-                <label><input type="checkbox" id="handbook"> I have read the handbook.</label><br><br>
+                <label><input type="checkbox" id="handbook" class="input-field"> I have read the handbook.</label><br><br>
                 <button onclick="prevStep()" class="auth-button">Back</button>
                 <button onclick="nextStep()" class="auth-button">Next</button>
             `;
@@ -37,7 +35,7 @@ function renderStep() {
         case 3:
             container.innerHTML = `
                 <p><strong>Step 3:</strong> Upload a photo ID.</p>
-                <input type="file" id="idUpload" accept=".pdf,.jpg,.jpeg,.png" class="input-field"><br><br>
+                <input type="file" id="idUpload" class="input-field" accept=".pdf,.jpg,.jpeg,.png"><br><br>
                 <button onclick="prevStep()" class="auth-button">Back</button>
                 <button onclick="nextStep()" class="auth-button">Next</button>
             `;
@@ -107,7 +105,6 @@ async function submitOnboarding() {
     }
     
     onboardingData.eSigned = true;
-    
     try {
         const { user } = await supabase.auth.getUser();
         if (user) {
