@@ -13,11 +13,16 @@ export function unlockDevTools() {
 }
 
 // Auto-show override if previously unlocked
-window.onload = () => {
+function checkDevOverride() {
     if (localStorage.getItem("alltechDevOverride") === "true") {
-        document.getElementById("devOverride").style.display = "block";
+        const devOverride = document.getElementById("devOverride");
+        if (devOverride) {
+            devOverride.style.display = "block";
+        }
     }
-};
+}
+
+window.onload = checkDevOverride;
 
 // Function to proceed to login
 export const proceedToLogin = () => {
