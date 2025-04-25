@@ -8,7 +8,10 @@ function updateProgress() {
         idUploaded: document.getElementById("id_upload").files.length > 0,
         eSigned: document.getElementById("e_sign").checked
     };
-    
+    updateProgressBar(completed);
+}
+
+function updateProgressBar(completed) {
     const total = 4;
     const count = [
         completed.policies,
