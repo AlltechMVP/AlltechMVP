@@ -26,4 +26,7 @@ export function checkDevOverride() {
 }
 
 // Initialize dev tools
-document.addEventListener('DOMContentLoaded', checkDevOverride);
+document.addEventListener('DOMContentLoaded', () => {
+  checkDevOverride();
+  window.unlockDevTools = unlockDevTools;
+});
