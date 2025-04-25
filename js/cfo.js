@@ -1,58 +1,55 @@
 
 window.onload = () => {
     const invoices = {
-        outstanding: "$642,500",
-        overdue: "$128,400",
-        pastDue30: "$84,300",
-        pastDue60: "$44,100"
+        total: "$212,000",
+        paid: "$182,000",
+        unpaid: "$30,000",
+        overdue: "$12,000"
     };
 
-    const payroll = {
-        currentPayroll: "$384,600",
-        projectedRevenue: "$892,300",
-        payrollPercent: "43.1%",
-        targetPercent: "40%"
-    };
+    const payroll = [
+        { week: "Apr 1–5", payroll: "$56,000", revenue: "$91,500" },
+        { week: "Apr 8–12", payroll: "$58,200", revenue: "$94,000" },
+        { week: "Apr 15–19", payroll: "$59,800", revenue: "$89,600" }
+    ];
 
     const margins = {
-        overallMargin: "38.5%",
-        lightIndustrial: "42%",
-        clerical: "36%",
-        technical: "41%"
+        current: "36.8%",
+        target: "38%",
+        trend: "Holding steady"
     };
 
     const alerts = [
-        "Tesla invoice #4421 ($84,300) - 45 days overdue",
-        "Funding request: North Branch ($125,000) for new client startup",
-        "Margin alert: AutoParts Inc. below 15% threshold",
-        "Credit limit reached: BuildCorp ($250,000)"
+        "Overdue AR: 3 invoices 30+ days late ($7,900)",
+        "Funding reserve at 78% — approaching minimum threshold",
+        "Client Tesla exceeded credit limit — hold on new placements"
     ];
 
-    const invoiceList = document.getElementById("invoiceStats");
-    Object.entries(invoices).forEach(([key, value]) => {
+    const invoiceStats = document.getElementById("invoiceStats");
+    for (const [key, value] of Object.entries(invoices)) {
         const li = document.createElement("li");
-        li.innerHTML = `${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: <strong>${value}</strong>`;
-        invoiceList.appendChild(li);
-    });
+        li.innerText = `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`;
+        invoiceStats.appendChild(li);
+    }
 
     const payrollList = document.getElementById("payrollSummary");
-    Object.entries(payroll).forEach(([key, value]) => {
+    payroll.forEach(p => {
         const li = document.createElement("li");
-        li.innerHTML = `${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: <strong>${value}</strong>`;
+        li.innerText = `${p.week} – Payroll: ${p.payroll}, Revenue: ${p.revenue}`;
         payrollList.appendChild(li);
     });
 
     const marginList = document.getElementById("marginSummary");
-    Object.entries(margins).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(margins)) {
         const li = document.createElement("li");
-        li.innerHTML = `${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: <strong>${value}</strong>`;
+        li.innerText = `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`;
         marginList.appendChild(li);
     });
 
     const alertList = document.getElementById("alertsList");
     alerts.forEach(alert => {
         const li = document.createElement("li");
-        li.innerHTML = `⚠️ ${alert}`;
+        li.innerText = `⚠️ ${alert}`;
         alertList.appendChild(li);
     });
 };
