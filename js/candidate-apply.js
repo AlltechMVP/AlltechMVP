@@ -1,17 +1,16 @@
 
-function handleSubmit(event) {
-    event.preventDefault();
+document.getElementById("applicationForm").addEventListener("submit", function (e) {
+    e.preventDefault();
 
     const mockCandidateProfile = {
-        fullName: document.getElementById('fullName').value,
-        email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value,
-        jobInterest: document.getElementById('jobInterest').value,
-        availability: document.getElementById('availability').value,
-        resumeFile: document.getElementById('resume').files[0]?.name || '',
-        appliedAt: new Date().toISOString()
+        name: document.getElementById("name").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        job: document.getElementById("job").value.trim(),
+        availability: document.getElementById("availability").value,
+        resume: document.getElementById("resume").files[0]?.name || "Not uploaded"
     };
 
-    localStorage.setItem('candidateProfile', JSON.stringify(mockCandidateProfile));
-    window.location.href = 'onboard.html';
-}
+    localStorage.setItem("candidateProfile", JSON.stringify(mockCandidateProfile));
+    window.location.href = "onboard.html";
+});

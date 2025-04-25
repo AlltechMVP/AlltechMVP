@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase.js';
 
 let currentStep = 1;
@@ -6,21 +5,19 @@ const totalSteps = 4;
 let uploadedFiles = {};
 
 async function init() {
-    const candidateProfile = JSON.parse(localStorage.getItem('candidateProfile'));
-    if (!candidateProfile) {
-        window.location.href = 'candidate-apply.html';
+    const profile = JSON.parse(localStorage.getItem("candidateProfile"));
+    if (!profile) {
+        window.location.href = "candidate-apply.html";
         return;
     }
 
-    // Add candidate info to the page
-    const header = document.querySelector('main h2');
-    header.insertAdjacentHTML('afterend', `
+    document.querySelector('main').insertAdjacentHTML("afterbegin", `
         <div class="candidate-info">
-            <p>Candidate: ${candidateProfile.fullName}</p>
-            <p>Email: ${candidateProfile.email}</p>
+            <strong>${profile.name}</strong><br>
+            ${profile.email} — ${profile.job}
         </div>
     `);
-    
+
     setupFileInputs();
     updateProgress();
 }
@@ -36,7 +33,7 @@ async function handleFileUpload(inputId) {
     const input = document.getElementById(inputId);
     const file = input.files[0];
     const statusDiv = document.getElementById(inputId.replace('Upload', 'Status'));
-    
+
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
         statusDiv.innerHTML = '❌ File too large (max 10MB)';
@@ -50,12 +47,12 @@ async function handleFileUpload(inputId) {
     const filePath = `documents/${user.id}/${fileName}`;
 
     statusDiv.innerHTML = '⏳ Uploading...';
-    
+
     try {
         const { data, error: uploadError } = await supabase.storage
             .from('documents')
             .upload(filePath, file, { upsert: true });
-            
+
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
@@ -86,7 +83,7 @@ function updateProgress() {
 
 function checkStepCompletion() {
     const nextBtn = document.getElementById('nextBtn');
-    
+
     switch(currentStep) {
         case 1:
             nextBtn.disabled = !document.getElementById('policiesCheck').checked;
@@ -126,7 +123,7 @@ window.nextStep = async () => {
 
         showCompletion();
     }
-    
+
     updateProgress();
     checkStepCompletion();
 };
@@ -149,7 +146,7 @@ function showCompletion() {
     document.getElementById('completion').style.display = 'block';
     document.getElementById('prevBtn').style.display = 'none';
     document.getElementById('nextBtn').style.display = 'none';
-    
+
     const summary = document.getElementById('completionSummary');
     summary.innerHTML = `
         <p>✅ Company Policies Acknowledged</p>

@@ -8,28 +8,30 @@
 </head>
 <body>
     <main class="login-container">
-        <h2>Apply to Alltech</h2>
-        <form id="applicationForm" onsubmit="handleSubmit(event)">
-            <input type="text" id="fullName" placeholder="Full Name" class="input-field" required>
-            <input type="email" id="email" placeholder="Email" class="input-field" required>
-            <input type="tel" id="phone" placeholder="Phone Number" class="input-field" required>
-            
-            <select id="jobInterest" class="input-field" required>
-                <option value="">Select Desired Role</option>
-                <option value="Warehouse Associate">Warehouse Associate</option>
-                <option value="Forklift Driver">Forklift Driver</option>
-                <option value="Logistics Coordinator">Logistics Coordinator</option>
+        <h2>Apply to Work</h2>
+        <form id="applicationForm">
+            <label>Full Name</label>
+            <input type="text" id="name" class="input-field" required />
+
+            <label>Email</label>
+            <input type="email" id="email" class="input-field" required />
+
+            <label>Phone</label>
+            <input type="text" id="phone" class="input-field" required />
+
+            <label>Job Interest</label>
+            <input type="text" id="job" class="input-field" required />
+
+            <label>Availability</label>
+            <select id="availability" class="input-field">
+                <option value="Immediately">Immediately</option>
+                <option value="1 week">In 1 week</option>
+                <option value="2+ weeks">In 2+ weeks</option>
             </select>
 
-            <select id="availability" class="input-field" required>
-                <option value="">Select Availability</option>
-                <option value="immediate">Immediately</option>
-                <option value="1week">1 Week</option>
-                <option value="2weeks">2+ Weeks</option>
-            </select>
+            <label>Upload Resume (simulated)</label>
+            <input type="file" id="resume" class="input-field" />
 
-            <input type="file" id="resume" accept=".pdf,.doc,.docx" class="input-field" required>
-            
             <button type="submit" class="auth-button">Start Onboarding</button>
         </form>
     </main>
