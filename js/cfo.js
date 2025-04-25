@@ -1,4 +1,3 @@
-
 window.onload = () => {
     const invoices = {
         total: "$212,000",
@@ -44,7 +43,7 @@ window.onload = () => {
         const li = document.createElement("li");
         li.innerText = `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`;
         marginList.appendChild(li);
-    });
+    }
 
     const alertList = document.getElementById("alertsList");
     alerts.forEach(alert => {
