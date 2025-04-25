@@ -5,7 +5,8 @@ import { Link } from "react-router-dom";
 export default function TopNav() {
   const user = JSON.parse(localStorage.getItem("currentUser"));
 
-  const handleLogout = () => {
+  const handleLogout = (e) => {
+    e.preventDefault();
     localStorage.removeItem("currentUser");
     window.location.href = "/";
   };
