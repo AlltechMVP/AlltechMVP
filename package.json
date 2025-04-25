@@ -10,9 +10,15 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.49.4",
+    "@vitejs/plugin-react": "^4.4.1",
+    "autoprefixer": "^10.4.21",
     "child_process": "^1.0.2",
     "fs": "^0.0.1-security",
+    "postcss": "^8.5.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "react-router-dom": "^6.30.0",
+    "tailwindcss": "^4.1.4",
     "vite": "^5.4.8"
   }
 }
