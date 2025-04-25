@@ -2,42 +2,50 @@
 const defaultCandidates = [
   {
     id: 1,
-    name: "Jane Doe",
-    contact: "jane@example.com", 
-    phone: "555-1234",
-    job: "Warehouse Associate",
-    onboardingStep: 2,
-    totalSteps: 5,
-    status: "New",
-    notes: "",
-  },
-  {
-    id: 2, 
-    name: "John Smith",
-    contact: "john@example.com",
-    phone: "555-5678",
-    job: "Forklift Operator", 
-    onboardingStep: 4,
-    totalSteps: 5,
-    status: "Submitted",
-    notes: "Spanish-speaking, needs translator",
+    name: 'Jane Doe',
+    email: 'jane@example.com',
+    phone: '555-0123',
+    status: 'Onboarding',
+    onboardingStep: 1,
+    jobId: 1,
+    submittedDate: '2024-01-15',
+    notes: []
   }
 ];
 
-const STORAGE_KEY = "candidatesData";
-
 export function loadCandidates() {
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = localStorage.getItem('candidates');
   return stored ? JSON.parse(stored) : defaultCandidates;
 }
 
 export function saveCandidates(candidates) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(candidates));
+  localStorage.setItem('candidates', JSON.stringify(candidates));
 }
 
 export function updateCandidate(id, updates) {
   const candidates = loadCandidates();
-  const updated = candidates.map(c => c.id === id ? {...c, ...updates} : c);
-  saveCandidates(updated);
-  return updated;
+  const updatedCandidates = candidates.map(candidate =>
+    candidate.id === id ? { ...candidate, ...updates } : candidate
+  );
+  saveCandidates(updatedCandidates);
+  return updatedCandidates.find(c => c.id === id);
+}
+
+export function addCandidateNote(id, note) {
+  const candidates = loadCandidates();
+  const updatedCandidates = candidates.map(candidate => {
+    if (candidate.id === id) {
+      return {
+        ...candidate,
+        notes: [...candidate.notes, { text: note, timestamp: new Date().toISOString() }]
+      };
+    }
+    return candidate;
+  });
+  saveCandidates(updatedCandidates);
+  return updatedCandidates.find(c => c.id === id);
+}
+
+export function updateOnboardingStep(id, step) {
+  return updateCandidate(id, { onboardingStep: step });
 }
