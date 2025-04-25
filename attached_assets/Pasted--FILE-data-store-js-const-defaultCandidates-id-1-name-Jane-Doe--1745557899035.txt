@@ -1,0 +1,158 @@
+// ✅ FILE: data-store.js
+
+const defaultCandidates = [
+  {
+    id: 1,
+    name: "Jane Doe",
+    contact: "jane@example.com",
+    phone: "555-1234",
+    job: "Warehouse Associate",
+    onboardingStep: 2,
+    totalSteps: 5,
+    status: "New",
+    notes: "",
+  },
+  {
+    id: 2,
+    name: "John Smith",
+    contact: "john@example.com",
+    phone: "555-5678",
+    job: "Forklift Operator",
+    onboardingStep: 4,
+    totalSteps: 5,
+    status: "Submitted",
+    notes: "Spanish-speaking, needs translator",
+  },
+];
+
+const STORAGE_KEY = "candidatesData";
+
+export function loadCandidates() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored ? JSON.parse(stored) : defaultCandidates;
+}
+
+export function saveCandidates(candidates) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(candidates));
+}
+
+export function updateCandidate(id, updates) {
+  const candidates = loadCandidates();
+  const updated = candidates.map((c) => (c.id === id ? { ...c, ...updates } : c));
+  saveCandidates(updated);
+  return updated;
+}
+
+// ✅ FILE: recruiter-dashboard.jsx
+
+import React, { useState, useEffect } from "react";
+import { loadCandidates, updateCandidate } from "./data-store";
+
+export default function RecruiterDashboard() {
+  const [candidates, setCandidates] = useState([]);
+
+  useEffect(() => {
+    setCandidates(loadCandidates());
+  }, []);
+
+  const handleStatusChange = (id, status) => {
+    const updated = updateCandidate(id, { status });
+    setCandidates(updated);
+  };
+
+  const handleNoteChange = (id, text) => {
+    const updated = updateCandidate(id, { notes: text });
+    setCandidates(updated);
+  };
+
+  const handleSubmitToClient = (id) => {
+    const updated = updateCandidate(id, { status: "Submitted" });
+    setCandidates(updated);
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <h2 className="text-xl font-bold">Recruiter Dashboard</h2>
+      {candidates.map((c) => (
+        <div key={c.id} className="border rounded-xl p-4 shadow">
+          <div className="font-semibold">{c.name}</div>
+          <div>{c.contact} | {c.phone}</div>
+          <div className="text-sm text-gray-600">Job: {c.job}</div>
+          <div className="my-2 bg-gray-100 rounded-full h-2">
+            <div
+              className="bg-blue-500 h-2 rounded-full"
+              style={{ width: `${(c.onboardingStep / c.totalSteps) * 100}%` }}
+            ></div>
+          </div>
+          <select
+            value={c.status}
+            onChange={(e) => handleStatusChange(c.id, e.target.value)}
+            className="border p-1 rounded"
+          >
+            {['New', 'In Review', 'Submitted', 'Hired', 'Rejected'].map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+          <textarea
+            value={c.notes}
+            onChange={(e) => handleNoteChange(c.id, e.target.value)}
+            placeholder="Add notes..."
+            className="block w-full mt-2 p-2 border rounded"
+          />
+          <button
+            onClick={() => handleSubmitToClient(c.id)}
+            className="mt-2 px-4 py-1 bg-green-600 text-white rounded"
+          >
+            Submit to Client
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ✅ FILE: client-dashboard.jsx
+
+import React, { useState, useEffect } from "react";
+import { loadCandidates, updateCandidate } from "./data-store";
+
+export default function ClientDashboard() {
+  const [candidates, setCandidates] = useState([]);
+
+  useEffect(() => {
+    setCandidates(loadCandidates().filter(c => c.status === "Submitted" || c.status === "Approved" || c.status === "Rejected"));
+  }, []);
+
+  const handleDecision = (id, status) => {
+    const updated = updateCandidate(id, { status });
+    setCandidates(updated.filter(c => c.status === "Submitted" || c.status === "Approved" || c.status === "Rejected"));
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <h2 className="text-xl font-bold">Client Dashboard</h2>
+      {candidates.map((c) => (
+        <div key={c.id} className="border rounded-xl p-4 shadow">
+          <div className="font-semibold">{c.name}</div>
+          <div>{c.contact} | {c.phone}</div>
+          <div className="text-sm text-gray-600">Job: {c.job}</div>
+          <div className="mt-2">Status: <span className="font-medium">{c.status}</span></div>
+          <div className="mt-2 space-x-2">
+            <button
+              onClick={() => handleDecision(c.id, "Approved")}
+              className="px-4 py-1 bg-blue-600 text-white rounded"
+            >
+              Approve
+            </button>
+            <button
+              onClick={() => handleDecision(c.id, "Rejected")}
+              className="px-4 py-1 bg-red-600 text-white rounded"
+            >
+              Reject
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
