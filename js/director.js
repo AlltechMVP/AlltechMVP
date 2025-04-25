@@ -1,56 +1,54 @@
 
 window.onload = () => {
     const kpis = [
-        { metric: "Average Time to Fill", value: "4.2 days" },
-        { metric: "Retention Rate", value: "92%" },
-        { metric: "Total Active Placements", value: "437" },
-        { metric: "Gross Margin", value: "24.5%" }
+        { label: "Avg Fill Rate", value: "84%" },
+        { label: "Avg Time-to-Fill", value: "3.4 days" },
+        { label: "Gross Margin", value: "39%" },
+        { label: "Placement Velocity", value: "2.1 placements/rep/week" }
     ];
 
     const automation = [
-        { tool: "Auto-matching", usage: "78% adoption", trend: "↑" },
-        { tool: "Smart Scheduling", usage: "65% adoption", trend: "↑" },
-        { tool: "Digital Onboarding", usage: "92% adoption", trend: "→" }
+        { label: "Digital Onboarding Rate", value: "92%" },
+        { label: "AI Resume Generator Usage", value: "68%" },
+        { label: "Automated Timecard Compliance", value: "87%" }
     ];
 
     const risks = [
-        { branch: "Dallas", issue: "High turnover rate in warehouse roles" },
-        { branch: "Phoenix", issue: "Compliance training overdue" },
-        { branch: "Miami", issue: "Safety incident reports increased" }
+        "High turnover at North Branch (27% last 30 days)",
+        "Client ghosting at Tesla (3 rejected, 0 response)",
+        "Manual payroll override detected in 12 cases last week"
     ];
 
     const branches = [
-        { name: "Houston", performance: "Top", metric: "+15% YoY growth" },
-        { name: "Chicago", performance: "Top", metric: "98% client retention" },
-        { name: "Atlanta", performance: "Bottom", metric: "-8% placement rate" },
-        { name: "Denver", performance: "Bottom", metric: "High contractor churn" }
+        { branch: "East Branch", result: "Top performer – 43 placements, 91% margin" },
+        { branch: "North Branch", result: "Low performer – 22 placements, high churn" }
     ];
 
     const kpiList = document.getElementById("kpiList");
-    kpis.forEach(kpi => {
+    kpis.forEach(k => {
         const li = document.createElement("li");
-        li.innerHTML = `${kpi.metric}: <strong>${kpi.value}</strong>`;
+        li.innerText = `${k.label}: ${k.value}`;
         kpiList.appendChild(li);
     });
 
     const automationList = document.getElementById("automationList");
-    automation.forEach(tool => {
+    automation.forEach(a => {
         const li = document.createElement("li");
-        li.innerHTML = `${tool.tool}: ${tool.usage} ${tool.trend}`;
+        li.innerText = `${a.label}: ${a.value}`;
         automationList.appendChild(li);
     });
 
     const riskList = document.getElementById("riskAlerts");
-    risks.forEach(risk => {
+    risks.forEach(r => {
         const li = document.createElement("li");
-        li.innerHTML = `<strong>${risk.branch}</strong>: ${risk.issue}`;
+        li.innerText = `⚠️ ${r}`;
         riskList.appendChild(li);
     });
 
     const branchList = document.getElementById("branchSummary");
-    branches.forEach(branch => {
+    branches.forEach(b => {
         const li = document.createElement("li");
-        li.innerHTML = `${branch.name} (${branch.performance}): ${branch.metric}`;
+        li.innerText = `${b.branch} – ${b.result}`;
         branchList.appendChild(li);
     });
 };
