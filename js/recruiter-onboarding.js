@@ -1,12 +1,11 @@
-
 import { supabase } from './supabase.js';
 
 async function loadOnboardingStatus() {
     try {
         const { data: candidates, error } = await supabase
-            .from('candidates')
+            .from('onboarding_status')
             .select('*')
-            .order('name');
+            .order('email');
 
         if (error) throw error;
 
@@ -15,18 +14,19 @@ async function loadOnboardingStatus() {
 
         candidates.forEach(candidate => {
             const row = document.createElement("tr");
-            const progress = calculateProgress(candidate);
-            
+            const progress = candidate.completed_steps;
+            const totalSteps = 4;
+            const progressColor = progress === totalSteps ? 'green' : 
+                                progress > 0 ? 'orange' : 'red';
+
             row.innerHTML = `
-                <td>${candidate.name}</td>
                 <td>${candidate.email}</td>
                 <td>${candidate.job_title || 'N/A'}</td>
-                <td>${candidate.status}</td>
-                <td>${checkmark(candidate.policies_acknowledged)}</td>
-                <td>${checkmark(candidate.handbook_acknowledged)}</td>
+                <td style="color: ${progressColor}">${progress}/${totalSteps}</td>
+                <td>${checkmark(candidate.acknowledged_policies)}</td>
+                <td>${checkmark(candidate.handbook)}</td>
                 <td>${checkmark(candidate.id_uploaded)}</td>
                 <td>${checkmark(candidate.e_signed)}</td>
-                <td>${progress}%</td>
             `;
             tbody.appendChild(row);
         });
@@ -38,17 +38,6 @@ async function loadOnboardingStatus() {
 
 function checkmark(value) {
     return value ? '✓' : '✗';
-}
-
-function calculateProgress(candidate) {
-    const steps = [
-        candidate.policies_acknowledged,
-        candidate.handbook_acknowledged,
-        candidate.id_uploaded,
-        candidate.e_signed
-    ];
-    const completed = steps.filter(step => step).length;
-    return Math.round((completed / steps.length) * 100);
 }
 
 window.onload = loadOnboardingStatus;

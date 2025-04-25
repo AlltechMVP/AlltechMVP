@@ -1,4 +1,6 @@
 
+import { supabase } from './supabase.js';
+
 let step = 1;
 let onboardingData = {
     policies: false,
@@ -7,7 +9,7 @@ let onboardingData = {
     eSigned: false
 };
 
-function updateStepIndicators() {
+async function updateStepIndicators() {
     for (let i = 1; i <= 4; i++) {
         const el = document.getElementById(`s${i}`);
         if (el) {
@@ -16,12 +18,30 @@ function updateStepIndicators() {
     }
 }
 
-function renderStep() {
+async function updateOnboardingStatus(updates) {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        const completedSteps = Object.values(onboardingData).filter(Boolean).length;
+        
+        await supabase.from("onboarding_status").upsert({
+            user_id: user.id,
+            email: user.email,
+            ...updates,
+            completed_steps: completedSteps
+        });
+    } catch (error) {
+        console.error("Error updating status:", error);
+    }
+}
+
+async function renderStep() {
     const container = document.getElementById("stepContainer");
     const progressText = document.getElementById("progressText");
     const fill = document.getElementById("progressFill");
     
-    updateStepIndicators();
+    await updateStepIndicators();
 
     const totalSteps = 4;
     progressText.innerText = `Step ${step} of ${totalSteps}`;
@@ -82,6 +102,8 @@ async function nextStep() {
         if (!onboardingData.policies) {
             alert("Please acknowledge the company policies to continue.");
             canProceed = false;
+        } else {
+            await updateOnboardingStatus({ acknowledged_policies: true });
         }
     }
     if (step === 2) {
@@ -89,6 +111,8 @@ async function nextStep() {
         if (!onboardingData.handbook) {
             alert("Please acknowledge reading the handbook to continue.");
             canProceed = false;
+        } else {
+            await updateOnboardingStatus({ handbook: true });
         }
     }
     if (step === 3) {
@@ -96,6 +120,8 @@ async function nextStep() {
         if (!onboardingData.idUploaded) {
             alert("Please upload your ID to continue.");
             canProceed = false;
+        } else {
+            await updateOnboardingStatus({ id_uploaded: true });
         }
     }
     
@@ -117,7 +143,7 @@ async function submitOnboarding() {
     
     onboardingData.eSigned = true;
     try {
-        const { user } = await supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             // Upload ID if present
             const idUpload = document.getElementById("idUpload").files[0];
@@ -134,14 +160,11 @@ async function submitOnboarding() {
                     .from("id_uploads")
                     .getPublicUrl(filePath);
 
-                // Update candidate status
-                await supabase.from("candidates")
-                    .update({
-                        status: "Ready for Placement",
-                        id_uploaded: publicUrl,
-                        onboarding_completed: true
-                    })
-                    .eq("email", user.email);
+                await updateOnboardingStatus({ 
+                    e_signed: true,
+                    id_uploaded: true,
+                    completed_steps: 4
+                });
             }
         }
     } catch (error) {
@@ -154,4 +177,7 @@ async function submitOnboarding() {
     renderStep();
 }
 
+window.nextStep = nextStep;
+window.prevStep = prevStep;
+window.submitOnboarding = submitOnboarding;
 window.onload = renderStep;
