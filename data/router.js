@@ -63,7 +63,6 @@ function CandidateDashboard() {
 export default CandidateDashboard;
 
 
-
 // onboarding-flow.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -99,7 +98,6 @@ function OnboardingFlow() {
     updateCandidate(1, { status: 'Onboarding Complete' });
     navigate('/candidate-dashboard');
   };
-
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -165,24 +163,24 @@ function OnboardingFlow() {
 
 export default OnboardingFlow;
 
-
-
-// App.js (Assuming this is your main app component)
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Signup from './signup.js';
-import Login from './login.js';
+// App.js
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './login.js'; // Assuming login.js is in the same directory
 import CandidateDashboard from './candidate-dashboard.jsx';
 import OnboardingFlow from './onboarding-flow.jsx';
+import Signup from './signup.js'; // Assuming signup.js is in the same directory
 
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Signup />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/candidate-dashboard" element={<CandidateDashboard />} />
-        <Route path="/onboarding-flow" element={<OnboardingFlow />} />
+          <Route path="/candidate-dashboard" element={<CandidateDashboard />} />
+          <Route path="/onboarding-flow" element={<OnboardingFlow />} />
+          <Route path="/" element={<Signup />} /> {/*Signup as default route*/}
+          <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
