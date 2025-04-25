@@ -1,7 +1,6 @@
-
 import { supabase } from './supabase.js';
 
-async function signUp() {
+export async function signUp() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
     const role = document.getElementById("role").value;
@@ -11,45 +10,43 @@ async function signUp() {
             email,
             password,
             options: {
-                data: { role }
+                data: {
+                    role: role
+                }
             }
         });
 
         if (error) throw error;
-        alert("Sign up successful! Please verify your email.");
-    } catch (error) {
-        alert(error.message);
+        alert("Check your email for a verification link");
+    } catch (err) {
+        alert("Error signing up: " + err.message);
     }
 }
 
-async function login() {
+export async function login() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
     try {
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
-            password,
-            options: {
-                persistSession: true
-            }
+            password
         });
 
         if (error) throw error;
-        localStorage.setItem('lastLoginEmail', email);
-        window.location.href = "dashboard.html";
-    } catch (error) {
-        alert(error.message);
+        window.location.href = '/dashboard.html';
+    } catch (err) {
+        alert("Error logging in: " + err.message);
     }
 }
 
-async function logout() {
+export async function logout() {
     try {
-        await supabase.auth.signOut();
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
         window.location.href = '/index.html';
-    } catch (error) {
-        console.error("Logout error:", error);
-        alert("Error during logout");
+    } catch (err) {
+        alert("Error logging out: " + err.message);
     }
 }
 
