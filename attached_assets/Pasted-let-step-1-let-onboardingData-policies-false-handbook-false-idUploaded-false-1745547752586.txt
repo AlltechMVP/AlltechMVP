@@ -1,0 +1,92 @@
+let step = 1;
+let onboardingData = {
+    policies: false,
+    handbook: false,
+    idUploaded: false,
+    eSigned: false
+};
+
+function renderStep() {
+    const container = document.getElementById("stepContainer");
+    const progressText = document.getElementById("progressText");
+    const fill = document.getElementById("progressFill");
+
+    const totalSteps = 4;
+    progressText.innerText = `Step ${step} of ${totalSteps}`;
+    fill.style.width = `${(step / totalSteps) * 100}%`;
+
+    switch (step) {
+        case 1:
+            container.innerHTML = `
+                <p><strong>Step 1:</strong> Acknowledge company policies.</p>
+                <label><input type="checkbox" id="policies"> I acknowledge company policies.</label><br><br>
+                <button onclick="nextStep()">Next</button>
+            `;
+            break;
+        case 2:
+            container.innerHTML = `
+                <p><strong>Step 2:</strong> Acknowledge employee handbook.</p>
+                <label><input type="checkbox" id="handbook"> I have read the handbook.</label><br><br>
+                <button onclick="prevStep()">Back</button>
+                <button onclick="nextStep()">Next</button>
+            `;
+            break;
+        case 3:
+            container.innerHTML = `
+                <p><strong>Step 3:</strong> Upload a photo ID.</p>
+                <input type="file" id="idUpload"><br><br>
+                <button onclick="prevStep()">Back</button>
+                <button onclick="nextStep()">Next</button>
+            `;
+            break;
+        case 4:
+            container.innerHTML = `
+                <p><strong>Step 4:</strong> Type your name as your electronic signature.</p>
+                <input type="text" id="signature" placeholder="Type your name"><br><br>
+                <button onclick="prevStep()">Back</button>
+                <button onclick="submitOnboarding()">Finish</button>
+            `;
+            break;
+        case 5:
+            container.innerHTML = `
+                <h3>Onboarding Complete</h3>
+                <ul>
+                    <li>Policies: ${onboardingData.policies ? "✓" : "✗"}</li>
+                    <li>Handbook: ${onboardingData.handbook ? "✓" : "✗"}</li>
+                    <li>ID Uploaded: ${onboardingData.idUploaded ? "✓" : "✗"}</li>
+                    <li>eSigned: ${onboardingData.eSigned ? "✓" : "✗"}</li>
+                </ul>
+                <a href="candidate.html">Return to Dashboard</a>
+            `;
+            break;
+    }
+}
+
+function nextStep() {
+    if (step === 1) {
+        onboardingData.policies = document.getElementById("policies").checked;
+    }
+    if (step === 2) {
+        onboardingData.handbook = document.getElementById("handbook").checked;
+    }
+    if (step === 3) {
+        onboardingData.idUploaded = document.getElementById("idUpload").files.length > 0;
+    }
+    if (step < 4) step++;
+    renderStep();
+}
+
+function prevStep() {
+    if (step > 1) step--;
+    renderStep();
+}
+
+function submitOnboarding() {
+    const sig = document.getElementById("signature").value.trim();
+    onboardingData.eSigned = !!sig;
+    localStorage.setItem("onboardingData", JSON.stringify(onboardingData));
+    step = 5;
+    renderStep();
+}
+
+window.onload = renderStep;
