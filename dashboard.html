@@ -8,6 +8,12 @@
     <script src="js/router.js" type="module"></script>
     <script src="js/auth.js" type="module"></script>
     <script src="js/dev-tools.js" type="module"></script>
+    <script type="module">
+        import { logout } from './js/auth.js';
+        import { unlockDevTools } from './js/dev-tools.js';
+        window.logout = logout;
+        window.unlockDevTools = unlockDevTools;
+    </script>
     <link href="style.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
