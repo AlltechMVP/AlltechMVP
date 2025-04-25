@@ -20,7 +20,7 @@ export function handleRoleOverride(e) {
     const selectedRole = e.target.value;
     if (selectedRole) {
         localStorage.setItem("roleOverride", selectedRole);
-        window.location.reload();
+        window.login(); // Trigger login with new role
     }
 }
 

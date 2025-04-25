@@ -26,6 +26,9 @@ window.login = async () => {
     if (overrideRole) {
         role = overrideRole;
         console.log("Dev override activated:", role);
+        // Redirect based on overridden role
+        window.location.href = role.toLowerCase().replace('_', '-') + '.html';
+        return;
     }
 
     // Redirect based on role
