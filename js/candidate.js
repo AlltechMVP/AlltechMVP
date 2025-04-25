@@ -1,46 +1,49 @@
 
-import { supabase } from './supabase.js';
-
-async function loadCandidateInfo() {
-    const {
-        data: { user },
-        error: authError
-    } = await supabase.auth.getUser();
-
-    if (authError) {
-        console.error('Error loading user:', authError);
-        return;
+// Mock candidate data (simulate logged-in candidate)
+const candidate = {
+    name: "Lena James",
+    email: "lj@a.com", 
+    phone: "555-876-4321",
+    jobTitle: "Forklift Operator",
+    status: "Ready for Placement",
+    resume: "#",
+    idUpload: "#",
+    onboarding: {
+        acknowledgedPolicies: true,
+        acknowledgedHandbook: true,
+        idUploaded: true,
+        eSigned: true
     }
+};
 
-    const { data: candidate, error } = await supabase
-        .from('candidates')
-        .select('*')
-        .eq('email', user.email)
-        .single();
-
-    if (error) {
-        console.error('Error loading candidate:', error);
-        return;
-    }
-
-    document.getElementById('candidateInfo').innerHTML = `
+function loadCandidateInfo() {
+    const infoDiv = document.getElementById("candidateInfo");
+    infoDiv.innerHTML = `
         <p><strong>Name:</strong> ${candidate.name}</p>
         <p><strong>Email:</strong> ${candidate.email}</p>
-        <p><strong>Status:</strong> ${candidate.status}</p>
+        <p><strong>Phone:</strong> ${candidate.phone}</p>
+        <p><strong>Job Title:</strong> ${candidate.jobTitle}</p>
+        <p><strong>Application Status:</strong> ${candidate.status}</p>
+        <p><a href="${candidate.resume}" target="_blank">View Resume</a></p>
+        <p><a href="${candidate.idUpload}" target="_blank">View Uploaded ID</a></p>
     `;
 
-    const checklist = document.getElementById('onboardingChecklist');
     const steps = [
-        { id: 'application', label: 'Application Submitted', done: true },
-        { id: 'docs', label: 'Documents Uploaded', done: candidate.id_uploaded ? true : false },
-        { id: 'placement', label: 'Ready for Placement', done: candidate.status === 'Ready for Placement' }
+        { label: "Acknowledged Company Policies", key: "acknowledgedPolicies" },
+        { label: "Acknowledged Handbook", key: "acknowledgedHandbook" },
+        { label: "Uploaded ID", key: "idUploaded" },
+        { label: "Signed Electronically", key: "eSigned" }
     ];
 
-    checklist.innerHTML = steps.map(step => `
-        <li style="color: ${step.done ? 'green' : 'gray'}">
-            ${step.done ? '✓' : '○'} ${step.label}
-        </li>
-    `).join('');
+    const checklist = document.getElementById("onboardingChecklist");
+    checklist.innerHTML = '';
+    steps.forEach(step => {
+        const li = document.createElement("li");
+        li.innerHTML = candidate.onboarding[step.key]
+            ? `✅ ${step.label}`
+            : `❌ ${step.label}`;
+        checklist.appendChild(li);
+    });
 }
 
 window.onload = loadCandidateInfo;
