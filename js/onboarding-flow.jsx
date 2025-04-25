@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadCandidates, updateCandidate } from './data-store';
+import { loadCandidates, updateOnboardingData, updateCandidate } from './data-store';
 
 const steps = [
   {
@@ -55,6 +55,7 @@ export default function OnboardingFlow() {
     }
     
     updateCandidate(candidate.id, updates);
+    updateOnboardingData(candidate.id, formData);
     
     if (currentStep === steps.length) {
       navigate('/candidate-dashboard');

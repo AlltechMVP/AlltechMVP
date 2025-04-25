@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadCandidates, updateCandidate } from './data-store';
+import { loadCandidates } from './data-store';
 
 export default function CandidateDashboard() {
   const [candidate, setCandidate] = useState(null);
