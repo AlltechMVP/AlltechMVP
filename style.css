@@ -287,33 +287,134 @@ tr:hover {
     transition: width 0.4s ease-in-out;
 }
 
-/* Visual step indicators */
+/* Enhanced Visual step indicators */
 .step-indicator {
     display: flex;
     justify-content: space-between;
-    margin: 1rem 0 0.5rem;
-    font-size: 0.9rem;
+    margin: 2rem 0;
+    padding: 0 1rem;
 }
 
-.step-indicator .step {
+.step {
     flex: 1;
     text-align: center;
     position: relative;
 }
 
-.step-indicator .step::before {
-    content: attr(data-step);
+.step-number {
     display: inline-block;
     background: #ccc;
     color: white;
-    width: 24px;
-    height: 24px;
-    line-height: 24px;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
     border-radius: 50%;
-    font-size: 0.8rem;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
 }
 
-.step-indicator .active::before {
+.step.active .step-number {
     background: #4CAF50;
+}
+
+.step-check {
+    position: absolute;
+    top: -5px;
+    right: 30%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.step-label {
+    display: block;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Progress bar */
+.progress-track {
+    background: #f0f0f0;
+    height: 10px;
+    border-radius: 5px;
+    margin: 1rem 0;
+    overflow: hidden;
+}
+
+#progressFill {
+    background: #4CAF50;
+    height: 100%;
+    width: 0;
+    transition: width 0.4s ease-in-out;
+}
+
+.progress-text {
+    text-align: center;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Step content */
+.step-content {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    margin: 1rem 0;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.button-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+/* Completion screen */
+.completion-screen {
+    text-align: center;
+    padding: 2rem;
+}
+
+.completion-summary {
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.completion-summary ul {
+    list-style: none;
+    padding: 0;
+    text-align: left;
+}
+
+.completion-summary li {
+    margin: 0.5rem 0;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+    .step-label {
+        font-size: 0.8rem;
+    }
+    
+    .step-check {
+        right: 20%;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .button-group button {
+        width: 100%;
+    }
 }
