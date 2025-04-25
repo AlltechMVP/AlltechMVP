@@ -1,65 +1,65 @@
 
 # Alltech Staffing Platform MVP
 
-A React-based staffing platform built in Replit using localStorage for data persistence.
+This is a full-featured, role-based staffing platform MVP built in React using Replit and localStorage. The platform supports recruiters, candidates, clients, and internal teams through custom workflows and simulated AI tools.
 
-## Quick Start
+---
 
-1. Open in Replit
-2. Click the "Run" button
-3. Application will start at port 5000
+## 🚀 How to Run
 
-## User Roles & Capabilities
+1. Open the project in [Replit](https://replit.com/@DDAlltech/AlltechMVP)
+2. Run the app using the green ▶️ "Run" button
+3. Open the webview in a new tab (globe icon 🌐)
 
-### Admin
-- Manage users and permissions
-- View all dashboards
-- Access system settings
+---
 
-### Recruiter
-- Post and manage job orders
-- Review candidate applications
-- Track candidate pipeline
-- Generate reports
+## 🔐 Roles & Functionality
 
-### Sales Representative
-- View and manage client accounts
-- Track job order status
-- Access ROI calculator
-- View pipeline metrics
+| Role         | Dashboard View            | Features |
+|--------------|---------------------------|----------|
+| **Admin**    | `/admin-dashboard`        | Create jobs, assign recruiters, view KPIs |
+| **Recruiter**| `/recruiter-dashboard`    | Manage candidates, onboarding, submissions |
+| **Sales Rep**| `/sales-dashboard`        | Manage pipeline, update leads |
+| **Client**   | `/client-approvals`       | Approve/reject candidates and job orders |
+| **Candidate**| `/candidate-dashboard`    | View application status, onboarding, job search |
 
-### Client
-- Review candidate submissions
-- Approve/reject candidates
-- View active placements
-- Access timecard summaries
+Login is simulated via a user dropdown (`/login`)
 
-### Candidate
-- Apply for positions
-- Complete onboarding
-- Upload documents
-- Track application status
+---
 
-## Core Features
+## 📦 Modules Included
 
-- Smart job matching
-- Document generation
-- GL code mapping
-- ROI calculations
-- Multi-role dashboards
-- Candidate onboarding
+- ✅ Role-based dashboards
+- ✅ Smart Matching (job → candidate)
+- ✅ Resume Generator (AI-style)
+- ✅ Timesheet entry + payroll simulation
+- ✅ Global search + alerts center
+- ✅ Import/Export simulation
+- ✅ VMS Aggregator (mock job feed)
+- ✅ ROI Calculator (cost savings estimator)
+- ✅ GL Mapping Assistant
 
-## Technical Stack
+---
 
-- React + Vite
+## 🧠 Stack
+
+- React
 - Tailwind CSS
-- localStorage for data persistence
-- React Router for navigation
+- LocalStorage (no backend required)
+- Routing via `react-router-dom`
 
-## Demo Access
+---
 
-For testing, use the role selector on the login page to access different user perspectives.
+## 🧪 Coming Soon
 
-## Development
+- Supabase integration (optional)
+- File upload + document preview
+- Role-based tasks/inbox
+- BI Charts (live)
 
-The project uses a component-based architecture with role-based routing and shared utilities.
+---
+
+## 📣 Notes
+
+> Built by @DDAlltech in Replit.  
+> For internal use, demo prep, or investor walkthrough.
