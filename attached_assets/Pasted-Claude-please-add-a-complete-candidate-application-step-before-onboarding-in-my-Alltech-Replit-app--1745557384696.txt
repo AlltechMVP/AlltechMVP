@@ -1,0 +1,97 @@
+Claude, please add a complete candidate application step before onboarding in my Alltech Replit app. Use only mock data (no Supabase yet). Create or update the following files:
+
+---
+
+1. ✅ Create a new file: **candidate-apply.html**
+
+Paste this code:
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Candidate Application</title>
+  <script src="js/candidate-apply.js" defer></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <main>
+    <h2>Apply to Work</h2>
+    <form id="applicationForm">
+      <label>Full Name</label>
+      <input type="text" id="name" required />
+
+      <label>Email</label>
+      <input type="email" id="email" required />
+
+      <label>Phone</label>
+      <input type="text" id="phone" required />
+
+      <label>Job Interest</label>
+      <input type="text" id="job" required />
+
+      <label>Availability</label>
+      <select id="availability">
+        <option value="Immediately">Immediately</option>
+        <option value="1 week">In 1 week</option>
+        <option value="2+ weeks">In 2+ weeks</option>
+      </select>
+
+      <label>Upload Resume (simulated)</label>
+      <input type="file" id="resume" />
+
+      <br><br>
+      <button type="submit">Start Onboarding</button>
+    </form>
+  </main>
+</body>
+</html>
+
+---
+
+2. ✅ Create a new file: **js/candidate-apply.js**
+
+Paste this code:
+
+document.getElementById("applicationForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  const mockCandidateProfile = {
+    name: document.getElementById("name").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    job: document.getElementById("job").value.trim(),
+    availability: document.getElementById("availability").value,
+    resume: document.getElementById("resume").files[0]?.name || "Not uploaded"
+  };
+
+  localStorage.setItem("candidateProfile", JSON.stringify(mockCandidateProfile));
+  window.location.href = "onboarding.html";
+});
+
+---
+
+3. ✅ Update **js/onboarding.js** (at the top)
+
+Add this snippet before rendering onboarding steps:
+
+const profile = JSON.parse(localStorage.getItem("candidateProfile"));
+
+if (!profile) {
+    window.location.href = "candidate-apply.html";
+} else {
+    document.body.insertAdjacentHTML("afterbegin", `
+        <div style="background:#f0f0f0;padding:1rem;border-radius:6px;margin-bottom:1rem;">
+            <strong>${profile.name}</strong><br>
+            ${profile.email} — ${profile.job}
+        </div>
+    `);
+}
+
+---
+
+Make sure:
+- The application saves the profile locally
+- Redirects to onboarding.html on submit
+- Onboarding page shows candidate’s info from localStorage
+
+Only mock data — no Supabase connections yet.
