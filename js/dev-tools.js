@@ -8,7 +8,7 @@ export function unlockDevTools() {
         if (devOverride) {
             devOverride.style.display = "block";
             localStorage.setItem("alltechDevOverride", "true");
-            alert("Dev override enabled.");
+            alert("Dev override enabled. Select a role and login with credentials.");
         }
     } else {
         alert("Invalid passcode");
@@ -20,7 +20,10 @@ export function handleRoleOverride(e) {
     const selectedRole = e.target.value;
     if (selectedRole) {
         localStorage.setItem("roleOverride", selectedRole);
-        window.login(); // Trigger login with new role
+        // Clear any existing auth
+        localStorage.removeItem("supabase.auth.token");
+        // Redirect to login page
+        window.location.href = "/index.html";
     }
 }
 
