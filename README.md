@@ -1,65 +1,91 @@
 
-# Alltech Staffing Platform MVP
+# Alltech Staffing Platform MVP – Developer README
 
-This is a full-featured, role-based staffing platform MVP built in React using Replit and localStorage. The platform supports recruiters, candidates, clients, and internal teams through custom workflows and simulated AI tools.
+This project is a modular, localStorage-powered staffing platform MVP built in React. It supports full front- and back-office workflows for recruiters, clients, candidates, and admins. Designed in Replit for rapid prototyping and demo readiness.
 
----
+## 🚀 Quick Start
 
-## 🚀 How to Run
+1. Open in [Replit](https://replit.com/@DDAlltech/AlltechMVP)
+2. Click ▶️ Run to start Vite dev server
+3. Access app via webview or new tab
 
-1. Open the project in [Replit](https://replit.com/@DDAlltech/AlltechMVP)
-2. Run the app using the green ▶️ "Run" button
-3. Open the webview in a new tab (globe icon 🌐)
+## 🏗️ Architecture
 
----
+```
+/js
+├── components/      # React JSX modules
+├── stores/         # Data persistence 
+├── tools/          # Feature modules
+└── auth/           # Role system
+```
 
-## 🔐 Roles & Functionality
+## 💻 Development
 
-| Role         | Dashboard View            | Features |
-|--------------|---------------------------|----------|
-| **Admin**    | `/admin-dashboard`        | Create jobs, assign recruiters, view KPIs |
-| **Recruiter**| `/recruiter-dashboard`    | Manage candidates, onboarding, submissions |
-| **Sales Rep**| `/sales-dashboard`        | Manage pipeline, update leads |
-| **Client**   | `/client-approvals`       | Approve/reject candidates and job orders |
-| **Candidate**| `/candidate-dashboard`    | View application status, onboarding, job search |
+### Role System
+- Dev override code: `alltechadmin`
+- Roles: CEO, CFO, Director, Sales, Client, Recruiter
+- Auth simulation via localStorage
 
-Login is simulated via a user dropdown (`/login`)
+### Data Layer
+```javascript
+// Access stored data
+const users = JSON.parse(localStorage.getItem('users'))
+const jobs = JSON.parse(localStorage.getItem('jobs'))
+```
 
----
+### Component Props
+```javascript
+// Standard dashboard props
+interface DashboardProps {
+  userData: UserData;
+  roleType: RoleTypes;
+  metrics?: MetricsData;
+}
+```
 
-## 📦 Modules Included
+## 🔧 Core Modules
 
-- ✅ Role-based dashboards
-- ✅ Smart Matching (job → candidate)
-- ✅ Resume Generator (AI-style)
-- ✅ Timesheet entry + payroll simulation
-- ✅ Global search + alerts center
-- ✅ Import/Export simulation
-- ✅ VMS Aggregator (mock job feed)
-- ✅ ROI Calculator (cost savings estimator)
-- ✅ GL Mapping Assistant
+| Module | Purpose | Key Functions |
+|--------|----------|--------------|
+| `data-store.js` | Central state | `getUser()`, `updateUser()` |
+| `router.js` | Navigation | Role-based routing |
+| `dev-tools.js` | Testing | Role override |
 
----
+## 🧪 Testing
 
-## 🧠 Stack
+1. Enable dev mode:
+   - Click "Dev override" link
+   - Enter code: `alltechadmin`
+   - Select role from dropdown
 
-- React
-- Tailwind CSS
-- LocalStorage (no backend required)
-- Routing via `react-router-dom`
+2. Test flows:
+   - Candidate application
+   - Job posting
+   - Client approvals
+   - Onboarding steps
 
----
+## 📦 Future Integration
 
-## 🧪 Coming Soon
+```javascript
+// Supabase auth example
+const { user, session } = await supabase.auth.signUp({
+  email: 'user@alltech.com',
+  password: 'password'
+})
+```
 
-- Supabase integration (optional)
-- File upload + document preview
-- Role-based tasks/inbox
-- BI Charts (live)
+## 🛠️ Dev Tools
 
----
+- Role override system
+- Mock data generators
+- Console debugging
+- localStorage inspector
 
-## 📣 Notes
+## 📝 Notes
 
-> Built by @DDAlltech in Replit.  
-> For internal use, demo prep, or investor walkthrough.
+- Vite dev server runs on port 5000
+- All API calls simulated via localStorage
+- Role-based routing handles access control
+- Mock data persists in localStorage
+
+> Built for rapid prototyping and demo deployment on Replit
