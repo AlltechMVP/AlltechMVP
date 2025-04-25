@@ -1,30 +1,15 @@
+
 <!DOCTYPE html>
 <html>
 <head>
     <title>Alltech Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script type="module" src="js/router.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js" type="module"></script>
+    <script src="js/router.js" type="module"></script>
     <link href="style.css" rel="stylesheet" type="text/css" />
-    <script src="js/dev-tools.js" type="module"></script>
 </head>
 <body>
-    <button onclick="unlockDevTools()" class="dev-button">Dev Tools</button>
-    <main>
-        <div id="devOverride" style="display: none;">
-            <label>Override Role (dev only):</label>
-            <select id="overrideRole" class="input-field">
-                <option value="">Use stored role</option>
-                <option value="ceo">CEO</option>
-                <option value="cfo">CFO</option>
-                <option value="director">Director</option>
-                <option value="branch_manager">Branch Manager</option>
-                <option value="sales_manager">Sales Manager</option>
-                <option value="sales_rep">Sales Rep</option>
-                <option value="recruiter">Recruiter</option>
-                <option value="client">Client</option>
-                <option value="candidate">Candidate</option>
-            </select>
-        </div>
+    <main class="login-container">
         <div id="devOverride" style="display: none;">
             <label>Override Role (dev only):</label>
             <select id="overrideRole" class="input-field">
@@ -41,9 +26,20 @@
             </select>
         </div>
         <h2>Welcome to Alltech</h2>
-        <div id="roleContent">Loading...</div>
+        <div id="roleContent">Redirecting to your dashboard...</div>
         <button onclick="logout()" class="auth-button">Logout</button>
         <p><a href="#" onclick="unlockDevTools(); return false;" class="dev-link">Dev override</a></p>
     </main>
+    <script>
+        // Redirect immediately
+        window.onload = () => {
+            // Give router.js a moment to check auth and redirect
+            setTimeout(() => {
+                if (document.getElementById('roleContent').innerText === 'Redirecting to your dashboard...') {
+                    window.location.href = '/index.html';
+                }
+            }, 2000);
+        };
+    </script>
 </body>
 </html>
