@@ -236,3 +236,13 @@ tr:hover {
 .back-link:hover {
     text-decoration: underline;
 }
+
+.dev-link {
+    color: #666;
+    text-decoration: none;
+    font-size: 0.8em;
+}
+
+.dev-link:hover {
+    text-decoration: underline;
+}
