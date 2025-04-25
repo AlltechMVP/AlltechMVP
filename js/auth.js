@@ -29,15 +29,28 @@ export async function login() {
     try {
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
-            password
+            password,
+            options: {
+                persistSession: true
+            }
         });
 
         if (error) throw error;
+        localStorage.setItem('lastLoginEmail', email);
         window.location.href = "dashboard.html";
     } catch (error) {
         alert(error.message);
     }
 }
+
+// Auto-fill last used email
+window.onload = () => {
+    const lastEmail = localStorage.getItem('lastLoginEmail');
+    if (lastEmail) {
+        const emailInput = document.getElementById("email");
+        if (emailInput) emailInput.value = lastEmail;
+    }
+};
 
 export async function logout() {
     await supabase.auth.signOut();
