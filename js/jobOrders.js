@@ -12,7 +12,10 @@ const defaultJobs = [
     urgency: "High",
     recruiterIds: [],
     submittedCandidates: [],
-    notes: []
+    notes: [],
+    clientApprovalStatus: 'pending',
+    clientFeedback: '',
+    sourceVMS: null
   },
   {
     id: 2,
@@ -88,4 +91,52 @@ export function markJobFilled(id) {
   });
   saveJobOrders(updatedJobs);
   return updatedJobs;
+}
+
+
+export function approveJobByClient(id, feedback) {
+  const jobs = loadJobOrders();
+  const updatedJobs = jobs.map(job => {
+    if (job.id === id) {
+      return {
+        ...job,
+        clientApprovalStatus: 'approved',
+        clientFeedback: feedback
+      };
+    }
+    return job;
+  });
+  saveJobOrders(updatedJobs);
+  return updatedJobs.find(j => j.id === id);
+}
+
+export function rejectJobByClient(id, feedback) {
+  const jobs = loadJobOrders();
+  const updatedJobs = jobs.map(job => {
+    if (job.id === id) {
+      return {
+        ...job,
+        clientApprovalStatus: 'rejected',
+        clientFeedback: feedback
+      };
+    }
+    return job;
+  });
+  saveJobOrders(updatedJobs);
+  return updatedJobs.find(j => j.id === id);
+}
+
+export function tagJobWithVMS(id, sourceVMS) {
+  const jobs = loadJobOrders();
+  const updatedJobs = jobs.map(job => {
+    if (job.id === id) {
+      return {
+        ...job,
+        sourceVMS
+      };
+    }
+    return job;
+  });
+  saveJobOrders(updatedJobs);
+  return updatedJobs.find(j => j.id === id);
 }
