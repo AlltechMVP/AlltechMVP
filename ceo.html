@@ -11,14 +11,29 @@
 
         const { data } = await supabase.auth.getUser();
         const role = data?.user?.user_metadata?.role;
+        const email = data?.user?.email;
 
         if (!data?.user || role !== "ceo") {
             window.location.href = "index.html";
+        } else {
+            document.getElementById("userInfo").innerHTML = `
+                <p><strong>Logged in as:</strong> ${email}</p>
+                <p><strong>Role:</strong> ${role}</p>
+            `;
         }
+    </script>
+    <script type="module">
+        import supabase from './js/supabase.js';
+        
+        window.logout = async () => {
+            await supabase.auth.signOut();
+            window.location.href = "index.html";
+        };
     </script>
 </head>
 <body>
     <main>
+        <div id="userInfo"></div>
         <button onclick="logout()" class="auth-button" style="float: right;">Logout</button>
         <h2>Welcome, CEO</h2>
 
