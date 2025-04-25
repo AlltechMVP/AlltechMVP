@@ -1,6 +1,27 @@
 
 import { supabase } from './supabase.js';
 
+function updateProgress() {
+    const totalSteps = 4;
+    const completedSteps = [
+        document.getElementById("ack_policy").checked,
+        document.getElementById("ack_handbook").checked,
+        document.getElementById("id_upload").files.length > 0,
+        document.getElementById("e_sign").checked
+    ].filter(step => step).length;
+
+    const percentage = (completedSteps / totalSteps) * 100;
+    document.getElementById("progressFill").style.width = percentage + "%";
+    document.getElementById("progressText").innerText = `${completedSteps} of ${totalSteps} steps completed`;
+}
+
+["ack_policy", "ack_handbook", "id_upload", "e_sign"].forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+        element.addEventListener("change", updateProgress);
+    }
+});
+
 document.getElementById("onboardingForm").addEventListener("submit", async function(e) {
     e.preventDefault();
 
