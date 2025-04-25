@@ -19,11 +19,20 @@ export function unlockDevTools() {
 export function handleRoleOverride(e) {
     const selectedRole = e.target.value;
     if (selectedRole) {
+        // Set mock auth data for testing
+        const mockAuthData = {
+            user: {
+                email: 'test@example.com',
+                user_metadata: {
+                    role: selectedRole
+                }
+            }
+        };
         localStorage.setItem("roleOverride", selectedRole);
-        // Clear any existing auth
-        localStorage.removeItem("supabase.auth.token");
-        // Redirect to login page
-        window.location.href = "/index.html";
+        localStorage.setItem("supabase.auth.token", JSON.stringify(mockAuthData));
+        
+        // Redirect to role-specific page
+        window.location.href = selectedRole.toLowerCase().replace('_', '-') + '.html';
     }
 }
 
