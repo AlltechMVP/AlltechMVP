@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -16,23 +17,30 @@
             <option value="recruiter">Recruiter</option>
             <option value="client">Client</option>
         </select><br>
-        <select id="overrideRole" class="input-field">
-            <option value="">Use my actual role</option>
-            <option value="ceo">CEO</option>
-            <option value="cfo">CFO</option>
-            <option value="director">Director</option>
-            <option value="branch_manager">Branch Manager</option>
-            <option value="sales_manager">Sales Manager</option>
-            <option value="sales_rep">Sales Rep</option>
-            <option value="recruiter">Recruiter</option>
-            <option value="client">Client</option>
-            <option value="candidate">Candidate</option>
-        </select><br>
+        
+        <!-- Hidden dev override -->
+        <div id="devOverride" style="display: none;">
+            <select id="overrideRole" class="input-field">
+                <option value="">Use stored role</option>
+                <option value="ceo">CEO</option>
+                <option value="cfo">CFO</option>
+                <option value="director">Director</option>
+                <option value="branch_manager">Branch Manager</option>
+                <option value="sales_manager">Sales Manager</option>
+                <option value="sales_rep">Sales Rep</option>
+                <option value="recruiter">Recruiter</option>
+                <option value="client">Client</option>
+                <option value="candidate">Candidate</option>
+            </select>
+        </div>
+        
         <p><a href="#" onclick="unlockDevTools(); return false;" class="dev-link">Dev override</a></p>
+        
         <div class="button-group">
             <button onclick="signUp()" class="auth-button">Sign Up</button>
             <button onclick="login()" class="auth-button">Login</button>
         </div>
+        
         <p class="reset-text">
             <a href="#" onclick="resetPassword(); return false;">Forgot Password?</a>
         </p>
