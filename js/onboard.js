@@ -6,11 +6,20 @@ const totalSteps = 4;
 let uploadedFiles = {};
 
 async function init() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        window.location.href = 'index.html';
+    const candidateProfile = JSON.parse(localStorage.getItem('candidateProfile'));
+    if (!candidateProfile) {
+        window.location.href = 'candidate-apply.html';
         return;
     }
+
+    // Add candidate info to the page
+    const header = document.querySelector('main h2');
+    header.insertAdjacentHTML('afterend', `
+        <div class="candidate-info">
+            <p>Candidate: ${candidateProfile.fullName}</p>
+            <p>Email: ${candidateProfile.email}</p>
+        </div>
+    `);
     
     setupFileInputs();
     updateProgress();

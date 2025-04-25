@@ -112,13 +112,12 @@ button {
 }
 
 .login-container {
+    max-width: 400px;
+    margin: 40px auto;
+    padding: 20px;
     background: white;
-    padding: 2rem;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
 }
 
 .input-field {
@@ -405,15 +404,15 @@ tr:hover {
     .step-label {
         font-size: 0.8rem;
     }
-    
+
     .step-check {
         right: 20%;
     }
-    
+
     .button-group {
         flex-direction: column;
     }
-    
+
     .button-group button {
         width: 100%;
     }
@@ -514,4 +513,39 @@ button:disabled {
     background: #1976D2;
 }
 
+}
+
+.login-container {
+    max-width: 400px;
+    margin: 40px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.candidate-info {
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+select.input-field {
+    width: 100%;
+    padding: 8px;
+    margin: 8px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+}
+
+input[type="file"].input-field {
+    padding: 8px;
+    margin: 8px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    width: 100%;
+    box-sizing: border-box;
 }

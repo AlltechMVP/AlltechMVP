@@ -1,0 +1,37 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Apply - Alltech</title>
+    <script src="js/candidate-apply.js" defer></script>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <main class="login-container">
+        <h2>Apply to Alltech</h2>
+        <form id="applicationForm" onsubmit="handleSubmit(event)">
+            <input type="text" id="fullName" placeholder="Full Name" class="input-field" required>
+            <input type="email" id="email" placeholder="Email" class="input-field" required>
+            <input type="tel" id="phone" placeholder="Phone Number" class="input-field" required>
+            
+            <select id="jobInterest" class="input-field" required>
+                <option value="">Select Desired Role</option>
+                <option value="Warehouse Associate">Warehouse Associate</option>
+                <option value="Forklift Driver">Forklift Driver</option>
+                <option value="Logistics Coordinator">Logistics Coordinator</option>
+            </select>
+
+            <select id="availability" class="input-field" required>
+                <option value="">Select Availability</option>
+                <option value="immediate">Immediately</option>
+                <option value="1week">1 Week</option>
+                <option value="2weeks">2+ Weeks</option>
+            </select>
+
+            <input type="file" id="resume" accept=".pdf,.doc,.docx" class="input-field" required>
+            
+            <button type="submit" class="auth-button">Start Onboarding</button>
+        </form>
+    </main>
+</body>
+</html>
