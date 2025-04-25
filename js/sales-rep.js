@@ -1,50 +1,39 @@
-
 // Mock data for sales rep dashboard
-const mockData = {
-    leads: [
-        { name: "Tech Corp", status: "New Lead", potential: "$50,000" },
-        { name: "Manufacturing Inc", status: "Follow Up", potential: "$75,000" },
-        { name: "Logistics Pro", status: "Proposal", potential: "$100,000" }
-    ],
-    jobOrders: [
-        { client: "Tech Corp", position: "Software Engineer", status: "Open" },
-        { client: "Manufacturing Inc", position: "Production Manager", status: "Filled" }
-    ],
-    commissions: {
-        monthToDate: 4500,
-        projected: 7500,
-        placements: 3
-    }
-};
+const leads = [
+    { name: "Metro Logistics", status: "Follow-Up", contact: "steve@metro.com" },
+    { name: "NorthPoint Tech", status: "Cold", contact: "hr@northpoint.io" },
+    { name: "Bright Staffing", status: "Hot Lead", contact: "paula@brightstaff.com" }
+];
 
-function loadDashboard() {
-    // Load client leads
+const jobOrders = [
+    { title: "Warehouse Loaders – Dallas", date: "2025-04-12", client: "Metro Logistics" },
+    { title: "Assemblers – Night Shift", date: "2025-04-17", client: "Bright Staffing" }
+];
+
+const commissions = [
+    { client: "Metro Logistics", value: "$480", status: "Pending" },
+    { client: "Bright Staffing", value: "$320", status: "Earned" }
+];
+
+window.onload = () => {
     const clientList = document.getElementById("clientList");
-    clientList.innerHTML = mockData.leads.map(lead => `
-        <li>
-            <strong>${lead.name}</strong><br>
-            Status: ${lead.status}<br>
-            Potential: ${lead.potential}
-        </li>
-    `).join('');
+    leads.forEach(lead => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${lead.name}</strong> – ${lead.status} (<a href="mailto:${lead.contact}">${lead.contact}</a>)`;
+        clientList.appendChild(li);
+    });
 
-    // Load job orders
-    const jobOrderList = document.getElementById("jobOrderList");
-    jobOrderList.innerHTML = mockData.jobOrders.map(job => `
-        <li>
-            <strong>${job.client}</strong><br>
-            Position: ${job.position}<br>
-            Status: <span class="${job.status.toLowerCase()}">${job.status}</span>
-        </li>
-    `).join('');
+    const jobList = document.getElementById("jobOrderList");
+    jobOrders.forEach(order => {
+        const li = document.createElement("li");
+        li.innerHTML = `${order.title} for ${order.client} (submitted ${order.date})`;
+        jobList.appendChild(li);
+    });
 
-    // Load commission data
     const commissionList = document.getElementById("commissionList");
-    commissionList.innerHTML = `
-        <li>Month-to-Date: $${mockData.commissions.monthToDate}</li>
-        <li>Projected: $${mockData.commissions.projected}</li>
-        <li>Placements: ${mockData.commissions.placements}</li>
-    `;
-}
-
-window.onload = loadDashboard;
+    commissions.forEach(item => {
+        const li = document.createElement("li");
+        li.innerHTML = `${item.client}: ${item.value} – ${item.status}`;
+        commissionList.appendChild(li);
+    });
+};
