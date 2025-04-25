@@ -19,5 +19,11 @@ window.onload = () => {
     }
 };
 
-// Make function available globally
+// Function to proceed to login
+export const proceedToLogin = () => {
+    window.location.href = '/index.html';
+};
+
+// Make functions available globally
 window.unlockDevTools = unlockDevTools;
+window.proceedToLogin = proceedToLogin;
