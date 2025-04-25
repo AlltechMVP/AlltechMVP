@@ -1,35 +1,26 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loadJobOrders, markJobFilled, updateJobOrder } from './jobOrders';
 
 export default function JobOrders() {
   const [jobs, setJobs] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedJobs = JSON.parse(localStorage.getItem('jobOrders') || '[]');
-    setJobs(storedJobs);
+    const jobData = loadJobOrders();
+    setJobs(jobData);
   }, []);
 
   const handleMarkFilled = (jobId) => {
-    const updatedJobs = jobs.map(job => {
-      if (job.id === jobId) {
-        return { ...job, currentFilled: job.totalOpenings };
-      }
-      return job;
-    });
-    localStorage.setItem('jobOrders', JSON.stringify(updatedJobs));
+    const updatedJobs = markJobFilled(jobId);
     setJobs(updatedJobs);
   };
 
   const assignRecruiter = (jobId) => {
-    const updatedJobs = jobs.map(job => {
-      if (job.id === jobId) {
-        return { ...job, recruiterId: 1 };
-      }
-      return job;
+    const updatedJobs = updateJobOrder(jobId, {
+      recruiterIds: [1]
     });
-    localStorage.setItem('jobOrders', JSON.stringify(updatedJobs));
     setJobs(updatedJobs);
   };
 
@@ -42,7 +33,7 @@ export default function JobOrders() {
             <h2 className="text-xl font-semibold">{job.title}</h2>
             <p className="text-gray-600">{job.location}</p>
             <p className="font-medium">${job.payRate}/hr</p>
-            <p className="text-gray-700">{job.clientName}</p>
+            <p className="text-gray-700">{job.client}</p>
             <div className="flex items-center gap-2 my-2">
               <span className={`px-2 py-1 rounded text-sm ${
                 job.urgency === 'High' ? 'bg-red-100 text-red-800' : 

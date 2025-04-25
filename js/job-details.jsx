@@ -1,49 +1,39 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { loadJobOrders, addNoteToJob, removeCandidateFromJob, updateJobOrder } from './jobOrders';
 
 export default function JobDetails() {
   const { id } = useParams();
   const [job, setJob] = useState(null);
 
   useEffect(() => {
-    const jobs = JSON.parse(localStorage.getItem('jobOrders') || '[]');
-    const foundJob = jobs.find(j => j.id === id);
+    const jobs = loadJobOrders();
+    const foundJob = jobs.find(j => j.id === parseInt(id));
     setJob(foundJob);
   }, [id]);
 
   const addCandidate = () => {
     const randomId = Math.floor(Math.random() * 1000);
-    const updatedJob = {
-      ...job,
+    const updatedJobs = updateJobOrder(parseInt(id), {
       submittedCandidates: [...(job.submittedCandidates || []), randomId]
-    };
-    updateJob(updatedJob);
+    });
+    setJob(updatedJobs.find(j => j.id === parseInt(id)));
   };
 
   const removeCandidate = () => {
-    const updatedCandidates = [...(job.submittedCandidates || [])];
-    updatedCandidates.pop();
-    const updatedJob = { ...job, submittedCandidates: updatedCandidates };
-    updateJob(updatedJob);
+    if (job.submittedCandidates.length === 0) return;
+    const lastId = job.submittedCandidates[job.submittedCandidates.length - 1];
+    const updatedJobs = removeCandidateFromJob(parseInt(id), lastId);
+    setJob(updatedJobs.find(j => j.id === parseInt(id)));
   };
 
-  const addNote = () => {
+  const handleAddNote = () => {
     const note = window.prompt('Enter note:');
     if (note) {
-      const updatedJob = {
-        ...job,
-        notes: [...(job.notes || []), { text: note, timestamp: new Date().toISOString() }]
-      };
-      updateJob(updatedJob);
+      const updatedJobs = addNoteToJob(parseInt(id), note);
+      setJob(updatedJobs.find(j => j.id === parseInt(id)));
     }
-  };
-
-  const updateJob = (updatedJob) => {
-    const jobs = JSON.parse(localStorage.getItem('jobOrders') || '[]');
-    const updatedJobs = jobs.map(j => j.id === id ? updatedJob : j);
-    localStorage.setItem('jobOrders', JSON.stringify(updatedJobs));
-    setJob(updatedJob);
   };
 
   if (!job) return <div className="p-4">Loading...</div>;
@@ -60,14 +50,16 @@ export default function JobDetails() {
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Assigned Recruiters</h2>
         <ul className="list-disc list-inside">
-          {job.recruiterId && <li>Recruiter #{job.recruiterId}</li>}
+          {job.recruiterIds.map(id => (
+            <li key={id}>Recruiter #{id}</li>
+          ))}
         </ul>
       </div>
 
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Submitted Candidates</h2>
         <ul className="list-disc list-inside">
-          {job.submittedCandidates?.map(candidateId => (
+          {job.submittedCandidates.map(candidateId => (
             <li key={candidateId}>Candidate #{candidateId}</li>
           ))}
         </ul>
@@ -76,7 +68,7 @@ export default function JobDetails() {
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Notes</h2>
         <div className="space-y-2">
-          {job.notes?.map((note, index) => (
+          {job.notes.map((note, index) => (
             <div key={index} className="border-b pb-2">
               <p className="text-gray-700">{note.text}</p>
               <p className="text-sm text-gray-500">
@@ -101,7 +93,7 @@ export default function JobDetails() {
           Remove Candidate
         </button>
         <button
-          onClick={addNote}
+          onClick={handleAddNote}
           className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
         >
           Add Note
