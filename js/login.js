@@ -5,10 +5,15 @@ window.login = async () => {
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value.trim();
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
         alert("Login failed: " + error.message);
+        return;
+    }
+
+    if (!authData.user.email_confirmed_at) {
+        alert("Please verify your email before logging in.");
         return;
     }
 
