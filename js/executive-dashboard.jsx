@@ -1,60 +1,83 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { loadJobOrders } from './jobOrders';
+import { loadSalesData } from './salesData';
 
 export default function ExecutiveDashboard() {
-  const [kpis, setKpis] = useState({
-    placements: 0,
-    avgTimeToFill: 0,
+  const [metrics, setMetrics] = useState({
+    totalJobs: 0,
+    filled: 0,
     winRate: 0,
-    grossMargin: 0
+    pipeline: {
+      lead: 0,
+      demo: 0,
+      proposal: 0,
+      closed: 0
+    }
   });
 
   useEffect(() => {
     const jobs = loadJobOrders();
-    
-    // Mock calculations
-    setKpis({
-      placements: jobs.reduce((acc, job) => acc + job.currentFilled, 0),
-      avgTimeToFill: 14.5, // Mock days
-      winRate: 68, // Mock percentage
-      grossMargin: 4200 // Mock dollars per job
+    const sales = loadSalesData();
+
+    const totalFilled = jobs.reduce((acc, job) => acc + job.currentFilled, 0);
+    const totalPositions = jobs.reduce((acc, job) => acc + job.totalOpenings, 0);
+
+    const pipelineCount = sales.reduce((acc, contact) => {
+      acc[contact.stage.toLowerCase()] = (acc[contact.stage.toLowerCase()] || 0) + 1;
+      return acc;
+    }, {});
+
+    const closedWon = sales.filter(s => s.stage === 'Closed').length;
+    const winRate = (closedWon / sales.length) * 100;
+
+    setMetrics({
+      totalJobs: jobs.length,
+      filled: totalFilled,
+      winRate: Math.round(winRate),
+      pipeline: pipelineCount
     });
   }, []);
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Executive Dashboard</h1>
-        <div className="space-x-4">
-          <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-            Export Report
-          </button>
-          <button className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-            Print View
-          </button>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Executive Dashboard</h1>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-gray-500 text-sm">Total Jobs</h3>
+          <p className="text-3xl font-bold">{metrics.totalJobs}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-gray-500 text-sm">Positions Filled</h3>
+          <p className="text-3xl font-bold">{metrics.filled}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-gray-500 text-sm">Win Rate</h3>
+          <p className="text-3xl font-bold">{metrics.winRate}%</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 mb-2">Placements This Month</h3>
-          <p className="text-3xl font-bold">{kpis.placements}</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 mb-2">Avg Time to Fill</h3>
-          <p className="text-3xl font-bold">{kpis.avgTimeToFill} days</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 mb-2">Sales Win Rate</h3>
-          <p className="text-3xl font-bold">{kpis.winRate}%</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 mb-2">Gross Margin/Job</h3>
-          <p className="text-3xl font-bold">${kpis.grossMargin}</p>
+      {/* Pipeline Visualization */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-4">Pipeline Breakdown</h2>
+        <div className="space-y-3">
+          {Object.entries(metrics.pipeline).map(([stage, count]) => (
+            <div key={stage} className="relative">
+              <div className="text-sm text-gray-600 mb-1 capitalize">
+                {stage} ({count})
+              </div>
+              <div className="h-4 bg-gray-200 rounded">
+                <div
+                  className="h-full bg-blue-500 rounded"
+                  style={{
+                    width: `${(count / Object.values(metrics.pipeline).reduce((a, b) => a + b, 0)) * 100}%`
+                  }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
