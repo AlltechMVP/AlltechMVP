@@ -9,6 +9,8 @@ import CEODashboard from '../components/dashboards/ceo-dashboard';
 import TimesheetEntry from '../components/candidate/timesheet-entry';
 import NotificationsPanel from '../components/candidate/notifications-panel';
 import ForgotPassword from '../components/auth/forgot-password';
+import ImportExportCenter from '../components/admin/import-export-center';
+import VMSAggregator from '../components/admin/vms-aggregator';
 import './App.css';
 
 function App() {
@@ -24,6 +26,8 @@ function App() {
         <Route path="/director-dashboard" element={<DirectorDashboard />} />
         <Route path="/cfo-dashboard" element={<CFODashboard />} />
         <Route path="/ceo-dashboard" element={<CEODashboard />} />
+        <Route path="/import-export-center" element={<ImportExportCenter />} />
+        <Route path="/vms-aggregator" element={<VMSAggregator />} />
       </Routes>
     </Router>
   );
