@@ -11,6 +11,7 @@ import NotificationsPanel from '../components/candidate/notifications-panel';
 import ForgotPassword from '../components/auth/forgot-password';
 import ImportExportCenter from '../components/admin/import-export-center';
 import VMSAggregator from '../components/admin/vms-aggregator';
+import NotificationCenter from '../components/notifications/notification-center';
 import './App.css';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
         <Route path="/ceo-dashboard" element={<CEODashboard />} />
         <Route path="/import-export-center" element={<ImportExportCenter />} />
         <Route path="/vms-aggregator" element={<VMSAggregator />} />
+        <Route path="/notification-center" element={<NotificationCenter />} />
       </Routes>
     </Router>
   );
