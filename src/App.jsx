@@ -14,6 +14,8 @@ import VMSAggregator from '../components/admin/vms-aggregator';
 import AssignmentOverview from '../components/admin/assignment-overview';
 import RevenueOverview from '../components/admin/revenue-overview';
 import NotificationCenter from '../components/notifications/notification-center';
+import ClientDashboard from '../components/client/client-dashboard';
+import CandidateApprovals from '../components/client/candidate-approvals';
 import JobSearch from '../components/candidate/job-search';
 import PayrollView from '../components/candidate/payroll-view';
 import './App.css';
@@ -42,6 +44,8 @@ function App() {
         <Route path="/candidate/payroll" element={<PayrollView />} />
         <Route path="/assignment-overview" element={<AssignmentOverview />} />
         <Route path="/revenue-overview" element={<RevenueOverview />} />
+        <Route path="/client-dashboard" element={<ClientDashboard />} />
+        <Route path="/client/candidate-approvals" element={<CandidateApprovals />} />
       </Routes>
       </div>
     </Router>
