@@ -14,10 +14,14 @@ import VMSAggregator from '../components/admin/vms-aggregator';
 import NotificationCenter from '../components/notifications/notification-center';
 import './App.css';
 
+import NavBar from '../components/common/navbar';
+
 function App() {
   return (
     <Router>
-      <Routes>
+      <NavBar />
+      <div className="pt-16"> {/* Add padding to account for fixed navbar */}
+        <Routes>
         <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
         <Route path="/sales-manager-dashboard" element={<SalesManagerDashboard />} />
         <Route path="/candidate/timesheet-entry" element={<TimesheetEntry />} />
@@ -31,6 +35,7 @@ function App() {
         <Route path="/vms-aggregator" element={<VMSAggregator />} />
         <Route path="/notification-center" element={<NotificationCenter />} />
       </Routes>
+      </div>
     </Router>
   );
 }
