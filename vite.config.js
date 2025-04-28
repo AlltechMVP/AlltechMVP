@@ -11,5 +11,10 @@ export default defineConfig({
       clientPort: 443,
       protocol: 'wss'
     }
-  }
+  },
+  preview: {
+    port: 5000,
+    host: true
+  },
+  base: '/'
 })
