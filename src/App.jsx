@@ -2,6 +2,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import SalesRepDashboard from '../components/dashboards/sales-rep-dashboard';
 import SalesManagerDashboard from '../components/dashboards/sales-manager-dashboard';
+import BranchManagerDashboard from '../components/dashboards/branch-manager-dashboard';
+import DirectorDashboard from '../components/dashboards/director-dashboard';
 import TimesheetEntry from '../components/candidate/timesheet-entry';
 import NotificationsPanel from '../components/candidate/notifications-panel';
 import ForgotPassword from '../components/auth/forgot-password';
@@ -16,6 +18,8 @@ function App() {
         <Route path="/candidate/timesheet-entry" element={<TimesheetEntry />} />
         <Route path="/candidate/notifications" element={<NotificationsPanel />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/branch-manager-dashboard" element={<BranchManagerDashboard />} />
+        <Route path="/director-dashboard" element={<DirectorDashboard />} />
       </Routes>
     </Router>
   );
