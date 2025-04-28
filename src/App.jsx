@@ -1,17 +1,24 @@
 
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from '../components/auth/login';
-import AppShell from '../misc/app-shell';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import SalesRepDashboard from './components/dashboards/sales-rep-dashboard';
+import SalesManagerDashboard from './components/dashboards/sales-manager-dashboard';
+import TimesheetEntry from './components/candidate/timesheet-entry';
+import NotificationsPanel from './components/candidate/notifications-panel';
+import ForgotPassword from './components/auth/forgot-password';
 import './App.css';
 
-export default function App() {
+function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/*" element={<AppShell />} />
+        <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
+        <Route path="/sales-manager-dashboard" element={<SalesManagerDashboard />} />
+        <Route path="/candidate/timesheet-entry" element={<TimesheetEntry />} />
+        <Route path="/candidate/notifications" element={<NotificationsPanel />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
+
+export default App;
