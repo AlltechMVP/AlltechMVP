@@ -12,6 +12,7 @@ import ForgotPassword from '../components/auth/forgot-password';
 import ImportExportCenter from '../components/admin/import-export-center';
 import VMSAggregator from '../components/admin/vms-aggregator';
 import NotificationCenter from '../components/notifications/notification-center';
+import JobSearch from '../components/candidate/job-search';
 import './App.css';
 
 import NavBar from '../components/common/navbar';
@@ -34,6 +35,7 @@ function App() {
         <Route path="/import-export-center" element={<ImportExportCenter />} />
         <Route path="/vms-aggregator" element={<VMSAggregator />} />
         <Route path="/notification-center" element={<NotificationCenter />} />
+        <Route path="/job-search" element={<JobSearch />} />
       </Routes>
       </div>
     </Router>
