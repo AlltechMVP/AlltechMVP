@@ -1,5 +1,7 @@
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LandingPage from '../components/common/landing-page';
+import Footer from '../components/common/footer';
 import SalesRepDashboard from '../components/dashboards/sales-rep-dashboard';
 import SalesManagerDashboard from '../components/dashboards/sales-manager-dashboard';
 import BranchManagerDashboard from '../components/dashboards/branch-manager-dashboard';
@@ -28,8 +30,9 @@ function App() {
   return (
     <Router>
       <NavBar />
-      <div className="pt-16"> {/* Add padding to account for fixed navbar */}
+      <div className="pt-16 min-h-screen flex flex-col"> {/* Add flex column for footer positioning */}
         <Routes>
+          <Route path="/" element={<LandingPage />} />
         <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
         <Route path="/sales-manager-dashboard" element={<SalesManagerDashboard />} />
         <Route path="/candidate/timesheet-entry" element={<TimesheetEntry />} />
@@ -51,6 +54,7 @@ function App() {
         <Route path="/settings-center" element={<SettingsCenter />} />
         <Route path="/billing-dashboard" element={<BillingDashboard />} />
       </Routes>
+        <Footer />
       </div>
     </Router>
   );

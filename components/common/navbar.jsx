@@ -6,6 +6,7 @@ export default function NavBar() {
   const location = useLocation();
   
   const links = [
+    { to: '/', label: 'Home' },
     { to: '/sales-rep-dashboard', label: 'Sales Rep' },
     { to: '/sales-manager-dashboard', label: 'Sales Manager' },
     { to: '/branch-manager-dashboard', label: 'Branch Manager' },

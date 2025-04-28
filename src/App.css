@@ -1,5 +1,100 @@
+/* Standard page header styling */
+h1.page-header {
+  @apply text-3xl font-bold py-4 px-6;
+}
 
 #root {
   width: 100%;
   min-height: 100vh;
 }
+
+/* components/common/landing-page.jsx */
+import React from 'react';
+
+function LandingPage() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-100">
+      <h1 className="text-4xl font-bold mb-4">Welcome to Alltech MVP</h1>
+      <p className="text-lg mb-8 text-center">Streamlining Staffing Operations with Alltech.</p>
+      <a href="/sales-rep-dashboard" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        Enter Platform
+      </a>
+    </div>
+  );
+}
+
+export default LandingPage;
+
+
+/* components/common/footer.jsx */
+import React from 'react';
+
+function Footer() {
+  return (
+    <footer className="bg-gray-200 text-center py-4 mt-auto">
+      <p className="text-sm">© 2025 Alltech. All rights reserved.</p>
+    </footer>
+  );
+}
+
+export default Footer;
+
+
+/* App.jsx */
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import LandingPage from './components/common/landing-page';
+import NavBar from './components/common/navbar'; // Assuming navbar.jsx exists
+import SalesRepDashboard from './components/sales-rep-dashboard'; // Placeholder
+import Footer from './components/common/footer';
+
+
+function App() {
+  return (
+    <Router>
+      <div className="flex flex-col min-h-screen">
+        <NavBar />
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} /> {/* Placeholder route */}
+        </Routes>
+        <Footer />
+      </div>
+    </Router>
+  );
+}
+
+export default App;
+
+
+/* components/common/navbar.jsx */
+import React from 'react';
+import { Link } from 'react-router-dom';
+
+function NavBar() {
+  return (
+    <nav className="bg-blue-500 p-4">
+      <ul className="flex justify-center space-x-4">
+        <li><Link to="/" className="text-white">Home</Link></li>
+        {/* Add other nav links here */}
+      </ul>
+    </nav>
+  );
+}
+
+export default NavBar;
+
+/* Placeholder for sales-rep-dashboard.jsx */
+// components/sales-rep-dashboard.jsx
+import React from 'react';
+
+function SalesRepDashboard() {
+  return (
+    <div className="p-6">
+      <h1 className="page-header">Sales Rep Dashboard</h1>
+      <p>Dashboard content will go here.</p>
+    </div>
+  );
+}
+
+export default SalesRepDashboard;
