@@ -18,6 +18,8 @@ import ClientDashboard from '../components/client/client-dashboard';
 import CandidateApprovals from '../components/client/candidate-approvals';
 import JobSearch from '../components/candidate/job-search';
 import PayrollView from '../components/candidate/payroll-view';
+import SettingsCenter from '../components/admin/settings-center';
+import BillingDashboard from '../components/admin/billing-dashboard';
 import './App.css';
 
 import NavBar from '../components/common/navbar';
@@ -46,6 +48,8 @@ function App() {
         <Route path="/revenue-overview" element={<RevenueOverview />} />
         <Route path="/client-dashboard" element={<ClientDashboard />} />
         <Route path="/client/candidate-approvals" element={<CandidateApprovals />} />
+        <Route path="/settings-center" element={<SettingsCenter />} />
+        <Route path="/billing-dashboard" element={<BillingDashboard />} />
       </Routes>
       </div>
     </Router>
