@@ -1,0 +1,154 @@
+Claude, help me add basic job order management and candidate-to-job matching to my Alltech Replit app, using only mock data for now (no Supabase yet).
+
+Please create or update the following:
+
+---
+
+1. ✅ Create a new file: job-orders.html
+
+Paste this code:
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Job Orders</title>
+    <script src="js/job-orders.js" defer></script>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <main>
+        <h2>Job Orders</h2>
+        <div id="jobList"></div>
+
+        <h3>Add New Job</h3>
+        <form id="jobForm">
+            <label>Job Title</label>
+            <input type="text" id="jobTitle" required>
+
+            <label>Location</label>
+            <input type="text" id="jobLocation" required>
+
+            <label>Pay Rate ($/hr)</label>
+            <input type="number" id="payRate" required>
+
+            <label>Bill Rate ($/hr)</label>
+            <input type="number" id="billRate" required>
+
+            <br><br>
+            <button type="submit">Create Job</button>
+        </form>
+    </main>
+</body>
+</html>
+
+---
+
+2. ✅ Create a new file: js/job-orders.js
+
+Paste this code:
+
+const jobs = JSON.parse(localStorage.getItem("mockJobs")) || [];
+
+function renderJobs() {
+    const list = document.getElementById("jobList");
+    list.innerHTML = "";
+
+    jobs.forEach((job, index) => {
+        const div = document.createElement("div");
+        div.style = "border:1px solid #ccc;padding:1rem;margin-bottom:1rem;border-radius:8px;";
+
+        div.innerHTML = `
+            <strong>${job.title}</strong><br>
+            Location: ${job.location}<br>
+            Pay: $${job.payRate}/hr, Bill: $${job.billRate}/hr<br><br>
+            <button onclick="matchCandidates(${index})">Match Candidates</button>
+        `;
+
+        list.appendChild(div);
+    });
+}
+
+function matchCandidates(index) {
+    localStorage.setItem("selectedJobIndex", index);
+    window.location.href = "match-candidates.html";
+}
+
+document.getElementById("jobForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const newJob = {
+        title: document.getElementById("jobTitle").value.trim(),
+        location: document.getElementById("jobLocation").value.trim(),
+        payRate: parseFloat(document.getElementById("payRate").value),
+        billRate: parseFloat(document.getElementById("billRate").value),
+        matchedCandidates: []
+    };
+
+    jobs.push(newJob);
+    localStorage.setItem("mockJobs", JSON.stringify(jobs));
+    renderJobs();
+});
+
+window.onload = renderJobs;
+
+---
+
+3. ✅ Create a new file: match-candidates.html
+
+Paste this code:
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Match Candidates to Job</title>
+    <script src="js/match-candidates.js" defer></script>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <main>
+        <h2>Match Candidates</h2>
+        <div id="candidateMatchList"></div>
+    </main>
+</body>
+</html>
+
+---
+
+4. ✅ Create a new file: js/match-candidates.js
+
+Paste this code:
+
+const candidates = JSON.parse(localStorage.getItem("mockCandidates")) || [];
+const jobs = JSON.parse(localStorage.getItem("mockJobs")) || [];
+const jobIndex = localStorage.getItem("selectedJobIndex");
+
+function renderMatching() {
+    const list = document.getElementById("candidateMatchList");
+    list.innerHTML = "";
+
+    candidates.forEach((c, index) => {
+        const div = document.createElement("div");
+        div.style = "border:1px solid #ccc;padding:1rem;margin-bottom:1rem;border-radius:8px;";
+
+        div.innerHTML = `
+            <strong>${c.name}</strong> (${c.email})<br>
+            Availability: ${c.availability}<br>
+            Onboarding: ${c.completedSteps || 0}/4 steps<br><br>
+            <button onclick="selectCandidate(${index})">Match to Job</button>
+        `;
+
+        list.appendChild(div);
+    });
+}
+
+function selectCandidate(candidateIndex) {
+    jobs[jobIndex].matchedCandidates = jobs[jobIndex].matchedCandidates || [];
+    jobs[jobIndex].matchedCandidates.push(candidates[candidateIndex]);
+
+    localStorage.setItem("mockJobs", JSON.stringify(jobs));
+    alert("Candidate matched successfully!");
+
+    window.location.href = "job-orders.html";
+}
+
+window.onload = renderMatching;
