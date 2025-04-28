@@ -4,6 +4,8 @@ import SalesRepDashboard from '../components/dashboards/sales-rep-dashboard';
 import SalesManagerDashboard from '../components/dashboards/sales-manager-dashboard';
 import BranchManagerDashboard from '../components/dashboards/branch-manager-dashboard';
 import DirectorDashboard from '../components/dashboards/director-dashboard';
+import CFODashboard from '../components/dashboards/cfo-dashboard';
+import CEODashboard from '../components/dashboards/ceo-dashboard';
 import TimesheetEntry from '../components/candidate/timesheet-entry';
 import NotificationsPanel from '../components/candidate/notifications-panel';
 import ForgotPassword from '../components/auth/forgot-password';
@@ -20,6 +22,8 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/branch-manager-dashboard" element={<BranchManagerDashboard />} />
         <Route path="/director-dashboard" element={<DirectorDashboard />} />
+        <Route path="/cfo-dashboard" element={<CFODashboard />} />
+        <Route path="/ceo-dashboard" element={<CEODashboard />} />
       </Routes>
     </Router>
   );
