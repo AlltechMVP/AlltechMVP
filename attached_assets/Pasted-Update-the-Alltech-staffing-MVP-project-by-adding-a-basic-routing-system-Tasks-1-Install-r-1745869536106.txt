@@ -1,0 +1,53 @@
+Update the Alltech staffing MVP project by adding a basic routing system.
+
+Tasks:
+
+1. Install `react-router-dom` (React Router v6).
+
+2. Update `App.jsx` with the following changes:
+   - Import BrowserRouter as Router, Routes, and Route from 'react-router-dom'.
+   - Import these components:
+     - SalesRepDashboard from './components/dashboards/sales-rep-dashboard'
+     - SalesManagerDashboard from './components/dashboards/sales-manager-dashboard'
+     - TimesheetEntry from './components/candidate/timesheet-entry'
+     - NotificationsPanel from './components/candidate/notifications-panel'
+     - ForgotPassword from './components/auth/forgot-password'
+   - Inside the App component, wrap everything with `<Router>`.
+   - Add the following `<Routes>` and `<Route>` definitions:
+     - Route path="/sales-rep-dashboard" → SalesRepDashboard
+     - Route path="/sales-manager-dashboard" → SalesManagerDashboard
+     - Route path="/candidate/timesheet-entry" → TimesheetEntry
+     - Route path="/candidate/notifications" → NotificationsPanel
+     - Route path="/forgot-password" → ForgotPassword
+
+The updated `App.jsx` file should look like this:
+
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import SalesRepDashboard from './components/dashboards/sales-rep-dashboard';
+import SalesManagerDashboard from './components/dashboards/sales-manager-dashboard';
+import TimesheetEntry from './components/candidate/timesheet-entry';
+import NotificationsPanel from './components/candidate/notifications-panel';
+import ForgotPassword from './components/auth/forgot-password';
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
+        <Route path="/sales-manager-dashboard" element={<SalesManagerDashboard />} />
+        <Route path="/candidate/timesheet-entry" element={<TimesheetEntry />} />
+        <Route path="/candidate/notifications" element={<NotificationsPanel />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
+
+3. Do not change any folder structure.
+
+4. Do not add a navigation bar yet.
+
+5. Deliver only clean, copy-pasteable code for the updated App.jsx.
+
