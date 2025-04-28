@@ -1,0 +1,136 @@
+components/
+├── auth/
+│ ├── login.jsx ✅
+│ ├── role-home.jsx ✅
+│ └── login.js ❌ (delete this)
+│
+├── candidate/
+│ ├── candidate-apply.js ✅
+│ └── candidate.js ❌ (delete if unused)
+│
+├── client/
+│ ├── client-approvals.jsx ✅
+│ └── client.js ❌ (delete if unused)
+│
+├── dashboards/
+│ ├── admin-dashboard.jsx ✅
+│ ├── candidate-dashboard.jsx ✅
+│ ├── executive-dashboard.jsx ✅
+│ ├── sales-dashboard.jsx ✅
+│
+├── tools/
+│ ├── gl-mapping-assistant.jsx ✅
+│ ├── global-search.jsx ✅
+│ ├── import-export.jsx ✅
+│ ├── resume-generator.jsx ✅
+│ ├── roi-calculator.jsx ✅
+│ ├── smart-matching.jsx ✅
+│ ├── vms-aggregator.jsx ✅
+│
+├── ui/
+│ ├── job-search-filter.jsx ✅
+│ ├── top-nav.jsx ✅
+
+data/
+├── users.js ✅
+├── jobOrders.js ✅
+├── salesData.js ✅
+├── data-store.js ✅
+├── recruiter.js ✅ (if it's your recruiter dashboard, otherwise rename)
+├── onboard.js ✅
+├── forgot-password.js ✅
+├── router.js ✅
+├── supabase.js 🔧 (move to future/ if not wired yet)
+
+❌ Unused files (delete these unless intentionally wired):
+├── auth.js
+├── application.js
+├── auto-commit.js
+├── branch-manager.js
+├── ceo.js
+├── cfo.js
+├── dev-tools.js
+├── director.js
+├── recruiter-onboarding.js
+├── sales-manager.js
+├── sales-rep.js
+├── signup.js
+├── script.js
+
+misc/
+├── app-shell.jsx ✅
+├── job-details.jsx ✅
+├── job-orders.jsx ✅
+├── onboarding-flow.jsx ✅
+├── user-manager.jsx ✅
+You are a React developer cleaning up a staffing MVP project in Replit. Please organize the following components into folders and delete unused files:
+
+✅ DELETE THESE FILES:
+
+login.js
+candidate.js
+client.js
+auth.js
+application.js
+auto-commit.js
+recruiter-onboarding.js
+sales-rep.js
+sales-manager.js
+branch-manager.js
+ceo.js
+cfo.js
+director.js
+signup.js
+script.js
+dev-tools.js
+✅ ORGANIZE FILES INTO FOLDERS:
+
+components/auth/
+
+login.jsx
+role-home.jsx
+components/candidate/
+
+candidate-apply.js
+components/client/
+
+client-approvals.jsx
+components/dashboards/
+
+admin-dashboard.jsx
+candidate-dashboard.jsx
+executive-dashboard.jsx
+sales-dashboard.jsx
+components/tools/
+
+gl-mapping-assistant.jsx
+global-search.jsx
+import-export.jsx
+resume-generator.jsx
+roi-calculator.jsx
+smart-matching.jsx
+vms-aggregator.jsx
+components/ui/
+
+top-nav.jsx
+job-search-filter.jsx
+data/
+
+users.js
+jobOrders.js
+salesData.js
+data-store.js
+recruiter.js
+router.js
+onboard.js
+forgot-password.js
+misc/
+
+app-shell.jsx
+job-details.jsx
+job-orders.jsx
+onboarding-flow.jsx
+user-manager.jsx
+Move supabase.js into /future/supabase.js unless it’s fully wired.
+
+Do not rewrite any files — just return a confirmation of moves/deletes.
