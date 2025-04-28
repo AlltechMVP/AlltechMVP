@@ -13,7 +13,7 @@ export default function TimesheetEntry() {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Timesheet submitted:', timesheet);
-    // Clear form after submission
+    alert('Timesheet submitted successfully!');
     setTimesheet({
       weekEnding: '',
       regularHours: '',
@@ -21,7 +21,6 @@ export default function TimesheetEntry() {
       doubleTimeHours: '',
       notes: ''
     });
-    alert('Timesheet submitted successfully!');
   };
 
   return (

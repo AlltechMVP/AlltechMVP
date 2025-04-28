@@ -13,10 +13,11 @@ export default function NavBar() {
     { to: '/cfo-dashboard', label: 'CFO' },
     { to: '/ceo-dashboard', label: 'CEO' },
     { to: '/candidate/timesheet-entry', label: 'Timesheet' },
-    { to: '/candidate/notifications', label: 'Candidate Notifications' },
-    { to: '/forgot-password', label: 'Forgot Password' },
-    { to: '/import-export-center', label: 'Import/Export' },
-    { to: '/vms-aggregator', label: 'VMS Aggregator' },
+    { to: '/candidate/payroll', label: 'Payroll' },
+    { to: '/assignment-overview', label: 'Assignments' },
+    { to: '/revenue-overview', label: 'Revenue' },
+    { to: '/client-dashboard', label: 'Client Portal' },
+    { to: '/client/candidate-approvals', label: 'Approvals' },
     { to: '/notification-center', label: 'Notifications' }
   ];
 
