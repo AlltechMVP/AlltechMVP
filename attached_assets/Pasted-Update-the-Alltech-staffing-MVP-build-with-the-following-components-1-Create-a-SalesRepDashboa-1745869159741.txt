@@ -1,0 +1,38 @@
+Update the Alltech staffing MVP build with the following components:
+
+1. Create a `SalesRepDashboard.jsx` component showing:
+   - Cards for Active Jobs, Submitted Candidates, Placements Made.
+   - Table listing: Job Title, Location, Status, Candidates Submitted.
+   - Use basic Tailwind CSS styling and mock data.
+
+2. Create a `SalesManagerDashboard.jsx` component showing:
+   - Cards for Total Open Jobs, Total Reps Managed, Candidates in Pipeline.
+   - Table listing: Rep Name, Open Jobs, Candidates Active, Placements This Month.
+   - Use basic Tailwind CSS styling and mock data.
+
+3. Create a `TimesheetEntry.jsx` component where candidates can:
+   - Enter Week Ending Date, Total Hours Worked, Optional Notes.
+   - Submit the form (use local state for now, no database connection).
+   - Use mobile-first responsive design with Tailwind CSS.
+
+4. Create a `NotificationsPanel.jsx` component for candidates:
+   - Display a simple list of mock notifications with Date and Message.
+   - Use Tailwind for basic card layout and spacing.
+
+5. Create a `forgot-password.jsx` page:
+   - Simple email input form to trigger password reset using Supabase.
+   - Use `supabase.auth.resetPasswordForEmail(email)` inside the form handler.
+   - Show a success or error message after submitting.
+
+6. Create a `roleRedirect.js` utility function:
+   - Export a function `roleRedirect(userRole)` that maps user roles to pages.
+   - Roles to handle: recruiter, sales-rep, sales-manager, candidate, client, branch-manager, director, cfo, ceo.
+   - Return correct dashboard route string (e.g., "/sales-rep-dashboard").
+
+General Instructions:
+- Use Tailwind-style basic styling throughout.
+- Use mock data for jobs, reps, notifications — no database connection yet.
+- Assume components will be placed in a `/components` folder and forgot-password page in `/pages`.
+- Batch all code together. Deliver clean, copy-pasteable React files organized by filename.
+- Do not omit any files. Do not restructure.
+
