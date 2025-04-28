@@ -1,0 +1,72 @@
+
+import React, { useState } from 'react';
+
+export default function TimesheetEntry() {
+  const [timesheet, setTimesheet] = useState({
+    weekEnding: '',
+    hoursWorked: '',
+    notes: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log('Timesheet submitted:', timesheet);
+    // Clear form after submission
+    setTimesheet({ weekEnding: '', hoursWorked: '', notes: '' });
+  };
+
+  return (
+    <div className="p-4 max-w-md mx-auto">
+      <h2 className="text-2xl font-bold mb-6">Submit Timesheet</h2>
+      
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Week Ending Date
+          </label>
+          <input
+            type="date"
+            value={timesheet.weekEnding}
+            onChange={(e) => setTimesheet({...timesheet, weekEnding: e.target.value})}
+            className="w-full p-2 border rounded-md"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Total Hours Worked
+          </label>
+          <input
+            type="number"
+            value={timesheet.hoursWorked}
+            onChange={(e) => setTimesheet({...timesheet, hoursWorked: e.target.value})}
+            className="w-full p-2 border rounded-md"
+            min="0"
+            step="0.5"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Notes (Optional)
+          </label>
+          <textarea
+            value={timesheet.notes}
+            onChange={(e) => setTimesheet({...timesheet, notes: e.target.value})}
+            className="w-full p-2 border rounded-md"
+            rows="3"
+          />
+        </div>
+
+        <button
+          type="submit"
+          className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
+        >
+          Submit Timesheet
+        </button>
+      </form>
+    </div>
+  );
+}
