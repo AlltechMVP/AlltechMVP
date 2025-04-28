@@ -1,10 +1,10 @@
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import SalesRepDashboard from './components/dashboards/sales-rep-dashboard';
-import SalesManagerDashboard from './components/dashboards/sales-manager-dashboard';
-import TimesheetEntry from './components/candidate/timesheet-entry';
-import NotificationsPanel from './components/candidate/notifications-panel';
-import ForgotPassword from './components/auth/forgot-password';
+import SalesRepDashboard from '../components/dashboards/sales-rep-dashboard';
+import SalesManagerDashboard from '../components/dashboards/sales-manager-dashboard';
+import TimesheetEntry from '../components/candidate/timesheet-entry';
+import NotificationsPanel from '../components/candidate/notifications-panel';
+import ForgotPassword from '../components/auth/forgot-password';
 import './App.css';
 
 function App() {
