@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 export default function TimesheetEntry() {
   const [timesheet, setTimesheet] = useState({
     weekEnding: '',
-    hoursWorked: '',
+    regularHours: '',
+    overtimeHours: '',
+    doubleTimeHours: '',
     notes: ''
   });
 
@@ -12,7 +14,14 @@ export default function TimesheetEntry() {
     e.preventDefault();
     console.log('Timesheet submitted:', timesheet);
     // Clear form after submission
-    setTimesheet({ weekEnding: '', hoursWorked: '', notes: '' });
+    setTimesheet({
+      weekEnding: '',
+      regularHours: '',
+      overtimeHours: '',
+      doubleTimeHours: '',
+      notes: ''
+    });
+    alert('Timesheet submitted successfully!');
   };
 
   return (
@@ -35,16 +44,44 @@ export default function TimesheetEntry() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Total Hours Worked
+            Regular Hours
           </label>
           <input
             type="number"
-            value={timesheet.hoursWorked}
-            onChange={(e) => setTimesheet({...timesheet, hoursWorked: e.target.value})}
+            value={timesheet.regularHours}
+            onChange={(e) => setTimesheet({...timesheet, regularHours: e.target.value})}
             className="w-full p-2 border rounded-md"
             min="0"
             step="0.5"
             required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Overtime Hours
+          </label>
+          <input
+            type="number"
+            value={timesheet.overtimeHours}
+            onChange={(e) => setTimesheet({...timesheet, overtimeHours: e.target.value})}
+            className="w-full p-2 border rounded-md"
+            min="0"
+            step="0.5"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Double-Time Hours
+          </label>
+          <input
+            type="number"
+            value={timesheet.doubleTimeHours}
+            onChange={(e) => setTimesheet({...timesheet, doubleTimeHours: e.target.value})}
+            className="w-full p-2 border rounded-md"
+            min="0"
+            step="0.5"
           />
         </div>
 
