@@ -11,6 +11,8 @@ import NotificationsPanel from '../components/candidate/notifications-panel';
 import ForgotPassword from '../components/auth/forgot-password';
 import ImportExportCenter from '../components/admin/import-export-center';
 import VMSAggregator from '../components/admin/vms-aggregator';
+import AssignmentOverview from '../components/admin/assignment-overview';
+import RevenueOverview from '../components/admin/revenue-overview';
 import NotificationCenter from '../components/notifications/notification-center';
 import JobSearch from '../components/candidate/job-search';
 import PayrollView from '../components/candidate/payroll-view';
@@ -38,6 +40,8 @@ function App() {
         <Route path="/notification-center" element={<NotificationCenter />} />
         <Route path="/job-search" element={<JobSearch />} />
         <Route path="/candidate/payroll" element={<PayrollView />} />
+        <Route path="/assignment-overview" element={<AssignmentOverview />} />
+        <Route path="/revenue-overview" element={<RevenueOverview />} />
       </Routes>
       </div>
     </Router>
