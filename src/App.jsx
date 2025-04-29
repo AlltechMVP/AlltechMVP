@@ -28,9 +28,9 @@ import BranchManagerDashboard from '../components/dashboards/branch-manager-dash
 import DirectorDashboard from '../components/dashboards/director-dashboard';
 import CFODashboard from '../components/dashboards/cfo-dashboard';
 import CEODashboard from '../components/dashboards/ceo-dashboard';
-import TimesheetEntry from './components/candidate/timesheet-entry';
-import NotificationsPanel from './components/candidate/notifications-panel';
-import JobSearch from './components/candidate/job-search';
+import TimesheetEntry from '../components/candidate/timesheet-entry';
+import NotificationsPanel from '../components/candidate/notifications-panel';
+import JobSearch from '../components/candidate/job-search';
 import CandidateApprovals from './components/client/candidate-approvals';
 import './App.css';
 
