@@ -25,7 +25,6 @@ import CEODashboard from '../components/dashboards/ceo-dashboard';
 import TimesheetEntry from '../components/candidate/timesheet-entry';
 import NotificationsPanel from '../components/candidate/notifications-panel';
 import ForgotPassword from '../components/auth/forgot-password';
-import ImportExportCenter from '../components/admin/import-export-center';
 import VMSAggregator from '../components/admin/vms-aggregator';
 import AssignmentOverview from '../components/admin/assignment-overview';
 import RevenueOverview from '../components/admin/revenue-overview';
