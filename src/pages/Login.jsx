@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login } from "../utils/auth";
+import { supabase } from "../lib/supabase";
 
 function Login() {
   const navigate = useNavigate();
@@ -9,20 +9,24 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const { error } = await login(email, password);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
     if (error) {
       setError(error.message);
-    } else {
-      navigate("/");
+    } else if (data?.user) {
+      navigate("/recruiter");
     }
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       <h1 className="text-2xl mb-4">Login</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-80">
+      <form onSubmit={handleLogin} className="flex flex-col gap-4 w-80">
         <input 
           type="email" 
           placeholder="Email" 
