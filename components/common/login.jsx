@@ -5,6 +5,7 @@ import { supabase } from "../../utils/supabaseClient";
 
 function Login() {
   console.log("📍 Login page loaded");
+  console.log("📍 Login page loaded");
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import NavBar from '../components/common/navbar';
 import Footer from '../components/common/footer';
 import LandingPage from './components/common/LandingPage';
-import Login from './pages/Login';
+import Login from './components/common/login';
 import RecruiterDashboard from '../components/recruiter/dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminTools from "./pages/AdminTools";
@@ -62,7 +62,10 @@ function App() {
       <main className="flex-grow">
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={user ? <Navigate to="/recruiter" /> : <Login />}
+          />
           <Route
             path="/recruiter"
             element={
