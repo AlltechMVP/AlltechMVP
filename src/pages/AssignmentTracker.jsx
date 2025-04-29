@@ -21,7 +21,7 @@ function AssignmentTracker() {
         <thead>
           <tr className="bg-gray-100">
             <th className="p-2 border">Employee</th>
-            <th className="p-2 border">Job</th>
+            <th className="p-2 border">Job</th> 
             <th className="p-2 border">Location</th>
             <th className="p-2 border">Shift</th>
             <th className="p-2 border">Punch Status</th>
@@ -36,13 +36,17 @@ function AssignmentTracker() {
               <td className="p-2 border">{assign.location}</td>
               <td className="p-2 border">{assign.shiftStart} - {assign.shiftEnd}</td>
               <td className="p-2 border">
-                {assign.punchedIn ? "Punched In" : "Not Punched"}
+                <span className={`px-2 py-1 rounded-full text-xs ${
+                  assign.punchedIn ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                }`}>
+                  {assign.punchedIn ? "Punched In" : "Not Punched"}
+                </span>
               </td>
               <td className="p-2 border">
                 <button
                   className={`px-4 py-2 rounded ${
                     assign.punchedIn ? "bg-red-500" : "bg-green-500"
-                  } text-white`}
+                  } text-white hover:opacity-90`}
                   onClick={() => handlePunchIn(assign.id)}
                 >
                   {assign.punchedIn ? "Punch Out" : "Punch In"}
