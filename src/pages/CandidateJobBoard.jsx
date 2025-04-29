@@ -19,8 +19,19 @@ function CandidateJobBoard() {
     job.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  return (
+  const [ready, setReady] = useState(false);
+
+return (
     <div className="p-6 max-w-6xl mx-auto">
+      {ready && (
+        <div 
+          className="text-green-600 font-medium mb-4" 
+          role="status" 
+          aria-live="polite"
+        >
+          ✅ Ready for Submission
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Available Positions</h1>
         <input
