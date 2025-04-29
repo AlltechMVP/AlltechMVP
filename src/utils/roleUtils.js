@@ -1,12 +1,14 @@
 
+// src/utils/roleUtils.js
+
 import { mockCurrentUser } from "../data/mockCurrentUser";
 
-// Get current user (simulated now, later real session)
+// Return the current simulated user
 export function getCurrentUser() {
   return mockCurrentUser;
 }
 
-// Check if user has one of the allowed roles
+// Check if current user has one of the allowed roles
 export function hasAccess(allowedRoles = []) {
   const user = getCurrentUser();
   if (!user) return false;

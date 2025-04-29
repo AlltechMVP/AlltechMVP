@@ -1,7 +1,10 @@
 
-// Mock current user session object (later connect to Supabase)
+// src/data/mockCurrentUser.js
+
+// Simulated current logged-in user (temporary for dev/testing)
 export const mockCurrentUser = {
-  id: "U123",
-  name: "Dalton DeLeon", 
-  role: "Admin" // Options: Admin, Recruiter, Client
+  id: "U001",
+  name: "Dalton DeLeon",
+  email: "dalton@example.com",
+  role: "Admin" // Options: "Admin", "Recruiter", "Client"
 };
