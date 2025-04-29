@@ -1,81 +1,67 @@
-
 import React, { useState } from "react";
-import { supabase } from "../../src/lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../../lib/supabase"; // ✅ Correct import path
 
-export default function Login() {
-  console.log("📍 Login page loaded");
-
+function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [logs, setLogs] = useState([]);
-  const [status, setStatus] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const log = (message) => {
-    console.log(message);
-    setLogs((prev) => [...prev, message]);
-  };
+  console.log("📍 Login page loaded");
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    log("🔐 Attempting login...");
+    console.log("🔐 Starting login...");
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    log("🧾 Supabase response:");
-    log(JSON.stringify({ data, error }, null, 2));
+    console.log("🧾 Supabase response:", { data, error });
 
     if (error) {
-      setStatus("❌ Login failed: " + error.message);
+      console.error("❌ Login failed:", error.message);
+      setErrorMsg("Login failed. Please check your credentials.");
       return;
     }
 
     if (data && data.user) {
-      setStatus("✅ Login successful for: " + data.user.email);
-      log("📦 User stored in localStorage.");
+      console.log("✅ Login successful. User:", data.user);
       localStorage.setItem("user", JSON.stringify(data.user));
+      console.log("📦 User saved to localStorage.");
+      navigate("/recruiter");
+      console.log("➡️ Redirecting to /recruiter...");
     } else {
-      setStatus("⚠️ Login did not return a user.");
+      console.warn("⚠️ Login did not return a user object.");
+      setErrorMsg("Login did not complete properly. Please try again.");
     }
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold mb-4">🔐 Debug Login Page</h2>
-      <form onSubmit={handleLogin} className="space-y-2">
+    <div>
+      <h2>Login</h2>
+      <form onSubmit={handleLogin}>
         <input
           type="email"
-          placeholder="Email"
           value={email}
-          required
+          placeholder="Email"
           onChange={(e) => setEmail(e.target.value)}
-          className="border p-2 w-full"
+          required
         />
         <input
           type="password"
-          placeholder="Password"
           value={password}
-          required
+          placeholder="Password"
           onChange={(e) => setPassword(e.target.value)}
-          className="border p-2 w-full"
+          required
         />
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
-          Log In
-        </button>
+        <button type="submit">Log In</button>
+        {errorMsg && <p style={{ color: "red" }}>{errorMsg}</p>}
       </form>
-
-      <div className="mt-4">
-        <strong>Status:</strong> {status}
-      </div>
-
-      <div className="mt-4 bg-gray-100 p-2 text-sm whitespace-pre-wrap">
-        <strong>Logs:</strong>
-        {logs.map((l, i) => (
-          <div key={i}>{l}</div>
-        ))}
-      </div>
     </div>
   );
 }
+
+export default Login;
