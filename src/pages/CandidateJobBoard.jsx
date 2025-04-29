@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { openJobs } from "../data/openJobs";
 
@@ -6,6 +5,7 @@ function CandidateJobBoard() {
   const [applied, setApplied] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [candidates, setCandidates] = useState([]); // Added state for candidates
 
   const handleApply = (jobId) => {
     if (!applied.includes(jobId)) {
@@ -57,12 +57,12 @@ return (
                   {job.status}
                 </span>
               </div>
-              
+
               <p className="text-sm text-gray-600 mb-2">
                 {job.location} | {job.shift} | {job.payRate}
               </p>
               <p className="text-gray-700 mb-4 line-clamp-2">{job.description}</p>
-              
+
               <div className="border-t pt-4 mt-4">
                 <h3 className="font-medium mb-2">Key Requirements:</h3>
                 <ul className="text-sm text-gray-600 list-disc list-inside mb-4">
@@ -70,7 +70,7 @@ return (
                     <li key={i}>{req}</li>
                   ))}
                 </ul>
-                
+
                 <div className="flex justify-between items-center">
                   <button
                     className="text-blue-600 text-sm hover:underline"
@@ -110,7 +110,7 @@ return (
                   ✕
                 </button>
               </div>
-              
+
               <div className="mb-6">
                 <p className="text-lg text-gray-700 mb-2">{selectedJob.location}</p>
                 <p className="text-gray-600">Shift: {selectedJob.shift}</p>
@@ -160,6 +160,21 @@ return (
           </div>
         </div>
       )}
+
+      <button
+        onClick={() => {
+          if (window.confirm('Are you sure you want to clear all candidates? This action cannot be undone.')) {
+            localStorage.removeItem("mockCandidates");
+            setCandidates([]);
+            // Show feedback that the operation was successful
+            alert('All candidates have been cleared successfully.');
+          }
+        }}
+        className="mt-8 mb-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+        aria-label="Clear all candidates"
+      >
+        Clear All Candidates
+      </button>
     </div>
   );
 }
