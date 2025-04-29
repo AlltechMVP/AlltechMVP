@@ -15,4 +15,24 @@ window.login = async () => {
         password = 'test123';
     }
 
+    // For testing, check if credentials match test accounts
+    if (testCredentials[email] && testCredentials[email].password === password) {
+        const role = testCredentials[email].role;
+        // Store user info in localStorage
+        localStorage.setItem('currentUser', JSON.stringify({
+            email,
+            role,
+            name: email.split('@')[0]
+        }));
+        
+        // Redirect based on role
+        switch (role) {
+            case 'ceo': window.location.href = '/ceo.html'; break;
+            case 'recruiter': window.location.href = '/recruiter.html'; break;
+            case 'client': window.location.href = '/client.html'; break;
+            default: window.location.href = '/index.html';
+        }
+    } else {
+        alert('Invalid credentials. Use test accounts or leave empty for CEO access.');
+    }
 };
