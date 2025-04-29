@@ -8,6 +8,7 @@ import BillingSettings from "./pages/BillingSettings";
 import ComplianceSettings from "./pages/ComplianceSettings";
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import AdminDashboard from './pages/AdminDashboard';
 import TimecardEntry from "./pages/TimecardEntry";
 import ClientPortal from "./pages/ClientPortal";
 import PayrollView from "./pages/PayrollView";
