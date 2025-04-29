@@ -31,7 +31,7 @@ import CEODashboard from '../components/dashboards/ceo-dashboard';
 import TimesheetEntry from '../components/candidate/timesheet-entry';
 import NotificationsPanel from '../components/candidate/notifications-panel';
 import JobSearch from '../components/candidate/job-search';
-import CandidateApprovals from './components/client/candidate-approvals';
+import CandidateApprovals from '../components/client/candidate-approvals.jsx';
 import './App.css';
 import ProtectedRoute from "./components/ProtectedRoute";
 
