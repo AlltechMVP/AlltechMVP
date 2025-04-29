@@ -1,4 +1,5 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import RecruiterDashboard from './pages/RecruiterDashboard';
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getSession } from "./utils/auth";
