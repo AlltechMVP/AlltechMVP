@@ -6,10 +6,11 @@ import { getSession } from "./utils/auth";
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import TimecardEntry from "./pages/TimecardEntry";
+import ClientPortal from "./pages/ClientPortal";
 import PayrollView from "./pages/PayrollView";
 import ClientDashboard from './pages/ClientDashboard';
-import LandingPage from '../components/common/landing-page';
-import Footer from '../components/common/footer';
+import LandingPage from './components/common/LandingPage';
+import Footer from './components/common/Footer';
 import SalesRepDashboard from '../components/dashboards/sales-rep-dashboard';
 import SalesManagerDashboard from '../components/dashboards/sales-manager-dashboard';
 import BranchManagerDashboard from '../components/dashboards/branch-manager-dashboard';
@@ -72,7 +73,6 @@ function App() {
           <Route path="/vms-aggregator" element={<VMSAggregator />} />
           <Route path="/notification-center" element={<NotificationCenter />} />
           <Route path="/job-search" element={<JobSearch />} />
-          <Route path="/candidate/payroll" element={<PayrollView />} />
           <Route path="/assignment-overview" element={<AssignmentOverview />} />
           <Route path="/revenue-overview" element={<RevenueOverview />} />
           <Route path="/client/candidate-approvals" element={<CandidateApprovals />} />
