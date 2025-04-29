@@ -2,38 +2,13 @@
 import React, { useState } from 'react';
 
 export default function NotificationCenter() {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      date: '2024-03-15',
-      message: 'New candidate application received for Senior Developer position',
-      isRead: false
-    },
-    {
-      id: 2,
-      date: '2024-03-14',
-      message: 'Interview scheduled with John Doe for Project Manager role',
-      isRead: true
-    },
-    {
-      id: 3,
-      date: '2024-03-14',
-      message: 'Client feedback received for submitted candidates',
-      isRead: false
-    },
-    {
-      id: 4,
-      date: '2024-03-13',
-      message: 'New job order posted by Tech Solutions Inc.',
-      isRead: true
-    },
-    {
-      id: 5,
-      date: '2024-03-13',
-      message: 'Timesheet approval pending for temporary staff',
-      isRead: false
-    }
-  ]);
+  import { notifications as notificationData } from '../../src/data/notifications';
+const [notifications, setNotifications] = useState(
+  notificationData.map(n => ({
+    ...n,
+    isRead: false
+  }))
+);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
