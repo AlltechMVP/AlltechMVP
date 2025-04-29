@@ -78,6 +78,7 @@ function App() {
           <Route path="/settings-center" element={<SettingsCenter />} />
           <Route path="/billing-dashboard" element={<BillingDashboard />} />
           <Route path="/notifications" element={<NotificationCenter />} />
+          <Route path="/assignments" element={<AssignmentTracker />} />
         </Routes>
         <Footer />
       </div>
