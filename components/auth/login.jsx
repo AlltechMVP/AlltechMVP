@@ -69,3 +69,33 @@ export default function Login() {
     </div>
   );
 }
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
+export default function Login() {
+  const navigate = useNavigate();
+  
+  const handleLogin = () => {
+    // Mock login - in real app this would validate credentials
+    localStorage.setItem('currentUser', JSON.stringify({
+      id: '1',
+      name: 'Demo User',
+      role: 'sales_rep'
+    }));
+    navigate('/');
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="p-8 bg-white rounded shadow-md w-96">
+        <h1 className="text-2xl font-bold mb-6">Login</h1>
+        <button 
+          onClick={handleLogin}
+          className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+        >
+          Demo Login
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -24,6 +24,10 @@ import BillingDashboard from '../components/admin/billing-dashboard';
 import NavBar from '../components/common/navbar';
 import './App.css';
 
+function Login() {
+  return <div>Login Page</div>;
+}
+
 function App() {
   console.log("✅ React App Loaded");
 
@@ -32,6 +36,7 @@ function App() {
       <NavBar />
       <div className="pt-16 min-h-screen flex flex-col">
         <Routes>
+          <Route path="/login" element={<Login />} />
           <Route path="/" element={<LandingPage />} />
           <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
           <Route path="/sales-manager-dashboard" element={<SalesManagerDashboard />} />
