@@ -5,6 +5,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getSession } from "./utils/auth";
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import TimecardEntry from "./pages/TimecardEntry";
+import PayrollView from "./pages/PayrollView";
 import ClientDashboard from './pages/ClientDashboard';
 import LandingPage from '../components/common/landing-page';
 import Footer from '../components/common/footer';
@@ -57,6 +59,8 @@ function App() {
           <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route path="/client-portal" element={<ClientPortal />} />
           <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
+          <Route path="/timecard" element={<TimecardEntry />} />
+          <Route path="/payroll" element={<PayrollView />} />
           <Route path="/sales-manager-dashboard" element={<SalesManagerDashboard />} />
           <Route path="/candidate/timesheet-entry" element={<TimesheetEntry />} />
           <Route path="/candidate/notifications" element={<NotificationsPanel />} />
