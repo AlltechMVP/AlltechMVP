@@ -24,7 +24,6 @@ import ImportExportCenter from '../components/admin/import-export-center';
 import VMSAggregator from '../components/admin/vms-aggregator';
 import AssignmentOverview from '../components/admin/assignment-overview';
 import RevenueOverview from '../components/admin/revenue-overview';
-import NotificationCenter from '../components/notifications/notification-center';
 import CandidateApprovals from '../components/client/candidate-approvals';
 import JobSearch from '../components/candidate/job-search';
 import SettingsCenter from '../components/admin/settings-center';
