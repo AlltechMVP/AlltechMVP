@@ -4,7 +4,7 @@ import NavBar from '../components/common/navbar';
 import Footer from '../components/common/footer';
 import LandingPage from './components/common/LandingPage';
 import Login from './pages/Login';
-import RecruiterDashboard from './pages/RecruiterDashboard';
+import RecruiterDashboard from '../components/recruiter/dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminTools from "./pages/AdminTools";
 import AccountSettings from "./pages/AccountSettings";
