@@ -53,8 +53,8 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/client" element={<ClientDashboard />} />
           <Route path="/" element={<LandingPage />} />
+          <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
           <Route path="/sales-manager-dashboard" element={<SalesManagerDashboard />} />
           <Route path="/candidate/timesheet-entry" element={<TimesheetEntry />} />
@@ -71,7 +71,6 @@ function App() {
           <Route path="/candidate/payroll" element={<PayrollView />} />
           <Route path="/assignment-overview" element={<AssignmentOverview />} />
           <Route path="/revenue-overview" element={<RevenueOverview />} />
-          <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route path="/client/candidate-approvals" element={<CandidateApprovals />} />
           <Route path="/settings-center" element={<SettingsCenter />} />
           <Route path="/billing-dashboard" element={<BillingDashboard />} />
