@@ -26,7 +26,6 @@ import RevenueOverview from '../components/admin/revenue-overview';
 import NotificationCenter from '../components/notifications/notification-center';
 import CandidateApprovals from '../components/client/candidate-approvals';
 import JobSearch from '../components/candidate/job-search';
-import PayrollView from '../components/candidate/payroll-view';
 import SettingsCenter from '../components/admin/settings-center';
 import BillingDashboard from '../components/admin/billing-dashboard';
 import NavBar from '../components/common/navbar';
