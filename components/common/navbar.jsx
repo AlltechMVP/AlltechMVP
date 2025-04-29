@@ -1,46 +1,27 @@
+import { Link } from 'react-router-dom';
 
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-
-export default function NavBar() {
-  const location = useLocation();
-  
-  const links = [
-    { to: '/', label: 'Home' },
-    { to: '/sales-rep-dashboard', label: 'Sales Rep' },
-    { to: '/sales-manager-dashboard', label: 'Sales Manager' },
-    { to: '/branch-manager-dashboard', label: 'Branch Manager' },
-    { to: '/director-dashboard', label: 'Director' },
-    { to: '/cfo-dashboard', label: 'CFO' },
-    { to: '/ceo-dashboard', label: 'CEO' },
-    { to: '/candidate/timesheet-entry', label: 'Timesheet' },
-    { to: '/candidate/payroll', label: 'Payroll' },
-    { to: '/assignment-overview', label: 'Assignments' },
-    { to: '/revenue-overview', label: 'Revenue' },
-    { to: '/client-dashboard', label: 'Client Portal' },
-    { to: '/client/candidate-approvals', label: 'Approvals' },
-    { to: '/notification-center', label: 'Notifications' }
-  ];
-
+function NavBar() {
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-gray-800 shadow-lg z-50">
-      <div className="overflow-x-auto">
-        <div className="flex space-x-4 p-4 min-w-max">
-          {links.map(({ to, label }) => (
-            <Link
-              key={to}
-              to={to}
-              className={`px-3 py-2 rounded-md text-sm font-medium ${
-                location.pathname === to
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
+    <nav className="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+        <div className="text-xl font-bold">
+          <Link to="/">Alltech MVP</Link>
+        </div>
+        <div className="space-x-4">
+          <Link to="/sales-rep-dashboard" className="hover:text-blue-500">Sales Rep Dashboard</Link>
+          <Link to="/sales-manager-dashboard" className="hover:text-blue-500">Sales Manager Dashboard</Link>
+          <Link to="/branch-manager-dashboard" className="hover:text-blue-500">Branch Manager Dashboard</Link>
+          <Link to="/director-dashboard" className="hover:text-blue-500">Director Dashboard</Link>
+          <Link to="/cfo-dashboard" className="hover:text-blue-500">CFO Dashboard</Link>
+          <Link to="/ceo-dashboard" className="hover:text-blue-500">CEO Dashboard</Link>
+          <Link to="/client-dashboard" className="hover:text-blue-500">Client Dashboard</Link>
+          <Link to="/job-search" className="hover:text-blue-500">Job Search</Link>
+          <Link to="/candidate/payroll" className="hover:text-blue-500">Payroll View</Link>
+          <Link to="/candidate/notifications" className="hover:text-blue-500">Notifications</Link>
         </div>
       </div>
     </nav>
   );
 }
+
+export default NavBar;
