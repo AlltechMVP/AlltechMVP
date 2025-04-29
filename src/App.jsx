@@ -1,4 +1,8 @@
+
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { getSession } from "./utils/auth";
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import LandingPage from '../components/common/landing-page';
@@ -26,20 +30,29 @@ import BillingDashboard from '../components/admin/billing-dashboard';
 import NavBar from '../components/common/navbar';
 import './App.css';
 
-function Login() {
-  return <div>Login Page</div>;
-}
-
 function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    async function checkAuth() {
+      const { session } = await getSession();
+      if (!session) {
+        if (location.pathname !== "/login" && location.pathname !== "/signup") {
+          navigate("/login");
+        }
+      }
+    }
+    checkAuth();
+  }, [navigate, location]);
+
   return (
-    <Router>
+    <div>
       <NavBar />
       <div className="pt-16 min-h-screen flex flex-col">
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/login" element={<Login />} />
           <Route path="/" element={<LandingPage />} />
           <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
           <Route path="/sales-manager-dashboard" element={<SalesManagerDashboard />} />
@@ -64,7 +77,7 @@ function App() {
         </Routes>
         <Footer />
       </div>
-    </Router>
+    </div>
   );
 }
 
