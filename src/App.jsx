@@ -124,7 +124,14 @@ function App() {
           <Route path="/settings/account" element={<AccountSettings />} />
           <Route path="/settings/billing" element={<BillingSettings />} />
           <Route path="/settings/compliance" element={<ComplianceSettings />} />
-          <Route path="/admin-revenue" element={<RevenueOverview />} /> {/* Added route */}
+          <Route 
+            path="/admin-revenue" 
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <RevenueOverview />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
         <Footer />
       </div>
