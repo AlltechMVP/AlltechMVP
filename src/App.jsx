@@ -1,4 +1,5 @@
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import RecruiterDashboard from './pages/RecruiterDashboard';
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -55,9 +56,9 @@ function App() {
   }, [navigate, location]);
 
   return (
-    <div>
+    <div className="min-h-screen flex flex-col">
       <NavBar />
-      <div className="pt-16 min-h-screen flex flex-col">
+      <main className="flex-grow">
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -136,8 +137,8 @@ function App() {
             }
           />
         </Routes>
-        <Footer />
-      </div>
+      </main>
+      <Footer />
     </div>
   );
 }
