@@ -1,14 +1,15 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import NavBar from '../components/common/navbar';
+import Footer from '../components/common/footer';
+import LandingPage from './components/common/LandingPage';
+import Login from './pages/Login';
 import RecruiterDashboard from './pages/RecruiterDashboard';
-import { useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { getSession } from "./utils/auth";
+import ProtectedRoute from './components/ProtectedRoute';
 import AdminTools from "./pages/AdminTools";
 import AccountSettings from "./pages/AccountSettings";
 import BillingSettings from "./pages/BillingSettings";
 import ComplianceSettings from "./pages/ComplianceSettings";
-import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AdminDashboard from './pages/AdminDashboard';
 import TimecardEntry from "./pages/TimecardEntry";
@@ -16,9 +17,6 @@ import ClientPortal from "./pages/ClientPortal";
 import PayrollView from "./pages/PayrollView";
 import ClientDashboard from './pages/ClientDashboard';
 import NotificationCenter from "./pages/NotificationCenter";
-import LandingPage from './components/common/LandingPage';
-import Footer from '../components/common/footer';
-import NavBar from '../components/common/navbar';
 import VMSAggregator from '../components/tools/vms-aggregator';
 import ImportExportCenter from '../components/tools/import-export';
 import AssignmentOverview from '../components/admin/assignment-overview';
@@ -37,7 +35,10 @@ import JobSearch from '../components/candidate/job-search';
 import CandidateApprovals from '../components/client/candidate-approvals.jsx';
 import ForgotPassword from '../components/auth/forgot-password.jsx';
 import './App.css';
-import ProtectedRoute from "./components/ProtectedRoute";
+import { useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { getSession } from "./utils/auth";
+
 
 function App() {
   const navigate = useNavigate();
@@ -60,9 +61,17 @@ function App() {
       <NavBar />
       <main className="flex-grow">
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
           <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/recruiter"
+            element={
+              <ProtectedRoute allowedRoles={["Recruiter"]}>
+                <RecruiterDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route
             path="/client-portal"
