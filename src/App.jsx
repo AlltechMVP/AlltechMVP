@@ -1,4 +1,3 @@
-
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -10,9 +9,9 @@ import ClientPortal from "./pages/ClientPortal";
 import PayrollView from "./pages/PayrollView";
 import ClientDashboard from './pages/ClientDashboard';
 import LandingPage from './components/common/LandingPage';
-import Footer from './components/common/Footer';
-import SalesRepDashboard from '../components/dashboards/sales-rep-dashboard';
-import SalesManagerDashboard from '../components/dashboards/sales-manager-dashboard';
+import Footer from './components/common/footer';
+import SalesRepDashboard from './components/dashboards/sales-rep-dashboard';
+import SalesManagerDashboard from './components/dashboards/sales-manager-dashboard';
 import BranchManagerDashboard from '../components/dashboards/branch-manager-dashboard';
 import DirectorDashboard from '../components/dashboards/director-dashboard';
 import CFODashboard from '../components/dashboards/cfo-dashboard';
