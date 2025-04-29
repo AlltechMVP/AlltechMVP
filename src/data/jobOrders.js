@@ -1,10 +1,10 @@
 
-export const loadJobOrders = () => {
+const loadJobOrders = () => {
   const stored = localStorage.getItem('jobOrders');
   return stored ? JSON.parse(stored) : [];
 };
 
-export const tagJobWithVMS = (jobId, vmsData) => {
+const tagJobWithVMS = (jobId, vmsData) => {
   const jobs = loadJobOrders();
   const jobIndex = jobs.findIndex(j => j.id === jobId);
   
@@ -14,7 +14,7 @@ export const tagJobWithVMS = (jobId, vmsData) => {
   }
 };
 
-export const saveJobOrder = (jobData) => {
+const saveJobOrder = (jobData) => {
   const jobs = loadJobOrders();
   jobs.push({
     id: Date.now(),
@@ -23,3 +23,6 @@ export const saveJobOrder = (jobData) => {
   });
   localStorage.setItem('jobOrders', JSON.stringify(jobs));
 };
+
+export { loadJobOrders, tagJobWithVMS, saveJobOrder };
+export default { loadJobOrders, tagJobWithVMS, saveJobOrder };
