@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getSession } from "./utils/auth";
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ClientDashboard from './pages/ClientDashboard';
 import LandingPage from '../components/common/landing-page';
 import Footer from '../components/common/footer';
 import SalesRepDashboard from '../components/dashboards/sales-rep-dashboard';
@@ -53,6 +54,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/client" element={<ClientDashboard />} />
           <Route path="/" element={<LandingPage />} />
           <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
           <Route path="/sales-manager-dashboard" element={<SalesManagerDashboard />} />
