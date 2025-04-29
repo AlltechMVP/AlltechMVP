@@ -30,9 +30,7 @@ function Login() {
 }
 
 function App() {
-  useEffect(() => {
-    console.log('Vite environment variables:', import.meta.env);
-  }, []);
+  
 
   console.log("✅ React App Loaded");
 
