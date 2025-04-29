@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getSession } from "./utils/auth";
 import AdminTools from "./pages/AdminTools";
-import ImportExportCenter from "./pages/ImportExportCenter";
 import AccountSettings from "./pages/AccountSettings";
 import BillingSettings from "./pages/BillingSettings";
 import ComplianceSettings from "./pages/ComplianceSettings";
@@ -16,23 +15,23 @@ import ClientDashboard from './pages/ClientDashboard';
 import NotificationCenter from "./pages/NotificationCenter";
 import LandingPage from './components/common/LandingPage';
 import Footer from './components/common/footer';
-import SalesRepDashboard from '../components/dashboards/sales-rep-dashboard';
-import SalesManagerDashboard from '../components/dashboards/sales-manager-dashboard';
-import BranchManagerDashboard from '../components/dashboards/branch-manager-dashboard';
-import DirectorDashboard from '../components/dashboards/director-dashboard';
-import CFODashboard from '../components/dashboards/cfo-dashboard';
-import CEODashboard from '../components/dashboards/ceo-dashboard';
-import TimesheetEntry from '../components/candidate/timesheet-entry';
-import NotificationsPanel from '../components/candidate/notifications-panel';
-import ForgotPassword from '../components/auth/forgot-password';
-import VMSAggregator from '../components/admin/vms-aggregator';
-import AssignmentOverview from '../components/admin/assignment-overview';
-import RevenueOverview from '../components/admin/revenue-overview';
-import CandidateApprovals from '../components/client/candidate-approvals';
-import JobSearch from '../components/candidate/job-search';
-import SettingsCenter from '../components/admin/settings-center';
-import BillingDashboard from '../components/admin/billing-dashboard';
-import NavBar from '../components/common/navbar';
+import NavBar from './components/common/navbar';
+import VMSAggregator from './components/admin/vms-aggregator';
+import ImportExportCenter from './components/admin/import-export-center';
+import AssignmentOverview from './components/admin/assignment-overview';
+import RevenueOverview from './components/admin/revenue-overview';
+import SettingsCenter from './components/admin/settings-center';
+import BillingDashboard from './components/admin/billing-dashboard';
+import SalesRepDashboard from './components/dashboards/sales-rep-dashboard';
+import SalesManagerDashboard from './components/dashboards/sales-manager-dashboard'; 
+import BranchManagerDashboard from './components/dashboards/branch-manager-dashboard';
+import DirectorDashboard from './components/dashboards/director-dashboard';
+import CFODashboard from './components/dashboards/cfo-dashboard';
+import CEODashboard from './components/dashboards/ceo-dashboard';
+import TimesheetEntry from './components/candidate/timesheet-entry';
+import NotificationsPanel from './components/candidate/notifications-panel';
+import JobSearch from './components/candidate/job-search';
+import CandidateApprovals from './components/client/candidate-approvals';
 import './App.css';
 
 function App() {
@@ -82,8 +81,9 @@ function App() {
           <Route path="/settings-center" element={<SettingsCenter />} />
           <Route path="/billing-dashboard" element={<BillingDashboard />} />
           <Route path="/notifications" element={<NotificationCenter />} />
-          <Route path="/assignments" element={<AssignmentTracker />} />
+          {/* Removed duplicate route and potential conflict */}
           <Route path="/admin-tools" element={<AdminTools />} />
+          {/* Simplified route for Import/Export */}
           <Route path="/import-export" element={<ImportExportCenter />} />
           <Route path="/settings/account" element={<AccountSettings />} />
           <Route path="/settings/billing" element={<BillingSettings />} />
