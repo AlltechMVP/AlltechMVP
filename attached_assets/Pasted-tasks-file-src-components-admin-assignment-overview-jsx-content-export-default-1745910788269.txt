@@ -1,0 +1,108 @@
+tasks:
+  - file: src/components/admin/assignment-overview.jsx
+    content: |
+      export default function AssignmentOverview() {
+        return <div className="p-4">Admin – Assignment Overview Placeholder</div>;
+      }
+
+  - file: src/components/admin/billing-dashboard.jsx
+    content: |
+      export default function BillingDashboard() {
+        return <div className="p-4">Admin – Billing Dashboard Placeholder</div>;
+      }
+
+  - file: src/components/admin/revenue-overview.jsx
+    content: |
+      export default function RevenueOverview() {
+        return <div className="p-4">Admin – Revenue Overview Placeholder</div>;
+      }
+
+  - file: src/components/admin/settings-center.jsx
+    content: |
+      export default function SettingsCenter() {
+        return <div className="p-4">Admin – Settings Center Placeholder</div>;
+      }
+
+  - file: src/components/admin/vms-aggregator.jsx
+    content: |
+      export default function VMSAggregator() {
+        return <div className="p-4">Admin – VMS Aggregator Placeholder</div>;
+      }
+
+  - file: src/components/client/candidate-approvals.jsx
+    content: |
+      export default function CandidateApprovals() {
+        return <div className="p-4">Client – Candidate Approvals Placeholder</div>;
+      }
+
+  - file: src/components/client/client-jobs.jsx
+    content: |
+      export default function ClientJobs() {
+        return <div className="p-4">Client – Job Listing Placeholder</div>;
+      }
+
+  - file: src/components/client/client-metrics.jsx
+    content: |
+      export default function ClientMetrics() {
+        return <div className="p-4">Client – Metrics Dashboard Placeholder</div>;
+      }
+
+  - file: src/components/client/client-view.jsx
+    content: |
+      export default function ClientView() {
+        return <div className="p-4">Client – Main View Placeholder</div>;
+      }
+
+  - file: src/components/candidate/job-search.jsx
+    content: |
+      export default function JobSearch() {
+        return <div className="p-4">Candidate – Job Search Placeholder</div>;
+      }
+
+  - file: src/components/candidate/notifications-panel.jsx
+    content: |
+      export default function NotificationsPanel() {
+        return <div className="p-4">Candidate – Notifications Panel Placeholder</div>;
+      }
+
+  - file: src/components/candidate/payroll-view.jsx
+    content: |
+      export default function PayrollView() {
+        return <div className="p-4">Candidate – Payroll View Placeholder</div>;
+      }
+
+  - file: src/components/candidate/timesheet-entry.jsx
+    content: |
+      export default function TimesheetEntry() {
+        return <div className="p-4">Candidate – Timesheet Entry Placeholder</div>;
+      }
+
+  - file: src/components/tools/import-export.jsx
+    content: |
+      export default function ImportExportCenter() {
+        return <div className="p-4">Tools – Import/Export Center Placeholder</div>;
+      }
+
+  - file: src/components/tools/notifications-admin.jsx
+    content: |
+      export default function AdminAlerts() {
+        return <div className="p-4">Tools – Admin Alerts Panel Placeholder</div>;
+      }
+
+  - file: src/components/tools/notifications-client.jsx
+    content: |
+      export default function ClientAlerts() {
+        return <div className="p-4">Tools – Client Alerts Panel Placeholder</div>;
+      }
+
+  - file: src/components/tools/assignment-tracker.jsx
+    content: |
+      export default function AssignmentTracker() {
+        return <div className="p-4">Tools – Assignment Tracker Placeholder</div>;
+      }
+
+  - file: src/components/tools/punch-simulator.jsx
+    content: |
+      export default function PunchSimulator() {
+        return <div className="p-4">Tools – Punch-in Simulation Placeholder</div>;
+      }
