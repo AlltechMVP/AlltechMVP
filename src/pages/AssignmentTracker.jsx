@@ -1,57 +1,57 @@
 
-import React, { useState } from 'react';
-import { assignments } from '../data/assignments';
+import { useState } from "react";
+import { assignments } from "../data/assignments";
 
 function AssignmentTracker() {
-  const [filter, setFilter] = useState('all');
-  
-  const filteredAssignments = filter === 'all' 
-    ? assignments 
-    : assignments.filter(a => a.punchedIn === (filter === 'active'));
+  const [data, setData] = useState(assignments);
+
+  const handlePunchIn = (id) => {
+    setData((prev) =>
+      prev.map((assign) =>
+        assign.id === id ? { ...assign, punchedIn: !assign.punchedIn } : assign
+      )
+    );
+    alert("Punch action recorded!");
+  };
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Assignment Tracker</h1>
-        <div className="space-x-2">
-          <button 
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded ${filter === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}
-          >
-            All
-          </button>
-          <button 
-            onClick={() => setFilter('active')}
-            className={`px-4 py-2 rounded ${filter === 'active' ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}
-          >
-            Active
-          </button>
-        </div>
-      </div>
-
-      <div className="grid gap-4">
-        {filteredAssignments.map(assignment => (
-          <div key={assignment.id} className="bg-white p-4 rounded-lg shadow">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-semibold text-lg">{assignment.employee}</h3>
-                <p className="text-gray-600">{assignment.jobTitle}</p>
-                <p className="text-sm text-gray-500">{assignment.location}</p>
-                <p className="text-sm">
-                  Shift: {assignment.shiftStart} - {assignment.shiftEnd}
-                </p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                assignment.punchedIn 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {assignment.punchedIn ? 'On Shift' : 'Not Started'}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+      <h1 className="text-2xl font-bold mb-4">Assignment Tracker</h1>
+      <table className="w-full text-left border">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="p-2 border">Employee</th>
+            <th className="p-2 border">Job</th>
+            <th className="p-2 border">Location</th>
+            <th className="p-2 border">Shift</th>
+            <th className="p-2 border">Punch Status</th>
+            <th className="p-2 border">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((assign) => (
+            <tr key={assign.id}>
+              <td className="p-2 border">{assign.employee}</td>
+              <td className="p-2 border">{assign.jobTitle}</td>
+              <td className="p-2 border">{assign.location}</td>
+              <td className="p-2 border">{assign.shiftStart} - {assign.shiftEnd}</td>
+              <td className="p-2 border">
+                {assign.punchedIn ? "Punched In" : "Not Punched"}
+              </td>
+              <td className="p-2 border">
+                <button
+                  className={`px-4 py-2 rounded ${
+                    assign.punchedIn ? "bg-red-500" : "bg-green-500"
+                  } text-white`}
+                  onClick={() => handlePunchIn(assign.id)}
+                >
+                  {assign.punchedIn ? "Punch Out" : "Punch In"}
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
