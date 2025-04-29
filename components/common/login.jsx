@@ -12,6 +12,8 @@ function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    alert("🚨 Login handler triggered!");
+    console.log("🔐 Starting login...");
     console.log("🔐 Starting login...");
 
     const { data, error } = await supabase.auth.signInWithPassword({
