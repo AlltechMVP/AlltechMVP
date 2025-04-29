@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { loadJobOrders } from './jobOrders';
+import { loadJobOrders } from '../../src/data/jobOrders';
 
 export default function ImportExport() {
   const handleExportJobs = () => {

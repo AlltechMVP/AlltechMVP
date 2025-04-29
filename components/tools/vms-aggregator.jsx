@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { loadJobOrders, tagJobWithVMS } from './jobOrders';
+import { loadJobOrders, tagJobWithVMS } from '../../src/data/jobOrders';
 
 export default function VMSAggregator() {
   const [mockVMSJobs] = useState([

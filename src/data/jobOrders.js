@@ -1,23 +1,25 @@
 
-const jobOrders = [
-  {
-    id: 1,
-    title: "Warehouse Associate",
-    location: "Dallas, TX",
-    approved: false,
-  },
-  {
-    id: 2,
-    title: "Forklift Driver", 
-    location: "Fort Worth, TX",
-    approved: true,
-  },
-  {
-    id: 3,
-    title: "Packing Line Worker",
-    location: "Arlington, TX", 
-    approved: false,
-  },
-];
+export const loadJobOrders = () => {
+  const stored = localStorage.getItem('jobOrders');
+  return stored ? JSON.parse(stored) : [];
+};
 
-export default jobOrders;
+export const tagJobWithVMS = (jobId, vmsData) => {
+  const jobs = loadJobOrders();
+  const jobIndex = jobs.findIndex(j => j.id === jobId);
+  
+  if (jobIndex >= 0) {
+    jobs[jobIndex].vmsData = vmsData;
+    localStorage.setItem('jobOrders', JSON.stringify(jobs));
+  }
+};
+
+export const saveJobOrder = (jobData) => {
+  const jobs = loadJobOrders();
+  jobs.push({
+    id: Date.now(),
+    ...jobData,
+    createdAt: new Date().toISOString()
+  });
+  localStorage.setItem('jobOrders', JSON.stringify(jobs));
+};
