@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { clients } from "../data/clients";
 
@@ -11,136 +10,99 @@ function ClientPortal() {
     setData(clients);
   }, []);
 
+  const stats = {
+    totalClients: data.length,
+    activeClients: data.filter(c => c.status === "Active").length,
+    totalJobs: data.reduce((sum, c) => sum + c.jobsOpen, 0),
+    totalAssignments: data.reduce((sum, c) => sum + c.activeAssignments, 0)
+  };
+
   const filteredData = data.filter(client => {
     if (filter === "all") return true;
-    return client.status.toLowerCase() === filter;
+    return client.status.toLowerCase() === filter.toLowerCase();
   });
 
-  const handleClientSelect = (client) => {
-    setSelectedClient(client);
-  };
-
-  const handleStatusChange = (clientId, newStatus) => {
-    setData(data.map(client => 
-      client.id === clientId ? {...client, status: newStatus} : client
-    ));
-    setSelectedClient(null);
-  };
-
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Client Portal</h1>
-        <div className="flex gap-4">
-          <select 
-            className="border p-2 rounded"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          >
-            <option value="all">All Clients</option>
-            <option value="active">Active</option>
-            <option value="pending approval">Pending</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-semibold">Total Clients</h3>
-          <p className="text-2xl">{data.length}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-semibold">Active Clients</h3>
-          <p className="text-2xl">{data.filter(c => c.status === "Active").length}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-semibold">Total Open Jobs</h3>
-          <p className="text-2xl">{data.reduce((sum, client) => sum + client.jobsOpen, 0)}</p>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="p-4 border-b">Client</th>
-              <th className="p-4 border-b">Location</th>
-              <th className="p-4 border-b">Industry</th>
-              <th className="p-4 border-b">Status</th>
-              <th className="p-4 border-b">Open Jobs</th>
-              <th className="p-4 border-b">Active Assignments</th>
-              <th className="p-4 border-b">Last Activity</th>
-              <th className="p-4 border-b">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredData.map((client) => (
-              <tr key={client.id} className="hover:bg-gray-50">
-                <td className="p-4 border-b">{client.name}</td>
-                <td className="p-4 border-b">{client.location}</td>
-                <td className="p-4 border-b">{client.industry}</td>
-                <td className="p-4 border-b">
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    client.status === "Active" ? "bg-green-100 text-green-800" :
-                    client.status === "Pending Approval" ? "bg-yellow-100 text-yellow-800" :
-                    "bg-red-100 text-red-800"
-                  }`}>
-                    {client.status}
-                  </span>
-                </td>
-                <td className="p-4 border-b">{client.jobsOpen}</td>
-                <td className="p-4 border-b">{client.activeAssignments}</td>
-                <td className="p-4 border-b">{client.lastActivity}</td>
-                <td className="p-4 border-b">
-                  <button 
-                    onClick={() => handleClientSelect(client)}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    Manage
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {selectedClient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Manage Client: {selectedClient.name}</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Status</label>
-                <select 
-                  className="w-full border p-2 rounded"
-                  value={selectedClient.status}
-                  onChange={(e) => handleStatusChange(selectedClient.id, e.target.value)}
-                >
-                  <option value="Active">Active</option>
-                  <option value="Pending Approval">Pending Approval</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button 
-                  onClick={() => setSelectedClient(null)}
-                  className="px-4 py-2 border rounded hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={() => handleStatusChange(selectedClient.id, selectedClient.status)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </div>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Client Portal</h1>
+          <div className="flex gap-4">
+            <select 
+              className="px-4 py-2 border rounded-lg shadow-sm"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            >
+              <option value="all">All Clients</option>
+              <option value="active">Active</option>
+              <option value="pending approval">Pending</option>
+              <option value="inactive">Inactive</option>
+            </select>
           </div>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-sm font-medium text-gray-500">Total Clients</h3>
+            <p className="text-2xl font-semibold text-gray-900">{stats.totalClients}</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-sm font-medium text-gray-500">Active Clients</h3>
+            <p className="text-2xl font-semibold text-green-600">{stats.activeClients}</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-sm font-medium text-gray-500">Total Open Jobs</h3>
+            <p className="text-2xl font-semibold text-blue-600">{stats.totalJobs}</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-sm font-medium text-gray-500">Active Assignments</h3>
+            <p className="text-2xl font-semibold text-purple-600">{stats.totalAssignments}</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Industry</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Open Jobs</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignments</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredData.map((client) => (
+                <tr key={client.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{client.name}</div>
+                    <div className="text-sm text-gray-500">{client.location}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{client.contactPerson}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{client.industry}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                      ${client.status === "Active" ? "bg-green-100 text-green-800" : 
+                        client.status === "Pending Approval" ? "bg-yellow-100 text-yellow-800" : 
+                        "bg-red-100 text-red-800"}`}>
+                      {client.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.jobsOpen}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.activeAssignments}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.billingRate}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
