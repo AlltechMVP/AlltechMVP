@@ -15,7 +15,7 @@ import ClientDashboard from './pages/ClientDashboard';
 import NotificationCenter from "./pages/NotificationCenter";
 import LandingPage from './components/common/LandingPage';
 import Footer from './components/common/footer';
-import NavBar from './components/common/navbar';
+import NavBar from '../components/common/navbar';
 import VMSAggregator from './components/admin/vms-aggregator';
 import ImportExportCenter from './components/admin/import-export-center';
 import AssignmentOverview from './components/admin/assignment-overview';
