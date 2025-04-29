@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { supabase } from "../../utils/supabaseClient";
+import { supabase } from "../../src/lib/supabase";
 
 export default function Login() {
   console.log("📍 Login page loaded");

@@ -1,5 +1,5 @@
 
-import { supabase } from './supabase.js';
+import { supabase } from '../src/lib/supabase.js';
 
 async function resetPassword() {
     const email = document.getElementById("email").value;
