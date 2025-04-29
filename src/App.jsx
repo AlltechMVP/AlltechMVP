@@ -2,6 +2,11 @@ import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getSession } from "./utils/auth";
+import AdminTools from "./pages/AdminTools";
+import ImportExportCenter from "./pages/ImportExportCenter";
+import AccountSettings from "./pages/AccountSettings";
+import BillingSettings from "./pages/BillingSettings";
+import ComplianceSettings from "./pages/ComplianceSettings";
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import TimecardEntry from "./pages/TimecardEntry";
@@ -79,6 +84,11 @@ function App() {
           <Route path="/billing-dashboard" element={<BillingDashboard />} />
           <Route path="/notifications" element={<NotificationCenter />} />
           <Route path="/assignments" element={<AssignmentTracker />} />
+          <Route path="/admin-tools" element={<AdminTools />} />
+          <Route path="/import-export" element={<ImportExportCenter />} />
+          <Route path="/settings/account" element={<AccountSettings />} />
+          <Route path="/settings/billing" element={<BillingSettings />} />
+          <Route path="/settings/compliance" element={<ComplianceSettings />} />
         </Routes>
         <Footer />
       </div>
