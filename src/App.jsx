@@ -55,6 +55,7 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/" element={<LandingPage />} />
           <Route path="/client-dashboard" element={<ClientDashboard />} />
+          <Route path="/client-portal" element={<ClientPortal />} />
           <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
           <Route path="/sales-manager-dashboard" element={<SalesManagerDashboard />} />
           <Route path="/candidate/timesheet-entry" element={<TimesheetEntry />} />
