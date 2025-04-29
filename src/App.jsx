@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import NavBar from '../components/common/navbar';
 import Footer from '../components/common/footer';
 import LandingPage from "./components/common/LandingPage";
-import Login from "./components/common/login";
+import Login from "./pages/Login";
 import RecruiterDashboard from "./components/recruiter/dashboard";
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
