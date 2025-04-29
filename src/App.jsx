@@ -34,6 +34,7 @@ function App() {
       <NavBar />
       <div className="pt-16 min-h-screen flex flex-col">
         <Routes>
+          <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<LandingPage />} />
           <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
