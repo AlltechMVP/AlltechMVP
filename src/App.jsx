@@ -32,6 +32,7 @@ import TimesheetEntry from '../components/candidate/timesheet-entry';
 import NotificationsPanel from '../components/candidate/notifications-panel';
 import JobSearch from '../components/candidate/job-search';
 import CandidateApprovals from '../components/client/candidate-approvals.jsx';
+import ForgotPassword from '../components/auth/forgot-password.jsx';
 import './App.css';
 import ProtectedRoute from "./components/ProtectedRoute";
 
