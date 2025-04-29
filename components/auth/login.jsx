@@ -1,101 +1,50 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../../utils/supabaseClient";
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { loadUsers } from '../../data/users';
-
-export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+function Login() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleSubmit = (e) => {
+  console.log("📍 Login page loaded");
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const users = loadUsers();
-    const user = users.find(u => u.email === email);
-    
-    if (user) {
-      localStorage.setItem('currentUser', JSON.stringify(user));
-      
-      const roleRoutes = {
-        admin: '/admin-dashboard',
-        recruiter: '/recruiter-dashboard',
-        sales_rep: '/sales-dashboard',
-        client: '/client-approvals',
-        executive: '/executive-dashboard'
-      };
+    console.log("🔐 Starting login...");
 
-      navigate(roleRoutes[user.role] || '/');
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    console.log("🧾 Supabase response:", { data, error });
+
+    if (error) {
+      console.error("❌ Login failed:", error.message);
+      setErrorMsg("Login failed. Please check your credentials.");
+      return;
+    }
+
+    if (data && data.user) {
+      console.log("✅ Login successful. User:", data.user);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      console.log("📦 User saved to localStorage.");
+      navigate("/recruiter");
+      console.log("➡️ Redirecting to /recruiter...");
     } else {
-      setError('Invalid credentials');
+      console.warn("⚠️ Login did not return a user object.");
+      setErrorMsg("Login did not complete properly. Please try again.");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">Alltech Staffing</h1>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="text-red-500 text-sm">{error}</div>}
-          <div>
-            <label className="block text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-2">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 focus:ring-2 focus:ring-blue-500"
-          >
-            Login
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-
-export default function Login() {
-  const navigate = useNavigate();
-  
-  const handleLogin = () => {
-    // Mock login - in real app this would validate credentials
-    localStorage.setItem('currentUser', JSON.stringify({
-      id: '1',
-      name: 'Demo User',
-      role: 'sales_rep'
-    }));
-    navigate('/');
-  };
-
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="p-8 bg-white rounded shadow-md w-96">
-        <h1 className="text-2xl font-bold mb-6">Login</h1>
-        <button 
-          onClick={handleLogin}
-          className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-        >
-          Demo Login
-        </button>
-      </div>
-    </div>
-  );
-}
+    <div>
+      <h2>Login</h2>
+      <form onSubmit={handleLogin}>
+        <input
+          type="email"
+          value={email}
+          placeholder="Email"
+          on
