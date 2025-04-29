@@ -12,8 +12,12 @@ async function resetPassword() {
     }
 
     try {
+        const redirectPath = window.location.host 
+            ? `${window.location.protocol}//${window.location.host}/reset-success.html`
+            : '/reset-success.html';
+            
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.protocol}//${window.location.host}/reset-success.html`
+            redirectTo: redirectPath
         });
 
         if (error) throw error;

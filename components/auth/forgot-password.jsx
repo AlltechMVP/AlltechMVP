@@ -9,8 +9,12 @@ export default function ForgotPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const redirectPath = window.location.origin 
+        ? `${window.location.origin}/reset-success`
+        : '/reset-success';
+        
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-success`
+        redirectTo: redirectPath
       });
 
       if (error) throw error;
