@@ -19,7 +19,7 @@ import NavBar from '../components/common/navbar';
 import VMSAggregator from '../components/tools/vms-aggregator';
 import ImportExportCenter from '../components/tools/import-export';
 import AssignmentOverview from '../components/admin/assignment-overview';
-import RevenueOverview from './components/admin/revenue-overview';
+import RevenueOverview from '../components/admin/revenue-overview';
 import SettingsCenter from './components/admin/settings-center';
 import BillingDashboard from './components/admin/billing-dashboard';
 import SalesRepDashboard from './components/dashboards/sales-rep-dashboard';
@@ -88,6 +88,7 @@ function App() {
           <Route path="/settings/account" element={<AccountSettings />} />
           <Route path="/settings/billing" element={<BillingSettings />} />
           <Route path="/settings/compliance" element={<ComplianceSettings />} />
+          <Route path="/admin-revenue" element={<RevenueOverview />} /> {/* Added route */}
         </Routes>
         <Footer />
       </div>
