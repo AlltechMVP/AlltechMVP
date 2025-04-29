@@ -8,6 +8,7 @@ import TimecardEntry from "./pages/TimecardEntry";
 import ClientPortal from "./pages/ClientPortal";
 import PayrollView from "./pages/PayrollView";
 import ClientDashboard from './pages/ClientDashboard';
+import NotificationCenter from "./pages/NotificationCenter";
 import LandingPage from './components/common/LandingPage';
 import Footer from './components/common/footer';
 import SalesRepDashboard from '../components/dashboards/sales-rep-dashboard';
@@ -77,6 +78,7 @@ function App() {
           <Route path="/client/candidate-approvals" element={<CandidateApprovals />} />
           <Route path="/settings-center" element={<SettingsCenter />} />
           <Route path="/billing-dashboard" element={<BillingDashboard />} />
+          <Route path="/notifications" element={<NotificationCenter />} />
         </Routes>
         <Footer />
       </div>
