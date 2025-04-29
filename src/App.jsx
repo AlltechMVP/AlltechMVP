@@ -33,6 +33,7 @@ import NotificationsPanel from '../components/candidate/notifications-panel';
 import JobSearch from '../components/candidate/job-search';
 import CandidateApprovals from './components/client/candidate-approvals';
 import './App.css';
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   const navigate = useNavigate();
@@ -59,7 +60,14 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/" element={<LandingPage />} />
           <Route path="/client-dashboard" element={<ClientDashboard />} />
-          <Route path="/client-portal" element={<ClientPortal />} />
+          <Route
+            path="/client-portal"
+            element={
+              <ProtectedRoute allowedRoles={["Client"]}>
+                <ClientPortal />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/sales-rep-dashboard" element={<SalesRepDashboard />} />
           <Route path="/timecard" element={<TimecardEntry />} />
           <Route path="/payroll" element={<PayrollView />} />
@@ -81,10 +89,38 @@ function App() {
           <Route path="/settings-center" element={<SettingsCenter />} />
           <Route path="/billing-dashboard" element={<BillingDashboard />} />
           <Route path="/notifications" element={<NotificationCenter />} />
-          {/* Removed duplicate route and potential conflict */}
-          <Route path="/admin-tools" element={<AdminTools />} />
-          {/* Simplified route for Import/Export */}
-          <Route path="/import-export" element={<ImportExportCenter />} />
+          <Route
+            path="/admin-tools"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminTools />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/import-export"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <ImportExportCenter />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recruiter"
+            element={
+              <ProtectedRoute allowedRoles={["Recruiter"]}>
+                <RecruiterDashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/settings/account" element={<AccountSettings />} />
           <Route path="/settings/billing" element={<BillingSettings />} />
           <Route path="/settings/compliance" element={<ComplianceSettings />} />
