@@ -1,9 +1,9 @@
 
-import { users } from "../data/users";
+import { loadUsers } from "../data/users";
 import { useState } from "react";
 
 function AdminTools() {
-  const [data, setData] = useState(users);
+  const [data, setData] = useState(loadUsers());
 
   const handleRemove = (id) => {
     setData(data.filter((user) => user.id !== id));
