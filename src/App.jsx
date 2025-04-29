@@ -25,6 +25,8 @@ import NavBar from '../components/common/navbar';
 import './App.css';
 
 function App() {
+  console.log("✅ React App Loaded");
+
   return (
     <Router>
       <NavBar />
