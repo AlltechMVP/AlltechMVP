@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabase"; // ✅ Correct import path
+import { supabase } from "../../src/lib/supabase"; // ✅ Correct import path
 
 function Login() {
   const navigate = useNavigate();
