@@ -1,4 +1,5 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import LandingPage from '../components/common/landing-page';
 import Footer from '../components/common/footer';
 import SalesRepDashboard from '../components/dashboards/sales-rep-dashboard';
@@ -29,6 +30,10 @@ function Login() {
 }
 
 function App() {
+  useEffect(() => {
+    console.log('Vite environment variables:', import.meta.env);
+  }, []);
+
   console.log("✅ React App Loaded");
 
   return (
