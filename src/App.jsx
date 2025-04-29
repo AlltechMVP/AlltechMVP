@@ -1,4 +1,6 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 import LandingPage from '../components/common/landing-page';
 import Footer from '../components/common/footer';
 import SalesRepDashboard from '../components/dashboards/sales-rep-dashboard';
@@ -34,6 +36,8 @@ function App() {
       <NavBar />
       <div className="pt-16 min-h-screen flex flex-col">
         <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<LandingPage />} />
