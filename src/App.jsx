@@ -1,4 +1,13 @@
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, createRoutesFromElements } from 'react-router-dom';
+
+// Enable v7 compatibility flag
+const router = createRoutesFromElements(
+  Routes({
+    future: {
+      v7_relativeSplatPath: true
+    }
+  })
+);
 import { useEffect } from 'react';
 import LandingPage from '../components/common/landing-page';
 import Footer from '../components/common/footer';
