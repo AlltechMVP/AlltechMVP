@@ -1,5 +1,5 @@
 
-# Alltech Staffing Platform MVP – Developer README
+# Alltech  MVP – Developer README
 
 This project is a modular, localStorage-powered staffing platform MVP built in React. It supports full front- and back-office workflows for recruiters, clients, candidates, and admins. Designed in Replit for rapid prototyping and demo readiness.
 
