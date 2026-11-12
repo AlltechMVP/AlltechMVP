@@ -6,7 +6,7 @@ import {
   setAssignmentPrefill, getCandidateById,
 } from '@/utils/storage';
 import {
-  fetchApplication, syncCandidateToSupabase,
+  fetchApplications, reconcilePipeline, syncCandidateToSupabase,
 } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty } from '@/components/ui';
