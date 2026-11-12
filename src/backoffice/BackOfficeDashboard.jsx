@@ -6,7 +6,16 @@ import { getStoredInvoices } from '../data/mockInvoices';
 export default function BackOfficeDashboard() {
   const timesheets = getStoredTimesheets();
   const invoices = getStoredInvoices();
-  const emailLog = JSON.parse(localStorage.getItem('emailLog') || '[]');
+  // The email log is a local demo artifact; a malformed value must not
+  // crash the whole dashboard (it did — ErrorBoundary "Something went
+  // wrong" — for a backoffice sign-in).
+  let emailLog = [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem('emailLog') || '[]');
+    emailLog = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    emailLog = [];
+  }
 
   const thisWeek = new Date();
   thisWeek.setDate(thisWeek.getDate() - 7);

@@ -529,6 +529,19 @@ export function applyTimesheetCompliance(ts) {
   const { exceptions, compliance } = runTimesheetCompliance(ts);
   ts.exceptions = exceptions;
   ts.compliance = compliance;
+  // A timesheet that has been submitted (or internally approved) goes to
+  // the client for approval. The client's Pending queue filters on
+  // clientApprovalStatus === 'Submitted', so a row left at
+  // 'Not Submitted' can never be approved — previously nothing in the app
+  // ever made this transition (only the hand-written seed had 'Submitted'
+  // rows), which made the client time-approval step unreachable for any
+  // freshly-created timesheet. Never overwrites a real client decision
+  // (Approved/Rejected).
+  if ((ts.status === 'Submitted' || ts.status === 'Approved')
+      && (!ts.clientApprovalStatus || ts.clientApprovalStatus === 'Not Submitted')) {
+    ts.clientApprovalStatus = 'Submitted';
+    if (!ts.submittedAt) ts.submittedAt = now();
+  }
   if (ts.status === 'Approved') {
     const newPayrollStatus = computePayrollStatus(ts);
     if (ts.payrollStatus !== 'In Payroll' && ts.payrollStatus !== 'Paid') {

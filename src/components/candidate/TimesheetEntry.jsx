@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import { fetchAssignments } from "@/lib/pipeline";
+import { fetchAssignments, syncTimesheetToSupabase } from "@/lib/pipeline";
+import {
+  getTimesheets, setTimesheets, getAssignments,
+  applyTimesheetCompliance, uid, now,
+} from "@/utils/storage";
 
 // Slice 7: candidate time entry, rewritten. The old version was broken in
 // four ways — `const newHours = [hours]` nested the hours array instead of
@@ -12,6 +16,11 @@ import { fetchAssignments } from "@/lib/pipeline";
 // their own Active assignments, takes a week-ending date (defaulting to
 // this week's Friday), submits numeric hours, and surfaces real errors
 // in the UI instead of alerting success.
+// It writes to the DEMO store (the canonical write path, same as the
+// timekeeping Form) and syncs up via syncTimesheetToSupabase — it must
+// NOT insert directly into Supabase: a direct row has no legacy_id, so
+// the reconcile creates demo twins for it and those twins sync up as NEW
+// Supabase rows (one submission became three timesheets).
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Friday of the Mon-Sun week containing today (the week-ending date the
@@ -22,6 +31,21 @@ function fridayOfCurrentWeek() {
   const offset = day === 0 ? -2 : 5 - day;
   d.setDate(d.getDate() + offset);
   return d.toISOString().slice(0, 10);
+}
+
+// The 7 dates of the Mon-Sun week ending on `weekEnding`, same convention
+// as the timekeeping Form (entries[0] is Monday, entries[6] is the
+// week-ending date).
+function generateWeekDates(weekEnding) {
+  if (!weekEnding) return [];
+  const end = new Date(weekEnding + "T00:00:00");
+  const dates = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(end);
+    d.setDate(end.getDate() - i);
+    dates.push(d.toISOString().split("T")[0]);
+  }
+  return dates;
 }
 
 const TimesheetEntry = () => {
@@ -66,7 +90,21 @@ const TimesheetEntry = () => {
       let mine = [];
       try {
         const all = await fetchAssignments();
-        mine = (all || []).filter((a) => a.candidateId === person.id && a.status === "Active");
+        const demoRows = getAssignments();
+        mine = (all || [])
+          .filter((a) => a.candidateId === person.id && a.status === "Active")
+          .map((a) => ({
+            ...a,
+            // The demo store is the canonical write path: the timesheet
+            // row references the DEMO assignment id, and the sync resolves
+            // it to the Supabase row. legacyId is the demo id for
+            // synced/seeded assignments; fall back to the demo row whose
+            // supabaseAssignmentId matches.
+            demoAssignmentId: a.legacyId
+              || demoRows.find((d) => String(d.supabaseAssignmentId) === String(a.id))?.id
+              || null,
+          }))
+          .filter((a) => a.demoAssignmentId);
       } catch {
         if (!mounted) return;
         setLoadError("Could not load your assignments. Please try again.");
@@ -75,7 +113,7 @@ const TimesheetEntry = () => {
       }
       if (!mounted) return;
       setAssignments(mine);
-      if (mine.length > 0) setAssignmentId(String(mine[0].id));
+      if (mine.length > 0) setAssignmentId(String(mine[0].demoAssignmentId));
       setLoading(false);
     })();
     return () => { mounted = false; };
@@ -103,29 +141,51 @@ const TimesheetEntry = () => {
       const n = parseFloat(h);
       return Number.isFinite(n) && n >= 0 ? n : 0;
     });
-    setSubmitting(true);
-    const { error } = await supabase.from("timesheets").insert([
-      {
-        candidate_id: personId,
-        assignment_id: Number(assignmentId),
-        week_ending: weekEnding,
-        hours_mon: numeric[0],
-        hours_tue: numeric[1],
-        hours_wed: numeric[2],
-        hours_thu: numeric[3],
-        hours_fri: numeric[4],
-        hours_sat: numeric[5],
-        hours_sun: numeric[6],
-        status: "Submitted",
-        payroll_status: "Not Ready",
-        client_approval_status: "Not Submitted",
-      },
-    ]);
-    setSubmitting(false);
-    if (error) {
-      setSubmitError(`Could not submit the timesheet: ${error.message}`);
+    if (numeric.reduce((s, h) => s + h, 0) === 0) {
+      setSubmitError("Enter at least some hours before submitting.");
       return;
     }
+    // One timesheet per assignment + week: a second submit for the same
+    // week is a duplicate, not a new timesheet.
+    const existing = getTimesheets().find(
+      (t) => String(t.assignmentId) === String(assignmentId) && t.weekEnding === weekEnding
+    );
+    if (existing) {
+      setSubmitError("A timesheet for this assignment and week already exists.");
+      return;
+    }
+    setSubmitting(true);
+    // Write to the DEMO store (the canonical write path) and sync up —
+    // the same pattern the timekeeping Form uses. Inserting directly into
+    // Supabase created duplicates: the direct row had no legacy_id, so
+    // the reconcile created demo twins for it and those twins synced up
+    // as NEW Supabase rows. applyTimesheetCompliance flips
+    // clientApprovalStatus to 'Submitted' so the client can approve it.
+    const timestamp = now();
+    const dates = generateWeekDates(weekEnding);
+    const row = {
+      id: uid(),
+      assignmentId,
+      weekEnding,
+      entries: dates.map((d, i) => ({ date: d, hours: numeric[i] })),
+      totalHours: numeric.reduce((s, h) => s + h, 0),
+      status: "Submitted",
+      clientApprovalStatus: "Not Submitted",
+      payrollStatus: "Not Ready",
+      exceptions: [],
+      compliance: {},
+      submittedAt: timestamp,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    applyTimesheetCompliance(row);
+    const all = getTimesheets();
+    all.push(row);
+    setTimesheets(all);
+    // Fire-and-forget sync (never throws); the demo write above already
+    // succeeded, and the recruiter/client read it from Supabase.
+    syncTimesheetToSupabase(row);
+    setSubmitting(false);
     setSubmitted(true);
   };
 
@@ -187,7 +247,7 @@ const TimesheetEntry = () => {
               className="w-full border px-3 py-2 rounded mt-1"
             >
               {assignments.map((a) => (
-                <option key={a.id} value={String(a.id)}>
+                <option key={a.demoAssignmentId} value={String(a.demoAssignmentId)}>
                   {a.jobTitle} — {a.clientName || ""}
                 </option>
               ))}

@@ -19,7 +19,12 @@ export const defaultTimesheets = [
 ];
 
 export const getStoredTimesheets = () => {
-  return JSON.parse(localStorage.getItem("mockTimesheets") || JSON.stringify(defaultTimesheets));
+  try {
+    const parsed = JSON.parse(localStorage.getItem("mockTimesheets") || JSON.stringify(defaultTimesheets));
+    return Array.isArray(parsed) ? parsed : defaultTimesheets;
+  } catch {
+    return defaultTimesheets;
+  }
 };
 
 export const saveTimesheets = (timesheets) => {

@@ -2,7 +2,12 @@
 const defaultInvoices = [];
 
 export const getStoredInvoices = () => {
-  return JSON.parse(localStorage.getItem("mockInvoices") || JSON.stringify(defaultInvoices));
+  try {
+    const parsed = JSON.parse(localStorage.getItem("mockInvoices") || JSON.stringify(defaultInvoices));
+    return Array.isArray(parsed) ? parsed : defaultInvoices;
+  } catch {
+    return defaultInvoices;
+  }
 };
 
 export const saveInvoices = (invoices) => {
