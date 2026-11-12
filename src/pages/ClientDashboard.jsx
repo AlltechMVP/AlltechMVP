@@ -1,13 +1,13 @@
 
 import { useEffect, useState } from "react";
-import jobOrders from "../data/jobOrders";
+import { loadJobOrders } from "../data/jobOrders";
 
 function ClientDashboard() {
   const [jobs, setJobs] = useState([]);
 
   useEffect(() => {
-    // Simulate data fetch
-    setJobs(jobOrders);
+    // loadJobOrders() returns the saved job orders (or [] when none exist)
+    setJobs(loadJobOrders());
   }, []);
 
   const handleApproval = (jobId) => {
@@ -21,6 +21,9 @@ function ClientDashboard() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Client Job Dashboard</h1>
+      {jobs.length === 0 ? (
+        <p className="text-gray-500">No job orders yet. New job orders will appear here once created.</p>
+      ) : (
       <table className="min-w-full border text-left">
         <thead>
           <tr className="bg-gray-100">
@@ -52,6 +55,7 @@ function ClientDashboard() {
           ))}
         </tbody>
       </table>
+      )}
     </div>
   );
 }
