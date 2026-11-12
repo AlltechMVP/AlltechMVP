@@ -26,6 +26,7 @@ export default function Sidebar() {
         {role === 'candidate' && (
           <>
             <li><Link to="/candidate" className={linkCls(pathname === '/candidate')}>My Dashboard</Link></li>
+            <li><Link to="/candidate/jobs" className={linkCls(pathname === '/candidate/jobs')}>Job Board</Link></li>
           </>
         )}
         {role === 'client' && (
@@ -35,6 +36,8 @@ export default function Sidebar() {
             <li><Link to="/client/approvals" className={linkCls(pathname === '/client/approvals')}>Approvals</Link></li>
             <li><Link to="/client/jobs" className={linkCls(pathname.startsWith('/client/jobs'))}>Jobs</Link></li>
             <li><Link to="/client/timecards" className={linkCls(pathname === '/client/timecards')}>Timecards</Link></li>
+            <li><Link to="/client/metrics" className={linkCls(pathname === '/client/metrics')}>Metrics</Link></li>
+            <li><Link to="/client/portal" className={linkCls(pathname === '/client/portal')}>Portal</Link></li>
           </>
         )}
         {role === 'director' && (
@@ -69,16 +72,28 @@ export default function Sidebar() {
 
         <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Operations</li>
         <li><Link to="/assignments" className={linkCls(pathname.startsWith('/assignments'))}>Assignments</Link></li>
+        <li><Link to="/assignments/tracker" className={linkCls(pathname === '/assignments/tracker')}>Assignment Tracker</Link></li>
         <li><Link to="/timekeeping" className={linkCls(pathname.startsWith('/timekeeping'))}>Timekeeping</Link></li>
+        <li><Link to="/timekeeping/entry" className={linkCls(pathname === '/timekeeping/entry')}>Timecard Entry</Link></li>
         <li><Link to="/payroll-queue" className={linkCls(pathname.startsWith('/payroll-queue'))}>Payroll Queue</Link></li>
+        <li><Link to="/payroll" className={linkCls(pathname === '/payroll')}>Payroll Summary</Link></li>
         <li><Link to="/invoices" className={linkCls(pathname.startsWith('/invoices'))}>Invoices</Link></li>
         <li><Link to="/ar-aging" className={linkCls(pathname === '/ar-aging')}>AR Aging</Link></li>
+        <li><Link to="/scheduler" className={linkCls(pathname === '/scheduler')}>Scheduler</Link></li>
 
         <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Resources</li>
         <li><Link to="/kb" className={linkCls(pathname === '/kb')}>Knowledge Base</Link></li>
+        <li><Link to="/notifications" className={linkCls(pathname === '/notifications')}>Notifications</Link></li>
+
+        <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Settings</li>
+        <li><Link to="/settings/account" className={linkCls(pathname === '/settings/account')}>Account Settings</Link></li>
+        <li><Link to="/settings/billing" className={linkCls(pathname === '/settings/billing')}>Billing Settings</Link></li>
+        <li><Link to="/settings/compliance" className={linkCls(pathname === '/settings/compliance')}>Compliance Settings</Link></li>
 
         <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin</li>
         <li><Link to="/tools" className={linkCls(pathname === '/tools')}>Tools</Link></li>
+        <li><Link to="/admin/reports" className={linkCls(pathname === '/admin/reports')}>Admin Reports</Link></li>
+        <li><Link to="/tools/import-export" className={linkCls(pathname === '/tools/import-export')}>Import / Export</Link></li>
       </ul>
     </aside>
   );

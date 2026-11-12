@@ -41,6 +41,19 @@ const BranchManagerDashboard = lazy(() => import('@/manager/BranchManagerDashboa
 const SalesManagerDashboard = lazy(() => import('@/manager/SalesManagerDashboard.jsx'));
 const BackOfficeDashboard = lazy(() => import('@/backoffice/BackOfficeDashboard.jsx'));
 const SalesPipeline = lazy(() => import('@/components/sales/SalesPipeline.jsx'));
+const Scheduler = lazy(() => import('@/pages/Scheduler.jsx'));
+const AccountSettings = lazy(() => import('@/pages/AccountSettings.jsx'));
+const AdminReports = lazy(() => import('@/pages/AdminReports.jsx'));
+const AssignmentTracker = lazy(() => import('@/pages/AssignmentTracker.jsx'));
+const BillingSettings = lazy(() => import('@/pages/BillingSettings.jsx'));
+const CandidateJobBoard = lazy(() => import('@/pages/CandidateJobBoard.jsx'));
+const ClientMetrics = lazy(() => import('@/pages/ClientMetrics.jsx'));
+const ClientPortal = lazy(() => import('@/pages/ClientPortal.jsx'));
+const ComplianceSettings = lazy(() => import('@/pages/ComplianceSettings.jsx'));
+const PayrollView = lazy(() => import('@/pages/PayrollView.jsx'));
+const TimecardEntry = lazy(() => import('@/pages/TimecardEntry.jsx'));
+const ImportExportCenter = lazy(() => import('@/pages/ImportExportCenter.jsx'));
+const NotificationCenter = lazy(() => import('@/pages/NotificationCenter.jsx'));
 
 export default function AppRoutes() {
   return (
@@ -204,6 +217,112 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={["backoffice","admin"]}>
                 <BackOfficeDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Previously unrouted pages */}
+          <Route
+            path="scheduler"
+            element={
+              <ProtectedRoute allowedRoles={[]}>
+                <Scheduler />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="settings/account"
+            element={
+              <ProtectedRoute allowedRoles={[]}>
+                <AccountSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin/reports"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="assignments/tracker"
+            element={
+              <ProtectedRoute allowedRoles={[]}>
+                <AssignmentTracker />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="settings/billing"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <BillingSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="candidate/jobs"
+            element={
+              <ProtectedRoute allowedRoles={["candidate"]}>
+                <CandidateJobBoard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="client/metrics"
+            element={
+              <ProtectedRoute allowedRoles={["client"]}>
+                <ClientMetrics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="client/portal"
+            element={
+              <ProtectedRoute allowedRoles={["client"]}>
+                <ClientPortal />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="settings/compliance"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <ComplianceSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="payroll"
+            element={
+              <ProtectedRoute allowedRoles={[]}>
+                <PayrollView />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="timekeeping/entry"
+            element={
+              <ProtectedRoute allowedRoles={[]}>
+                <TimecardEntry />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="tools/import-export"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <ImportExportCenter />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="notifications"
+            element={
+              <ProtectedRoute allowedRoles={[]}>
+                <NotificationCenter />
               </ProtectedRoute>
             }
           />
