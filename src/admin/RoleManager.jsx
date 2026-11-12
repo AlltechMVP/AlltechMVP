@@ -11,6 +11,7 @@ export default function RoleManager() {
   const [error, setError] = useState("");
   const [updateMessage, setUpdateMessage] = useState("");
   const [pendingChange, setPendingChange] = useState(null);
+  const [logTick, setLogTick] = useState(0);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -59,6 +60,7 @@ export default function RoleManager() {
       setUpdateMessage(`Updated role for ${email} successfully`);
       setTimeout(() => setUpdateMessage(""), 3000);
       setPendingChange(null);
+      setLogTick((t) => t + 1);
       fetchUsers();
     } catch (err) {
       setError(`Failed to update role: ${err.message}`);
@@ -144,7 +146,7 @@ export default function RoleManager() {
         </table>
       )}
 
-      <RoleAuditLog />
+      <RoleAuditLog key={logTick} />
     </div>
   );
 }
