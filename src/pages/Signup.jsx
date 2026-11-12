@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { signup } from "../utils/auth";
 
 function Signup() {
@@ -15,7 +15,7 @@ function Signup() {
     if (error) {
       setError(error.message);
     } else {
-      navigate("/");
+      navigate("/login");
     }
   };
 
@@ -47,6 +47,12 @@ function Signup() {
           Sign Up
         </button>
       </form>
+      <p className="text-sm text-gray-600">
+        Already have an account?{" "}
+        <Link to="/login" className="text-blue-600 hover:text-blue-500">
+          Log in
+        </Link>
+      </p>
     </div>
   );
 }

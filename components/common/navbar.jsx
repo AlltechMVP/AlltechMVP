@@ -1,18 +1,23 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 
 function NavBar() {
   const [user, setUser] = useState(null);
+  const location = useLocation();
 
+  // Login stores the Supabase user under "user" in localStorage.
+  // Re-read on every navigation so the nav updates right after login/logout.
   useEffect(() => {
-    const currentUser = JSON.parse(
-      localStorage.getItem("currentUser") || "null",
+    const storedUser = JSON.parse(
+      localStorage.getItem("user") ||
+        localStorage.getItem("currentUser") ||
+        "null",
     );
-    setUser(currentUser);
-    // REMOVE navigate('/login') to prevent crash
-  }, []);
+    setUser(storedUser);
+  }, [location.pathname]);
 
   const handleLogout = () => {
+    localStorage.removeItem("user");
     localStorage.removeItem("currentUser");
     window.location.href = "/"; // Just force reload to Landing Page
   };
@@ -23,6 +28,14 @@ function NavBar() {
         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
           <div className="text-xl font-bold">
             <Link to="/">Alltech MVP</Link>
+          </div>
+          <div className="hidden md:flex space-x-4">
+            <Link to="/login" className="hover:text-blue-500">
+              Log In
+            </Link>
+            <Link to="/signup" className="hover:text-blue-500">
+              Sign Up
+            </Link>
           </div>
         </div>
       </nav>
@@ -74,6 +87,9 @@ function NavBar() {
               Client Dashboard
             </Link>
           )}
+          <Link to="/recruiter" className="hover:text-blue-500">
+            Recruiter Dashboard
+          </Link>
           <Link to="/job-search" className="hover:text-blue-500">
             Job Search
           </Link>
