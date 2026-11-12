@@ -5,7 +5,6 @@ import {
   getAssignments,
   getTimesheets,
   getInvoices,
-  getSubmittedCandidatesForJob,
   getJobById,
 } from '../utils/storage';
 
@@ -133,7 +132,7 @@ function AdminReports() {
               <td className="p-2 border">{job.client_name}</td>
               <td className="p-2 border">{job.openings}</td>
               <td className="p-2 border">{job.status}</td>
-              <td className="p-2 border">{getSubmittedCandidatesForJob(job.id).length}</td>
+              <td className="p-2 border">{candidates.filter((c) => c.submittedJobId === job.id).length}</td>
             </tr>
           ))}
         </tbody>

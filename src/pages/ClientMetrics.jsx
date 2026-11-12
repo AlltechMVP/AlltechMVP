@@ -8,7 +8,6 @@ import {
   getTimesheetsForClient,
   getCandidateById,
   getAssignmentById,
-  getSubmittedCandidatesForJob,
 } from '../utils/storage';
 
 function ClientMetrics() {
@@ -88,7 +87,7 @@ function ClientMetrics() {
               <td className="p-2 border">{job.openings}</td>
               <td className="p-2 border">${job.rate}/hr</td>
               <td className="p-2 border">{job.status}</td>
-              <td className="p-2 border">{getSubmittedCandidatesForJob(job.id).length}</td>
+              <td className="p-2 border">{candidates.filter((c) => c.submittedJobId === job.id).length}</td>
               <td className="p-2 border">
                 {assignments.filter((a) => a.jobId === job.id && a.status === 'Active').length}
               </td>
