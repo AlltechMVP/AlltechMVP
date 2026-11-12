@@ -93,6 +93,7 @@ export default function Sidebar() {
         <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin</li>
         <li><Link to="/tools" className={linkCls(pathname === '/tools')}>Tools</Link></li>
         <li><Link to="/admin/reports" className={linkCls(pathname === '/admin/reports')}>Admin Reports</Link></li>
+        <li><Link to="/admin/roles" className={linkCls(pathname === '/admin/roles')}>Role Manager</Link></li>
         <li><Link to="/tools/import-export" className={linkCls(pathname === '/tools/import-export')}>Import / Export</Link></li>
       </ul>
     </aside>

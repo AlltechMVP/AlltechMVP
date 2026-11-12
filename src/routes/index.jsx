@@ -54,6 +54,7 @@ const PayrollView = lazy(() => import('@/pages/PayrollView.jsx'));
 const TimecardEntry = lazy(() => import('@/pages/TimecardEntry.jsx'));
 const ImportExportCenter = lazy(() => import('@/pages/ImportExportCenter.jsx'));
 const NotificationCenter = lazy(() => import('@/pages/NotificationCenter.jsx'));
+const RoleManager = lazy(() => import('@/admin/RoleManager.jsx'));
 
 export default function AppRoutes() {
   return (
@@ -243,6 +244,14 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin/roles"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <RoleManager />
               </ProtectedRoute>
             }
           />

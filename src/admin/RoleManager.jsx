@@ -1,8 +1,11 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { useAuth } from "../context/AuthContext.jsx";
+import RoleAuditLog from "../components/admin/RoleAuditLog.jsx";
 
 export default function RoleManager() {
+  const { session } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -12,21 +15,14 @@ export default function RoleManager() {
     setLoading(true);
     setError("");
     const { data, error } = await supabase
-      .from("users")
+      .from("profiles")
       .select("*")
       .order("email");
-      
+
     if (error) {
       setError("Failed to fetch users: " + error.message);
     } else {
-      // Filter out test/system accounts
-      const filteredUsers = data?.filter(u => (
-        !u.email.toLowerCase().includes('test') &&
-        !u.email.toLowerCase().includes('noreply') &&
-        !u.email.toLowerCase().includes('system') &&
-        !u.email.toLowerCase().includes('bot')
-      )) || [];
-      setUsers(filteredUsers);
+      setUsers(data || []);
     }
     setLoading(false);
   };
@@ -46,14 +42,17 @@ export default function RoleManager() {
 
     try {
       const { error: updateError } = await supabase
-        .from("users")
+        .from("profiles")
         .update({ role: newRole })
         .eq("id", userId);
 
       if (updateError) throw updateError;
 
+      const adminEmail = session?.user?.email
+        || JSON.parse(localStorage.getItem("user") || "null")?.email
+        || "unknown";
       const { error: logError } = await supabase.from("role_audit_log").insert([{
-        admin_email: JSON.parse(localStorage.getItem("user"))?.email || "unknown",
+        admin_email: adminEmail,
         user_email: email,
         old_role: user.role,
         new_role: newRole
@@ -70,7 +69,7 @@ export default function RoleManager() {
     }
   };
 
-  const roles = ["ceo", "cfo", "admin", "recruiter", "client", "candidate", "sales", "branch", "director"];
+  const roles = ["admin", "ceo", "cfo", "director", "branch-manager", "sales-rep", "sales-manager", "recruiter", "candidate", "client", "backoffice"];
 
   return (
     <div className="p-6" role="region" aria-label="User Role Management">
@@ -123,6 +122,8 @@ export default function RoleManager() {
           </tbody>
         </table>
       )}
+
+      <RoleAuditLog />
     </div>
   );
 }
