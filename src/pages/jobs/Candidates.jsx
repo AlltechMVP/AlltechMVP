@@ -2,8 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getCandidates, getJobById, normalizeStatus,
-  getAllowedTransitions, changeCandidateStatus
+  getAllowedTransitions, changeCandidateStatus, getCandidateById,
 } from '@/utils/storage';
+import {
+  fetchJobs, fetchApplications, syncCandidateToSupabase,
+} from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty } from '@/components/ui';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
@@ -21,6 +24,18 @@ const STATUS_COLORS = {
 
 const FILTER_OPTIONS = ['All', 'Applied', 'Reviewed', 'Submitted', 'Interview', 'Hired', 'Rejected'];
 
+// Slice 1 (thin): per-job candidates read from Supabase (shared) with a
+// demo-store fallback. Writes still go to the demo row, then sync.
+function attachDemoTwins(apps) {
+  const demoRows = getCandidates();
+  return apps.map((a) => {
+    const twin = demoRows.find((d) => String(d.supabaseApplicationId) === String(a.id))
+      || demoRows.find((d) => (d.email || '').trim().toLowerCase() === (a.email || '').trim().toLowerCase()
+        && String(d.submittedJobId) === String(a.legacyJobId));
+    return { ...a, demoCandidateId: twin ? twin.id : null };
+  });
+}
+
 export default function JobCandidates() {
   const { jobId } = useParams();
   const navigate = useNavigate();
@@ -29,20 +44,50 @@ export default function JobCandidates() {
   const [data, setData] = useState([]);
   const [job, setJob] = useState(null);
 
+  const load = async () => {
+    try {
+      const jobs = await fetchJobs();
+      const found = jobs.find((j) => String(j.id) === String(jobId));
+      setJob(found || null);
+      const apps = await fetchApplications({ jobId: Number(jobId) });
+      setData(attachDemoTwins(apps));
+    } catch {
+      setJob(getJobById(jobId) || null);
+      setData(getCandidates()
+        .filter(c => String(c.submittedJobId) === String(jobId) || String(c.currentJobId) === String(jobId))
+        .map((c) => ({
+          id: c.id,
+          demoCandidateId: c.id,
+          name: c.name,
+          email: c.email || '-',
+          status: normalizeStatus(c.status),
+          lastActionAt: c.lastActionAt || null,
+        })));
+    }
+  };
+
   useEffect(() => {
-    setJob(getJobById(jobId));
-    setData(getCandidates().filter(c => c.submittedJobId === jobId || c.currentJobId === jobId));
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
-  const handleAction = (candidateId, newStatus) => {
+  const handleAction = async (applicationId, newStatus) => {
     let note;
     if (newStatus === 'Rejected') {
       note = prompt('Rejection reason:');
       if (note === null) return;
     }
-    const result = changeCandidateStatus(candidateId, newStatus, { note });
+    const row = data.find((r) => String(r.id) === String(applicationId));
+    const demoId = row?.demoCandidateId;
+    if (!demoId) {
+      addToast({ type: 'error', message: 'Could not find the local record for this application.' });
+      return;
+    }
+    const result = changeCandidateStatus(demoId, newStatus, { note });
     if (result) {
-      setData(getCandidates().filter(c => c.submittedJobId === jobId || c.currentJobId === jobId));
+      const updated = getCandidateById(demoId);
+      if (updated) syncCandidateToSupabase(updated).catch(() => {});
+      await load();
       addToast({ type: 'success', message: `Candidate status updated to "${result}".` });
     } else {
       addToast({ type: 'error', message: 'Status transition not allowed.' });

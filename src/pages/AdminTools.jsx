@@ -6,6 +6,7 @@ import {
   getCandidates, getJobs, getAssignments, getTimesheets
 } from '@/utils/storage';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
+import { clearSupabasePipeline, reconcilePipeline } from '@/lib/pipeline';
 
 const SEV_STYLE = {
   error: 'bg-red-100 text-red-800 border-red-200',
@@ -32,10 +33,19 @@ export default function AdminTools() {
     runValidation();
   }, [runValidation]);
 
-  const handleReset = () => {
+  const handleReset = async () => {
     clearAlltechKeys();
     seedDemoData();
     setConfirmReset(false);
+    // Slice 1 (thin): the shared pipeline lives in Supabase too. Clear it
+    // and re-sync the fresh seed up, so a presentation starts clean in both
+    // stores. Best-effort: the demo reset itself never fails because of this.
+    try {
+      await clearSupabasePipeline();
+      await reconcilePipeline();
+    } catch {
+      addToast({ type: 'error', message: 'Demo data reset locally; shared pipeline reset failed — it will re-sync on next load.' });
+    }
     addToast({ type: 'success', message: 'Demo data reset.' });
     runValidation();
     navigate('/candidates');

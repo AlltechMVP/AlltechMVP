@@ -1,13 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { getJobs, getCandidates, applyToJob } from '@/utils/storage';
+import {
+  fetchJobs, fetchApplications, fetchAppliedJobIds, syncCandidateToSupabase,
+} from '@/lib/pipeline';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty } from '@/components/ui';
 
+// Slice 1 (thin): jobs + applications read from Supabase (shared across
+// sessions) with a demo-store fallback when Supabase is unreachable, so a
+// sales presentation never breaks on wifi. Writes still go to the demo
+// store as today, then sync to Supabase (best-effort, fire-and-forget).
 export default function JobsList() {
   const [jobs, setJobs] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [appliedJobIds, setAppliedJobIds] = useState([]);
   const [applyingJob, setApplyingJob] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', phone: '' });
@@ -18,18 +26,48 @@ export default function JobsList() {
   const userEmail = session?.user?.email || '';
   const userName = session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || '';
 
+  const refreshApplications = async (email) => {
+    try {
+      const apps = await fetchApplications();
+      setApplications(apps);
+      if (email) {
+        const ids = await fetchAppliedJobIds(email);
+        setAppliedJobIds(ids.map(String));
+      }
+    } catch {
+      // Demo fallback: derive from localStorage.
+      const demo = getCandidates();
+      setApplications(demo.map((c) => ({ jobId: c.submittedJobId })));
+      if (email) {
+        const normalized = email.trim().toLowerCase();
+        setAppliedJobIds(
+          demo
+            .filter((c) => (c.email || '').trim().toLowerCase() === normalized)
+            .map((c) => String(c.submittedJobId))
+        );
+      }
+    }
+  };
+
   useEffect(() => {
-    setJobs(getJobs());
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await fetchJobs();
+        if (mounted) setJobs(data);
+      } catch {
+        if (mounted) setJobs(getJobs());
+      }
+      if (mounted) refreshApplications(userEmail);
+    })();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!userEmail) return;
-    const normalized = userEmail.trim().toLowerCase();
-    setAppliedJobIds(
-      getCandidates()
-        .filter((c) => (c.email || '').trim().toLowerCase() === normalized)
-        .map((c) => c.submittedJobId)
-    );
+    refreshApplications(userEmail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userEmail]);
 
   const openApply = (job) => {
@@ -51,17 +89,20 @@ export default function JobsList() {
     }
     if (!result.alreadyApplied) {
       addToast({ message: 'Application submitted — you are now in the recruiter pipeline as Applied.', kind: 'success' });
+      // Sync the new demo row to Supabase (shared pipeline); never blocks the toast.
+      syncCandidateToSupabase(result.candidate)
+        .then(() => refreshApplications(userEmail))
+        .catch(() => {});
     } else {
       addToast({ message: 'You already applied to this job.', kind: 'success' });
     }
-    setAppliedJobIds((prev) => (prev.includes(applyingJob.id) ? prev : [...prev, applyingJob.id]));
+    setAppliedJobIds((prev) => (prev.includes(String(applyingJob.id)) ? prev : [...prev, String(applyingJob.id)]));
     setApplyingJob(null);
   };
 
   const rows = useMemo(() => {
-    const candidates = getCandidates();
     return jobs.map(j => {
-      const candCount = candidates.filter(c => c.submittedJobId === j.id || c.currentJobId === j.id).length;
+      const candCount = applications.filter(a => String(a.jobId) === String(j.id)).length;
       return {
         id: j.id,
         title: j.title,
@@ -73,7 +114,7 @@ export default function JobsList() {
         candidates: candCount,
       };
     });
-  }, [jobs, appliedJobIds]);
+  }, [jobs, applications]);
 
   const columns = [
     { key: 'title', header: 'Title' },
@@ -90,11 +131,11 @@ export default function JobsList() {
     { key: 'id', header: '', render: (_, row) => (
       <span className="flex gap-3 items-center whitespace-nowrap">
         <Link to={`/jobs/${row.id}/candidates`} className="text-blue-600 hover:underline text-xs font-medium">View Candidates</Link>
-        {appliedJobIds.includes(row.id) ? (
+        {appliedJobIds.includes(String(row.id)) ? (
           <span className="text-green-700 text-xs font-medium">Applied ✓</span>
         ) : (
           <button
-            onClick={() => openApply(jobs.find((j) => j.id === row.id))}
+            onClick={() => openApply(jobs.find((j) => String(j.id) === String(row.id)))}
             className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium"
           >
             Apply

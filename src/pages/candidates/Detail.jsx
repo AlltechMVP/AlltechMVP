@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  getCandidateById, getJobById,
-  normalizeStatus, getAllowedTransitions, changeCandidateStatus
+  getCandidates, getCandidateById, getJobById,
+  normalizeStatus, getAllowedTransitions, changeCandidateStatus,
 } from '@/utils/storage';
+import { fetchApplication, syncCandidateToSupabase } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 const STATUS_COLORS = {
@@ -26,14 +27,51 @@ const ACTION_CONFIG = {
   'Rejected': { label: 'Reject', cls: 'bg-red-600 hover:bg-red-700', desc: 'Reject this candidate' },
 };
 
+// Slice 1 (thin): detail reads the Supabase application (shared) with a
+// demo-store fallback. Writes still go to the demo row, then sync.
+function attachDemoTwin(app) {
+  const demoRows = getCandidates();
+  const twin = demoRows.find((d) => String(d.supabaseApplicationId) === String(app.id))
+    || demoRows.find((d) => (d.email || '').trim().toLowerCase() === (app.email || '').trim().toLowerCase()
+      && String(d.submittedJobId) === String(app.legacyJobId));
+  return { ...app, demoCandidateId: twin ? twin.id : null };
+}
+
+function mapDemoCandidate(c) {
+  const job = c.submittedJobId ? getJobById(c.submittedJobId) : null;
+  return {
+    id: c.id,
+    demoCandidateId: c.id,
+    name: c.name,
+    email: c.email,
+    phone: c.phone || '',
+    status: normalizeStatus(c.status),
+    jobTitle: job?.title || null,
+    clientName: job?.client_name || null,
+    rejectedReason: c.rejectedReason || null,
+    history: c.statusHistory || [],
+  };
+}
+
 export default function CandidateDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToast } = useToasts();
   const [candidate, setCandidate] = useState(null);
 
+  const load = async () => {
+    try {
+      const app = await fetchApplication(id);
+      setCandidate(attachDemoTwin(app));
+    } catch {
+      const demo = getCandidateById(id);
+      setCandidate(demo ? mapDemoCandidate(demo) : null);
+    }
+  };
+
   useEffect(() => {
-    setCandidate(getCandidateById(id));
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (!candidate) {
@@ -49,19 +87,25 @@ export default function CandidateDetail() {
 
   const status = normalizeStatus(candidate.status);
   const allowed = getAllowedTransitions(status);
-  const job = candidate.submittedJobId ? getJobById(candidate.submittedJobId) : null;
   const hasActiveAssignment = status === 'Active Assignment';
-  const history = (candidate.statusHistory || []).slice().reverse();
+  const history = (candidate.history || []).slice().reverse();
 
-  const handleAction = (newStatus) => {
+  const handleAction = async (newStatus) => {
     let note;
     if (newStatus === 'Rejected') {
       note = prompt('Rejection reason:');
       if (note === null) return;
     }
-    const result = changeCandidateStatus(id, newStatus, { note });
+    const demoId = candidate.demoCandidateId;
+    if (!demoId) {
+      addToast({ type: 'error', message: 'Could not find the local record for this application.' });
+      return;
+    }
+    const result = changeCandidateStatus(demoId, newStatus, { note });
     if (result) {
-      setCandidate(getCandidateById(id));
+      const updated = getCandidateById(demoId);
+      if (updated) syncCandidateToSupabase(updated).catch(() => {});
+      await load();
       addToast({ type: 'success', message: `Status updated to "${result}".` });
     } else {
       addToast({ type: 'error', message: 'Status transition not allowed.' });
@@ -81,9 +125,9 @@ export default function CandidateDetail() {
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[status] || 'bg-gray-100'}`}>{status}</span>
         </div>
 
-        {job && (
+        {candidate.jobTitle && (
           <div className="text-sm text-gray-600">
-            <span className="font-medium">Job:</span> {job.title} ({job.client_name || 'N/A'})
+            <span className="font-medium">Job:</span> {candidate.jobTitle} ({candidate.clientName || 'N/A'})
           </div>
         )}
 

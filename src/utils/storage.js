@@ -212,6 +212,18 @@ export function hasAppliedToJob(jobId, email) {
   );
 }
 
+// TEMPORARY (migration slice 1): mirror demo pipeline writes to Supabase so
+// the shared pipeline stays current. Fire-and-forget; the demo write never
+// waits on it and never fails because of it. Dynamic import avoids a
+// dependency cycle (pipeline.js imports helpers from this file). Delete when
+// the write paths move to Supabase.
+function queueSync(demoCandidate) {
+  if (!demoCandidate) return;
+  import('@/lib/pipeline.js')
+    .then((m) => m.syncCandidateToSupabase(demoCandidate))
+    .catch(() => {});
+}
+
 export function applyToJob(jobId, { name, email, phone } = {}, by) {
   const normalizedEmail = (email || '').trim().toLowerCase();
   if (!jobId || !normalizedEmail || !(name || '').trim()) return null;
@@ -231,6 +243,7 @@ export function applyToJob(jobId, { name, email, phone } = {}, by) {
     lastActionAt: timestamp,
   };
   setCandidates([...getCandidates(), candidate]);
+  queueSync(candidate);
   return { candidate, alreadyApplied: false };
 }
 
@@ -261,6 +274,7 @@ export function clientDecideCandidate(candidateId, decision, { note } = {}) {
   }
 
   setCandidates(candidates);
+  queueSync(candidates[idx]);
   return decision;
 }
 
@@ -417,6 +431,7 @@ export function changeCandidateStatus(candidateId, newStatus, { note, by } = {})
   }
 
   setCandidates(candidates);
+  queueSync(candidates[idx]);
   return newStatus;
 }
 
@@ -597,6 +612,7 @@ export function syncCandidateFromAssignment(assignment) {
 
   if (statusMsg) {
     setCandidates(candidates);
+    queueSync(candidates[idx]);
   }
 
   return statusMsg;
