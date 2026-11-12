@@ -13,12 +13,12 @@ const RecruiterDashboard = () => {
   }, []);
 
   const exportCSV = () => {
-    const headers = ["Name", "Email", "Status", "Job Title"];
+    const headers = ["Name", "Email", "Phone", "Status"];
     const rows = candidates.map((c) => [
       c.name,
       c.email,
-      c.status,
-      c.job_title,
+      c.phone || "",
+      c.status || "",
     ]);
     const csvContent =
       "data:text/csv;charset=utf-8," +
@@ -45,34 +45,55 @@ const RecruiterDashboard = () => {
     return (
       <div className="space-y-4">
         {candidates.map((candidate, index) => (
-          <div key={index} className="border rounded-lg shadow-sm p-4 bg-white">
+          <div key={candidate.id || index} className="border rounded-lg shadow-sm p-4 bg-white">
             <div className="flex justify-between items-start">
               <div className="space-y-2 flex-grow">
                 <h3 className="font-semibold text-lg">{candidate.name}</h3>
                 <p className="text-gray-600">{candidate.email}</p>
+                {candidate.phone && (
+                  <p className="text-gray-600">{candidate.phone}</p>
+                )}
                 <p className="text-gray-700">
-                  {candidate.job_title}
+                  <span className="text-sm text-gray-600">Status: </span>
+                  {candidate.status || "—"}
                 </p>
-                <div className="mt-2">
-                  <span className="text-sm text-gray-600">
-                    Onboarding Progress: {candidate.completedSteps}/4
-                  </span>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${(candidate.completedSteps / 4) * 100}%` }}
-                    />
+                {candidate.job_title && (
+                  <p className="text-gray-700">{candidate.job_title}</p>
+                )}
+                {candidate.resume_url && (
+                  <a
+                    className="text-sm text-blue-600 underline"
+                    href={candidate.resume_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Resume
+                  </a>
+                )}
+                {typeof candidate.completedSteps === "number" && (
+                  <div className="mt-2">
+                    <span className="text-sm text-gray-600">
+                      Onboarding Progress: {candidate.completedSteps}/4
+                    </span>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${(candidate.completedSteps / 4) * 100}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
                 {candidate.note && (
                   <p className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
                     Note: {candidate.note}
                   </p>
                 )}
               </div>
-              <span className="text-2xl ml-4">
-                {candidate.ready ? "✅" : "❌"}
-              </span>
+              {typeof candidate.ready === "boolean" && (
+                <span className="text-2xl ml-4">
+                  {candidate.ready ? "✅" : "❌"}
+                </span>
+              )}
             </div>
 
             {/*Removed timesheet related section*/}
