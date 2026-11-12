@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getInvoices } from '@/utils/storage';
+import { fetchInvoices, reconcileInvoices } from '@/lib/pipeline';
 import { Empty } from '@/components/ui';
 import DataTable from '@/components/table/DataTable.jsx';
 
@@ -22,13 +23,93 @@ function overdueDays(inv) {
   return Math.max(0, diff);
 }
 
+// Slice 5 (thin): the invoices list reads Supabase (shared across
+// sessions) with a demo-store fallback when Supabase is unreachable.
+// Writes still go to the demo store and sync up from there. Each row
+// carries demoInvoiceId so the View link opens the demo row the invoice
+// page works on.
+function attachDemoTwins(invoices) {
+  const demoRows = getInvoices();
+  return invoices.map((inv) => {
+    const twin = demoRows.find((d) => String(d.supabaseInvoiceId) === String(inv.id))
+      || demoRows.find((d) => String(d.id) === String(inv.legacyId));
+    return { ...inv, demoInvoiceId: twin ? twin.id : null };
+  });
+}
+
+function toRow(inv) {
+  return {
+    id: inv.id,
+    demoInvoiceId: inv.demoInvoiceId || null,
+    invoiceNumber: inv.invoiceNumber,
+    clientName: inv.clientName,
+    issuedAt: inv.issuedAt || '-',
+    dueDate: inv.dueDate || '-',
+    total: inv.total ?? 0,
+    amountPaid: inv.amountPaid ?? 0,
+    balanceDue: inv.balanceDue ?? 0,
+    status: inv.status,
+  };
+}
+
+function mapDemoRow(inv) {
+  return {
+    id: inv.id,
+    demoInvoiceId: inv.id,
+    invoiceNumber: inv.invoiceNumber,
+    clientName: inv.clientName,
+    issuedAt: inv.issuedAt || '-',
+    dueDate: inv.dueDate || '-',
+    total: inv.total ?? 0,
+    amountPaid: inv.amountPaid ?? 0,
+    balanceDue: inv.balanceDue ?? 0,
+    status: inv.status,
+  };
+}
+
 export default function InvoicesList() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [openOnly, setOpenOnly] = useState(false);
   const [data, setData] = useState([]);
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  const loadFromSupabase = async () => {
+    // Render fast from Supabase, then reconcile in the background (pushes
+    // this browser's demo rows up, creates missing twins) and refresh.
+    const rows = await fetchInvoices();
+    setData(attachDemoTwins(rows).map(toRow));
+    reconcileInvoices()
+      .then((fresh) => {
+        setData(attachDemoTwins(fresh).map(toRow));
+      })
+      .catch(() => {});
+  };
+
+  const loadFromDemo = () => {
+    setData(getInvoices().map(mapDemoRow));
+  };
 
   useEffect(() => {
-    setData(getInvoices());
+    let mounted = true;
+    (async () => {
+      try {
+        await loadFromSupabase();
+        if (mounted) setUsingFallback(false);
+      } catch {
+        // The shared fetch failed: try the reconcile (it re-syncs and
+        // re-fetches) before falling back to local demo data.
+        try {
+          const rows = await reconcileInvoices();
+          if (!mounted) return;
+          setData(attachDemoTwins(rows).map(toRow));
+          setUsingFallback(false);
+        } catch {
+          if (mounted) { loadFromDemo(); setUsingFallback(true); }
+        }
+      }
+    })();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtered = useMemo(() => {
@@ -39,7 +120,7 @@ export default function InvoicesList() {
   }, [data, statusFilter, openOnly]);
 
   const columns = [
-    { key: 'invoiceNumber', header: 'Invoice #', render: (v, r) => <Link to={`/invoices/${r.id}`} className="text-blue-600 hover:underline">{v}</Link> },
+    { key: 'invoiceNumber', header: 'Invoice #', render: (v, r) => <Link to={`/invoices/${r.demoInvoiceId || r.id}`} className="text-blue-600 hover:underline">{v}</Link> },
     { key: 'clientName', header: 'Client' },
     { key: 'issuedAt', header: 'Issued' },
     { key: 'dueDate', header: 'Due Date' },
@@ -58,7 +139,7 @@ export default function InvoicesList() {
         </span>
       );
     }},
-    { key: '_actions', header: '', render: (_, r) => <Link to={`/invoices/${r.id}`} className="text-blue-600 hover:underline text-sm">View</Link> },
+    { key: '_actions', header: '', render: (_, r) => <Link to={`/invoices/${r.demoInvoiceId || r.id}`} className="text-blue-600 hover:underline text-sm">View</Link> },
   ];
 
   return (
@@ -66,6 +147,12 @@ export default function InvoicesList() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Invoices</h1>
       </div>
+
+      {usingFallback && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+          Showing local demo data — the shared invoices are unreachable right now. Changes here will sync when they come back.
+        </p>
+      )}
 
       <div className="flex items-center gap-4 mb-4">
         <label className="text-sm">

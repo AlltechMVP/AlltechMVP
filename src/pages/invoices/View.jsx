@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getInvoiceById, getPaymentsForInvoice, postPayment, getInvoices, setInvoices, uid, now, getClientById } from '@/utils/storage';
+import { getInvoiceById, getPaymentsForInvoice, postPayment, getInvoices, setInvoices, getPayments, uid, now, getClientById } from '@/utils/storage';
+import { fetchInvoice, fetchPaymentsForInvoice, reconcileInvoices, syncInvoiceToSupabase, syncPaymentToSupabase } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 const statusBadge = (s) => {
@@ -13,11 +14,17 @@ const statusBadge = (s) => {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{s}</span>;
 };
 
+// Slice 5 (thin): the invoice detail reads Supabase (shared across
+// sessions) with a demo-store fallback when Supabase is unreachable.
+// Writes still go to the demo store (the canonical write path) and sync
+// up from there: Send flips the demo invoice, Post Payment appends a demo
+// payment and updates the demo invoice totals.
 export default function InvoiceView() {
   const { id } = useParams();
   const { addToast } = useToasts();
   const [invoice, setInvoice] = useState(null);
   const [payments, setPayments] = useState([]);
+  const [usingFallback, setUsingFallback] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('ACH');
@@ -25,10 +32,41 @@ export default function InvoiceView() {
   const [memo, setMemo] = useState('');
   const [error, setError] = useState('');
 
-  const reload = () => {
-    const inv = getInvoiceById(id);
-    setInvoice(inv);
-    if (inv) setPayments(getPaymentsForInvoice(inv.id));
+  // Resolve the demo row (the write target) by demo id, then by its
+  // Supabase id; if neither exists locally, reconcile (which creates the
+  // demo twin) and look again.
+  const resolveDemoInvoice = async () => {
+    let demo = getInvoiceById(id)
+      || getInvoices().find((i) => String(i.supabaseInvoiceId) === String(id));
+    if (!demo) {
+      try {
+        await reconcileInvoices();
+        demo = getInvoiceById(id)
+          || getInvoices().find((i) => String(i.supabaseInvoiceId) === String(id));
+      } catch {
+        demo = null;
+      }
+    }
+    return demo;
+  };
+
+  const reload = async () => {
+    const demo = await resolveDemoInvoice();
+    if (!demo) { setInvoice(null); setPayments([]); return; }
+    try {
+      const row = await fetchInvoice(demo.supabaseInvoiceId || demo.id);
+      const mapped = {
+        ...row,
+        demoInvoiceId: demo.id,
+      };
+      setInvoice(mapped);
+      setPayments(await fetchPaymentsForInvoice(row.id));
+      setUsingFallback(false);
+    } catch {
+      setInvoice({ ...demo, demoInvoiceId: demo.id });
+      setPayments(getPaymentsForInvoice(demo.id));
+      setUsingFallback(true);
+    }
   };
 
   useEffect(() => { reload(); }, [id]);
@@ -44,10 +82,11 @@ export default function InvoiceView() {
     if (isNaN(amt) || amt <= 0) { setError('Amount must be greater than 0.'); return; }
     if (amt > balanceDue) { setError(`Amount cannot exceed balance due ($${balanceDue.toFixed(2)}).`); return; }
 
+    const demoId = invoice.demoInvoiceId || invoice.id;
     const payment = {
       id: `pmt-${uid()}`,
       clientId: invoice.clientId,
-      invoiceId: invoice.id,
+      invoiceId: demoId,
       amount: amt,
       method,
       receivedDate,
@@ -57,22 +96,34 @@ export default function InvoiceView() {
     };
 
     postPayment(payment);
+    // Sync the payment up (which also re-syncs the parent invoice totals).
+    syncPaymentToSupabase(payment);
     addToast(amt === balanceDue ? 'Payment posted — invoice is now Paid!' : `Partial payment of $${amt.toFixed(2)} posted.`, amt === balanceDue ? 'success' : 'info');
     setShowForm(false);
     setAmount('');
     setMemo('');
-    reload();
+    // Show the demo result in place — do not refetch, the sync may not
+    // have landed yet and a stale fetch would overwrite the new totals.
+    const updated = getInvoiceById(demoId);
+    if (updated) setInvoice({ ...updated, demoInvoiceId: updated.id });
+    setPayments(getPaymentsForInvoice(demoId));
   };
 
-  const sendInvoice = () => {
+  const sendInvoice = async () => {
+    const demo = await resolveDemoInvoice();
+    if (!demo) return;
     const all = getInvoices();
-    const idx = all.findIndex(i => i.id === invoice.id);
+    const idx = all.findIndex(i => i.id === demo.id);
     if (idx === -1) return;
     all[idx].status = 'Sent';
     all[idx].updatedAt = now();
     setInvoices(all);
+    // Sync the status flip up (fire-and-forget; the demo write succeeded).
+    syncInvoiceToSupabase(all[idx]);
     addToast('Invoice sent.', 'success');
-    reload();
+    // Show the demo result in place — do not refetch, the sync may not
+    // have landed yet and a stale fetch would overwrite the new status.
+    setInvoice({ ...all[idx], demoInvoiceId: all[idx].id });
   };
 
   return (
@@ -80,6 +131,12 @@ export default function InvoiceView() {
       <div className="mb-4">
         <Link to="/invoices" className="text-blue-600 hover:underline text-sm">&larr; Back to Invoices</Link>
       </div>
+
+      {usingFallback && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+          Showing local demo data — the shared invoice is unreachable right now. Changes here will sync when it comes back.
+        </p>
+      )}
 
       <div className="bg-white border rounded-lg p-6 mb-6">
         <div className="flex items-start justify-between mb-4">

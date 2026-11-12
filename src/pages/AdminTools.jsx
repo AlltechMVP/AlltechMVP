@@ -6,7 +6,7 @@ import {
   getCandidates, getJobs, getAssignments, getTimesheets
 } from '@/utils/storage';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
-import { clearSupabasePipeline, reconcilePipeline, clearSupabaseAssignments, reconcileAssignments, clearSupabaseTimesheets, reconcileTimesheets } from '@/lib/pipeline';
+import { clearSupabasePipeline, reconcilePipeline, clearSupabaseAssignments, reconcileAssignments, clearSupabaseTimesheets, reconcileTimesheets, clearSupabaseInvoices, reconcileInvoices } from '@/lib/pipeline';
 
 const SEV_STYLE = {
   error: 'bg-red-100 text-red-800 border-red-200',
@@ -17,6 +17,7 @@ export default function AdminTools() {
   const navigate = useNavigate();
   const { addToast } = useToasts();
   const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [report, setReport] = useState(null);
   const [fixableIssues, setFixableIssues] = useState([]);
 
@@ -34,28 +35,35 @@ export default function AdminTools() {
   }, [runValidation]);
 
   const handleReset = async () => {
-    clearAlltechKeys();
-    seedDemoData();
-    setConfirmReset(false);
-    // Slice 1-3 (thin): the shared pipeline, assignments, and timesheets live
-    // in Supabase too. Clear them and re-sync the fresh seed up, so a
-    // presentation starts clean in both stores. Best-effort: the demo reset
-    // itself never fails because of this. Order matters: clear assignments
-    // first (they reference persons), reconcile timesheets last (they
-    // reference assignments).
+    setResetting(true);
     try {
-      await clearSupabaseAssignments();
-      await clearSupabasePipeline();
-      await clearSupabaseTimesheets();
-      await reconcilePipeline();
-      await reconcileAssignments();
-      await reconcileTimesheets();
-    } catch {
-      addToast({ type: 'error', message: 'Demo data reset locally; shared reset failed — it will re-sync on next load.' });
+      clearAlltechKeys();
+      seedDemoData();
+      setConfirmReset(false);
+      // Slice 1-5 (thin): the shared pipeline, assignments, timesheets, and
+      // invoices live in Supabase too. Clear them and re-sync the fresh seed
+      // up, so a presentation starts clean in both stores. Best-effort: the
+      // demo reset itself never fails because of this. Order matters: clear
+      // assignments first (they reference persons), reconcile invoices last
+      // (invoice creation stamps timesheets).
+      try {
+        await clearSupabaseAssignments();
+        await clearSupabasePipeline();
+        await clearSupabaseTimesheets();
+        await clearSupabaseInvoices();
+        await reconcilePipeline();
+        await reconcileAssignments();
+        await reconcileTimesheets();
+        await reconcileInvoices();
+      } catch {
+        addToast({ type: 'error', message: 'Demo data reset locally; shared reset failed — it will re-sync on next load.' });
+      }
+      addToast({ type: 'success', message: 'Demo data reset.' });
+      runValidation();
+      navigate('/candidates');
+    } finally {
+      setResetting(false);
     }
-    addToast({ type: 'success', message: 'Demo data reset.' });
-    runValidation();
-    navigate('/candidates');
   };
 
   const handleAutoFix = () => {
@@ -90,9 +98,10 @@ export default function AdminTools() {
         {!confirmReset ? (
           <button
             onClick={() => setConfirmReset(true)}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700"
+            disabled={resetting}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 disabled:bg-red-300"
           >
-            Reset Demo Data
+            {resetting ? 'Resetting…' : 'Reset Demo Data'}
           </button>
         ) : (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">

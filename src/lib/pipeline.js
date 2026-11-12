@@ -2,7 +2,8 @@ import { supabase } from '@/lib/supabase';
 import {
   getCandidates, setCandidates, normalizeStatus,
   getAssignments, setAssignments, getJobs, setJobs, getClients,
-  getTimesheets, setTimesheets,
+  getTimesheets, setTimesheets, getInvoices, setInvoices,
+  getPayments, setPayments,
 } from '@/utils/storage';
 
 // ---------------------------------------------------------------------------
@@ -656,8 +657,9 @@ const TIMESHEET_SELECT =
   'id,status,client_approval_status,payroll_status,approver_note,week_ending,' +
   'hours_mon,hours_tue,hours_wed,hours_thu,hours_fri,hours_sat,hours_sun,' +
   'submitted_at,approved_at,payroll_ready_at,client_decided_at,' +
-  'exceptions,compliance,legacy_id,created_at,updated_at,candidate_id,assignment_id,' +
+  'exceptions,compliance,legacy_id,created_at,updated_at,candidate_id,assignment_id,invoice_id,' +
   'candidates(id,name,email,legacy_id),' +
+  'invoices(id,legacy_id),' +
   `assignments(${ASSIGNMENT_SELECT})`;
 
 function addDays(dateStr, days) {
@@ -699,6 +701,7 @@ function mapTimesheet(t) {
     approvedAt: t.approved_at || null,
     payrollReadyAt: t.payroll_ready_at || null,
     clientDecidedAt: t.client_decided_at || null,
+    invoiceId: t.invoices?.legacy_id || null,
     legacyId: t.legacy_id || null,
     createdAt: t.created_at || null,
     updatedAt: t.updated_at || null,
@@ -735,7 +738,7 @@ async function resolveAssignmentSupabaseId(demoAssignmentId) {
   return data && data.length > 0 ? data[0].id : null;
 }
 
-function timesheetPayload(demo, candidateUuid, assignmentSupabaseId) {
+function timesheetPayload(demo, candidateUuid, assignmentSupabaseId, invoiceSupabaseId) {
   const hours = [0, 0, 0, 0, 0, 0, 0];
   (demo.entries || []).forEach((e, i) => {
     if (i < 7) hours[i] = Number(e.hours) || 0;
@@ -743,6 +746,7 @@ function timesheetPayload(demo, candidateUuid, assignmentSupabaseId) {
   return {
     candidate_id: candidateUuid,
     assignment_id: assignmentSupabaseId,
+    invoice_id: invoiceSupabaseId || null,
     week_ending: demo.weekEnding || null,
     hours_mon: hours[0],
     hours_tue: hours[1],
@@ -794,6 +798,7 @@ function applySupabaseTimesheetToDemo(row, demo) {
     approvedAt: m.approvedAt,
     payrollReadyAt: m.payrollReadyAt,
     clientDecidedAt: m.clientDecidedAt,
+    invoiceId: m.invoiceId || rows[idx].invoiceId || null,
     updatedAt: m.updatedAt || rows[idx].updatedAt,
     supabaseTimesheetId: row.id,
   };
@@ -844,6 +849,10 @@ export async function syncTimesheetToSupabase(demo) {
     if (!candidateUuid) return 'skipped';
     const assignmentSupabaseId = await resolveAssignmentSupabaseId(demo.assignmentId);
     if (!assignmentSupabaseId) return 'skipped';
+    // Slice 5: carry the invoice stamp (null when uninvoiced).
+    const invoiceSupabaseId = demo.invoiceId
+      ? await resolveInvoiceSupabaseId(demo.invoiceId)
+      : null;
 
     const { data: existing } = await supabase
       .from('timesheets')
@@ -855,7 +864,7 @@ export async function syncTimesheetToSupabase(demo) {
     if (!row) {
       const { data: created, error } = await supabase
         .from('timesheets')
-        .insert([timesheetPayload(demo, candidateUuid, assignmentSupabaseId)])
+        .insert([timesheetPayload(demo, candidateUuid, assignmentSupabaseId, invoiceSupabaseId)])
         .select('id')
         .single();
       if (error || !created) return 'failed';
@@ -870,7 +879,7 @@ export async function syncTimesheetToSupabase(demo) {
     if (demoTime >= rowTime) {
       const { error } = await supabase
         .from('timesheets')
-        .update(timesheetPayload(demo, candidateUuid, assignmentSupabaseId))
+        .update(timesheetPayload(demo, candidateUuid, assignmentSupabaseId, invoiceSupabaseId))
         .eq('id', row.id);
       if (error) return 'failed';
       await syncTimecardMirror(demo, assignmentSupabaseId);
@@ -978,4 +987,368 @@ export async function clearSupabaseTimesheets() {
   const { error: tcError } = await supabase.from('timecards').delete().neq('id', 0);
   if (tcError) throw tcError;
   return { timesheetsCleared: true, timecardsCleared: true };
+}
+
+// --- Invoices + payments (migration slice 5) --------------------------------
+
+const INVOICE_SELECT =
+  'id,invoice_number,issued_at,due_date,total,amount_paid,balance_due,status,' +
+  'paid_at,line_items,legacy_id,created_at,updated_at,client_id,' +
+  'clients(id,name,legacy_id)';
+
+const PAYMENT_SELECT =
+  'id,amount,method,received_date,memo,legacy_id,created_at,updated_at,' +
+  'client_id,invoice_id,' +
+  'clients(id,name,legacy_id),' +
+  'invoices(id,invoice_number,legacy_id)';
+
+function mapInvoice(inv) {
+  const client = inv.clients || {};
+  return {
+    id: inv.id,
+    clientId: client.legacy_id || null,
+    clientName: client.name || '—',
+    invoiceNumber: inv.invoice_number || '—',
+    issuedAt: inv.issued_at || null,
+    dueDate: inv.due_date || null,
+    total: Number(inv.total) || 0,
+    amountPaid: Number(inv.amount_paid) || 0,
+    balanceDue: inv.balance_due == null ? (Number(inv.total) || 0) - (Number(inv.amount_paid) || 0) : Number(inv.balance_due),
+    status: inv.status,
+    paidAt: inv.paid_at || null,
+    lineItems: Array.isArray(inv.line_items) ? inv.line_items : [],
+    legacyId: inv.legacy_id || null,
+    createdAt: inv.created_at || null,
+    updatedAt: inv.updated_at || null,
+  };
+}
+
+function mapPayment(p) {
+  const client = p.clients || {};
+  const inv = p.invoices || {};
+  return {
+    id: p.id,
+    clientId: client.legacy_id || null,
+    clientName: client.name || '—',
+    invoiceId: inv.legacy_id || null,
+    invoiceNumber: inv.invoice_number || '—',
+    amount: Number(p.amount) || 0,
+    method: p.method || '',
+    receivedDate: p.received_date || null,
+    memo: p.memo || '',
+    legacyId: p.legacy_id || null,
+    createdAt: p.created_at || null,
+    updatedAt: p.updated_at || null,
+  };
+}
+
+export async function fetchInvoices() {
+  const { data, error } = await withRetry(() => supabase
+    .from('invoices')
+    .select(INVOICE_SELECT)
+    .order('issued_at', { ascending: false }));
+  if (error) throw error;
+  return (data || []).map(mapInvoice);
+}
+
+export async function fetchInvoice(id) {
+  // Route ids are demo ids (inv-001) most of the time; fall back to the
+  // numeric Supabase id when the param is numeric.
+  let query = supabase.from('invoices').select(INVOICE_SELECT).eq('legacy_id', String(id));
+  let { data, error } = await withRetry(() => query.single());
+  if ((error || !data) && /^\d+$/.test(String(id))) {
+    ({ data, error } = await withRetry(() => supabase
+      .from('invoices')
+      .select(INVOICE_SELECT)
+      .eq('id', Number(id))
+      .single()));
+  }
+  if (error) throw error;
+  return mapInvoice(data);
+}
+
+export async function fetchPaymentsForInvoice(invoiceSupabaseId) {
+  const { data, error } = await withRetry(() => supabase
+    .from('payments')
+    .select(PAYMENT_SELECT)
+    .eq('invoice_id', invoiceSupabaseId)
+    .order('received_date', { ascending: true }));
+  if (error) throw error;
+  return (data || []).map(mapPayment);
+}
+
+async function resolveClientSupabaseId(demoClientId) {
+  const { data } = await supabase
+    .from('clients')
+    .select('id')
+    .eq('legacy_id', String(demoClientId))
+    .limit(1);
+  return data && data.length > 0 ? data[0].id : null;
+}
+
+async function resolveInvoiceSupabaseId(demoInvoiceId) {
+  const demo = getInvoices().find((i) => i.id === demoInvoiceId);
+  if (demo && demo.supabaseInvoiceId) return demo.supabaseInvoiceId;
+  const { data } = await supabase
+    .from('invoices')
+    .select('id')
+    .eq('legacy_id', String(demoInvoiceId))
+    .limit(1);
+  return data && data.length > 0 ? data[0].id : null;
+}
+
+function invoicePayload(demo, clientSupabaseId) {
+  return {
+    client_id: clientSupabaseId,
+    invoice_number: demo.invoiceNumber,
+    issued_at: demo.issuedAt || null,
+    due_date: demo.dueDate || null,
+    total: demo.total || 0,
+    amount_paid: demo.amountPaid || 0,
+    balance_due: demo.balanceDue ?? ((demo.total || 0) - (demo.amountPaid || 0)),
+    status: demo.status || 'Draft',
+    paid_at: demo.paidAt || null,
+    line_items: demo.lineItems || [],
+    legacy_id: String(demo.id),
+    updated_at: demo.updatedAt || new Date().toISOString(),
+  };
+}
+
+function stampDemoInvoice(demo, supabaseId) {
+  const rows = getInvoices();
+  const idx = rows.findIndex((i) => i.id === demo.id);
+  if (idx === -1) return;
+  rows[idx] = { ...rows[idx], supabaseInvoiceId: supabaseId };
+  setInvoices(rows);
+}
+
+function applySupabaseInvoiceToDemo(row, demo) {
+  const rows = getInvoices();
+  const idx = rows.findIndex((i) => i.id === demo.id);
+  if (idx === -1) return;
+  const m = mapInvoice(row);
+  rows[idx] = {
+    ...rows[idx],
+    clientId: m.clientId || rows[idx].clientId,
+    clientName: m.clientName,
+    invoiceNumber: m.invoiceNumber,
+    issuedAt: m.issuedAt,
+    dueDate: m.dueDate,
+    total: m.total,
+    amountPaid: m.amountPaid,
+    balanceDue: m.balanceDue,
+    status: m.status,
+    paidAt: m.paidAt,
+    lineItems: m.lineItems,
+    updatedAt: m.updatedAt || rows[idx].updatedAt,
+    supabaseInvoiceId: row.id,
+  };
+  setInvoices(rows);
+}
+
+/**
+ * Sync one demo invoice row to Supabase. Never throws. Returns
+ * 'demo' | 'supabase' | 'created' | 'skipped' | 'failed'.
+ */
+export async function syncInvoiceToSupabase(demo) {
+  try {
+    if (!demo || !demo.clientId || !demo.invoiceNumber) return 'skipped';
+    const clientSupabaseId = await resolveClientSupabaseId(demo.clientId);
+    if (!clientSupabaseId) return 'skipped';
+
+    const { data: existing } = await supabase
+      .from('invoices')
+      .select(INVOICE_SELECT)
+      .eq('legacy_id', String(demo.id))
+      .limit(1);
+    const row = existing && existing.length > 0 ? existing[0] : null;
+
+    if (!row) {
+      const { data: created, error } = await supabase
+        .from('invoices')
+        .insert([invoicePayload(demo, clientSupabaseId)])
+        .select('id')
+        .single();
+      if (error || !created) return 'failed';
+      stampDemoInvoice(demo, created.id);
+      return 'created';
+    }
+
+    stampDemoInvoice(demo, row.id);
+    const demoTime = Date.parse(demo.updatedAt || 0) || 0;
+    const rowTime = Date.parse(row.updated_at || 0) || 0;
+    if (demoTime >= rowTime) {
+      const { error } = await supabase
+        .from('invoices')
+        .update(invoicePayload(demo, clientSupabaseId))
+        .eq('id', row.id);
+      if (error) return 'failed';
+      return 'demo';
+    }
+    applySupabaseInvoiceToDemo(row, demo);
+    return 'supabase';
+  } catch (err) {
+    if (import.meta.env.MODE !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[invoice sync] failed', err);
+    }
+    return 'failed';
+  }
+}
+
+function paymentPayload(demo, clientSupabaseId, invoiceSupabaseId) {
+  return {
+    client_id: clientSupabaseId,
+    invoice_id: invoiceSupabaseId,
+    amount: demo.amount || 0,
+    method: demo.method || null,
+    received_date: demo.receivedDate || null,
+    memo: demo.memo || null,
+    legacy_id: String(demo.id),
+    updated_at: demo.updatedAt || new Date().toISOString(),
+  };
+}
+
+function stampDemoPayment(demo, supabaseId) {
+  const rows = getPayments();
+  const idx = rows.findIndex((p) => p.id === demo.id);
+  if (idx === -1) return;
+  rows[idx] = { ...rows[idx], supabasePaymentId: supabaseId };
+  setPayments(rows);
+}
+
+/**
+ * Sync one demo payment row to Supabase, then re-sync its parent invoice
+ * (amountPaid/balanceDue/status are derived from payments). Never throws.
+ */
+export async function syncPaymentToSupabase(demo) {
+  try {
+    if (!demo || !demo.invoiceId || demo.amount == null) return 'skipped';
+    const clientSupabaseId = await resolveClientSupabaseId(demo.clientId);
+    const invoiceSupabaseId = await resolveInvoiceSupabaseId(demo.invoiceId);
+    if (!clientSupabaseId || !invoiceSupabaseId) return 'skipped';
+
+    const { data: existing } = await supabase
+      .from('payments')
+      .select(PAYMENT_SELECT)
+      .eq('legacy_id', String(demo.id))
+      .limit(1);
+    const row = existing && existing.length > 0 ? existing[0] : null;
+
+    let result;
+    if (!row) {
+      const { data: created, error } = await supabase
+        .from('payments')
+        .insert([paymentPayload(demo, clientSupabaseId, invoiceSupabaseId)])
+        .select('id')
+        .single();
+      if (error || !created) return 'failed';
+      stampDemoPayment(demo, created.id);
+      result = 'created';
+    } else {
+      stampDemoPayment(demo, row.id);
+      const demoTime = Date.parse(demo.updatedAt || 0) || 0;
+      const rowTime = Date.parse(row.updated_at || 0) || 0;
+      if (demoTime >= rowTime) {
+        const { error } = await supabase
+          .from('payments')
+          .update(paymentPayload(demo, clientSupabaseId, invoiceSupabaseId))
+          .eq('id', row.id);
+        if (error) return 'failed';
+        result = 'demo';
+      } else {
+        result = 'supabase';
+      }
+    }
+
+    // The parent invoice's totals derive from its payments — sync it too.
+    const parent = getInvoices().find((i) => i.id === demo.invoiceId);
+    if (parent) await syncInvoiceToSupabase(parent);
+    return result;
+  } catch (err) {
+    if (import.meta.env.MODE !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[payment sync] failed', err);
+    }
+    return 'failed';
+  }
+}
+
+/**
+ * Load-time reconcile for invoices + payments: push this browser's demo
+ * rows up, and create demo twins for Supabase rows this browser has never
+ * seen. Returns the fresh Supabase invoice list (mapped).
+ */
+export async function reconcileInvoices() {
+  const demoInvoices = getInvoices();
+  await Promise.all(demoInvoices.map((d) => syncInvoiceToSupabase(d)));
+  const demoPayments = getPayments();
+  await Promise.all(demoPayments.map((d) => syncPaymentToSupabase(d)));
+
+  const rows = await fetchInvoices();
+  const demoByKey = new Map();
+  for (const d of getInvoices()) {
+    if (d.supabaseInvoiceId) demoByKey.set(String(d.supabaseInvoiceId), d);
+    if (d.id) demoByKey.set(String(d.id), d);
+  }
+  const missing = rows.filter(
+    (inv) => !demoByKey.has(String(inv.id)) && !demoByKey.has(String(inv.legacyId))
+  );
+
+  if (missing.length > 0) {
+    const demoRows = getInvoices();
+    for (const inv of missing) {
+      demoRows.push({
+        id: inv.legacyId || `inv-${inv.id}`,
+        clientId: inv.clientId,
+        clientName: inv.clientName,
+        invoiceNumber: inv.invoiceNumber,
+        issuedAt: inv.issuedAt,
+        dueDate: inv.dueDate,
+        total: inv.total,
+        amountPaid: inv.amountPaid,
+        balanceDue: inv.balanceDue,
+        status: inv.status,
+        paidAt: inv.paidAt,
+        lineItems: inv.lineItems,
+        createdAt: inv.createdAt,
+        updatedAt: inv.updatedAt,
+        supabaseInvoiceId: inv.id,
+      });
+    }
+    setInvoices(demoRows);
+
+    // Twin the payments belonging to those invoices.
+    const demoPayRows = getPayments();
+    for (const inv of missing) {
+      const payments = await fetchPaymentsForInvoice(inv.id);
+      for (const p of payments) {
+        if (demoPayRows.some((d) => String(d.id) === String(p.legacyId) || String(d.supabasePaymentId) === String(p.id))) continue;
+        demoPayRows.push({
+          id: p.legacyId || `pmt-${p.id}`,
+          clientId: p.clientId,
+          invoiceId: inv.legacyId || `inv-${inv.id}`,
+          amount: p.amount,
+          method: p.method,
+          receivedDate: p.receivedDate,
+          memo: p.memo,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+          supabasePaymentId: p.id,
+        });
+      }
+    }
+    setPayments(demoPayRows);
+  }
+
+  return rows;
+}
+
+/** Demo reset support: clear Supabase payments + invoices (re-synced after). */
+export async function clearSupabaseInvoices() {
+  const { error: pmtError } = await supabase.from('payments').delete().neq('id', 0);
+  if (pmtError) throw pmtError;
+  const { error: invError } = await supabase.from('invoices').delete().neq('id', 0);
+  if (invError) throw invError;
+  return { paymentsCleared: true, invoicesCleared: true };
 }

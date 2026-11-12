@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getInvoices, getClients } from '@/utils/storage';
+import { fetchInvoices, reconcileInvoices } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
 
 function computeAgingBuckets(invoices) {
@@ -49,15 +50,51 @@ function computeAgingBuckets(invoices) {
 
 const fmt = (v) => `$${(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
+// Slice 5 (thin): AR aging reads Supabase invoices (shared across
+// sessions) with a demo-store fallback when Supabase is unreachable.
+// The bucket math is unchanged — it runs on the mapped rows.
+function attachDemoTwins(invoices) {
+  const demoRows = getInvoices();
+  return invoices.map((inv) => {
+    const twin = demoRows.find((d) => String(d.supabaseInvoiceId) === String(inv.id))
+      || demoRows.find((d) => String(d.id) === String(inv.legacyId));
+    return { ...inv, demoInvoiceId: twin ? twin.id : null };
+  });
+}
+
 export default function ArAging() {
   const [data, setData] = useState([]);
   const [drillClient, setDrillClient] = useState(null);
   const [invoices, setInvoices] = useState([]);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
-    const allInv = getInvoices();
-    setInvoices(allInv);
-    setData(computeAgingBuckets(allInv));
+    let mounted = true;
+    const apply = (allInv) => {
+      if (!mounted) return;
+      setInvoices(allInv);
+      setData(computeAgingBuckets(allInv));
+    };
+    (async () => {
+      try {
+        const rows = await fetchInvoices();
+        apply(attachDemoTwins(rows));
+        setUsingFallback(false);
+        reconcileInvoices()
+          .then((fresh) => { apply(attachDemoTwins(fresh)); })
+          .catch(() => {});
+      } catch {
+        try {
+          const rows = await reconcileInvoices();
+          apply(attachDemoTwins(rows));
+          setUsingFallback(false);
+        } catch {
+          if (mounted) { apply(getInvoices()); setUsingFallback(true); }
+        }
+      }
+    })();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totals = useMemo(() => {
@@ -87,6 +124,12 @@ export default function ArAging() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-2">AR Aging / Collections</h1>
       <p className="text-gray-500 text-sm mb-6">Accounts receivable aging by client. Click a client to see their open invoices.</p>
+
+      {usingFallback && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+          Showing local demo data — the shared invoices are unreachable right now.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-white border rounded-lg p-4">
@@ -185,7 +228,7 @@ export default function ArAging() {
                   const od = dueStr ? Math.max(0, Math.floor((Date.now() - new Date(dueStr).getTime()) / 86400000)) : 0;
                   return (
                     <tr key={inv.id} className={i % 2 ? 'bg-white' : 'bg-gray-50/40'}>
-                      <td className="px-3 py-2"><Link to={`/invoices/${inv.id}`} className="text-blue-600 hover:underline">{inv.invoiceNumber}</Link></td>
+                      <td className="px-3 py-2"><Link to={`/invoices/${inv.demoInvoiceId || inv.id}`} className="text-blue-600 hover:underline">{inv.invoiceNumber}</Link></td>
                       <td className="px-3 py-2">{inv.dueDate || '-'}</td>
                       <td className="px-3 py-2 text-right">{fmt(inv.total)}</td>
                       <td className="px-3 py-2 text-right">{fmt(inv.amountPaid)}</td>
@@ -193,7 +236,7 @@ export default function ArAging() {
                       <td className="px-3 py-2 text-right">
                         {od > 0 ? <span className="text-red-600 font-medium">{od} days</span> : <span className="text-green-600">Current</span>}
                       </td>
-                      <td className="px-3 py-2"><Link to={`/invoices/${inv.id}`} className="text-blue-600 hover:underline text-sm">Post Payment</Link></td>
+                      <td className="px-3 py-2"><Link to={`/invoices/${inv.demoInvoiceId || inv.id}`} className="text-blue-600 hover:underline text-sm">Post Payment</Link></td>
                     </tr>
                   );
                 })}
