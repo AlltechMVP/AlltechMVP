@@ -1,16 +1,26 @@
 
 // src/utils/roleUtils.js
 
-import { mockCurrentUser } from "../data/mockCurrentUser";
+export const ROLE_ROUTES = {
+  admin: '/admin',
+  ceo: '/ceo',
+  cfo: '/cfo',
+  director: '/director',
+  'branch-manager': '/branch-manager',
+  'sales-rep': '/sales',
+  'sales-manager': '/sales-manager',
+  recruiter: '/recruiter',
+  candidate: '/candidate/dashboard',
+  client: '/client/approvals',
+  backoffice: '/finance/reports',
+};
 
-// Return the current simulated user
-export function getCurrentUser() {
-  return mockCurrentUser;
+export function getDashboardRouteForRole(role) {
+  if (!role) return '/';
+  return ROLE_ROUTES[role] || '/recruiter';
 }
 
-// Check if current user has one of the allowed roles
-export function hasAccess(allowedRoles = []) {
-  const user = getCurrentUser();
-  if (!user) return false;
-  return allowedRoles.includes(user.role);
+export function hasAccess(userRole, allowedRoles) {
+  if (!allowedRoles || allowedRoles.length === 0) return true;
+  return allowedRoles.includes(userRole);
 }

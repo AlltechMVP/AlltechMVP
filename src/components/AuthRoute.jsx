@@ -1,26 +1,24 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getSession } from '../utils/auth';
 
 export default function AuthRoute({ children }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  async function checkAuth() {
-    const { session } = await getSession();
+    const session = localStorage.getItem('currentUser');
+    
     if (!session) {
-      navigate('/login');
+      navigate('/login', { replace: true });
+      return;
     }
+    
     setLoading(false);
-  }
+  }, [navigate]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div role="status" aria-label="Loading authentication">Loading</div>;
   }
 
   return children;

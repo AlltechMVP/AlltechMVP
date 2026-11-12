@@ -1,7 +1,8 @@
-document.getElementById("applicationForm").addEventListener("submit", function(e) {
+document.getElementById("applicationForm").addEventListener("submit", function (e) {
   e.preventDefault();
 
   const mockCandidateProfile = {
+    id: crypto.randomUUID(),
     name: document.getElementById("name").value.trim(),
     email: document.getElementById("email").value.trim(),
     phone: document.getElementById("phone").value.trim(),
@@ -9,13 +10,17 @@ document.getElementById("applicationForm").addEventListener("submit", function(e
     availability: document.getElementById("availability").value,
     resume: document.getElementById("resume").files[0]?.name || "Not uploaded",
     completedSteps: 0,
-    ready: false
+    ready: false,
+    status: "Application",
+    clientStatus: null,
+    note: ""
   };
 
   const candidates = JSON.parse(localStorage.getItem("mockCandidates")) || [];
   candidates.push(mockCandidateProfile);
   localStorage.setItem("mockCandidates", JSON.stringify(candidates));
+
   localStorage.setItem("candidateProfile", JSON.stringify(mockCandidateProfile));
 
-  window.location.href = '/onboarding';
+  window.location.href = "onboarding.html";
 });

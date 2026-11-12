@@ -27,15 +27,15 @@ function Login() {
       return;
     }
 
-    if (data && data.user) {
-      console.log("✅ Login successful. User:", data.user);
-      localStorage.setItem("user", JSON.stringify(data.user));
+    if (data && data.session && data.session.user) {
+      console.log("✅ Login successful. User:", data.session.user);
+      localStorage.setItem("user", JSON.stringify(data.session.user));
       console.log("📦 User saved to localStorage.");
       navigate("/recruiter");
       console.log("➡️ Redirecting to /recruiter...");
     } else {
-      console.warn("⚠️ Login did not return a user object.");
-      setErrorMsg("Login did not complete properly. Please try again.");
+      console.warn("⚠️ Login succeeded but user info not found.");
+      setErrorMsg("Login completed, but no user info returned.");
     }
   };
 
@@ -47,4 +47,21 @@ function Login() {
           type="email"
           value={email}
           placeholder="Email"
-          on
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          value={password}
+          placeholder="Password"
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <button type="submit">Login</button>
+        {errorMsg && <p style={{ color: "red" }}>{errorMsg}</p>}
+      </form>
+    </div>
+  );
+}
+
+export default Login;

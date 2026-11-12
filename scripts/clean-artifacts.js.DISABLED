@@ -1,0 +1,36 @@
+
+import fs from 'node:fs';
+import path from 'node:path';
+
+const ROOT = path.resolve(process.cwd(), 'src');
+const exts = new Set(['.js', '.jsx', '.ts', '.tsx']);
+
+const replacements = [
+  [/…/g, ''],          // remove unicode ellipsis
+  [/\u2026/g, ''],     // explicit unicode ellipsis
+  [/\.{3}/g, ''],     // remove literal '...'
+  [/statu\s*s/g, 'status'],
+  [/Unauthori\s*zed/gi, 'Unauthorized'],
+  [/className=\"\s+\"/g, 'className=""'],
+];
+
+function walk(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walk(full);
+    else if (exts.has(path.extname(entry.name))) fix(full);
+  }
+}
+
+function fix(file) {
+  let text = fs.readFileSync(file, 'utf8');
+  const before = text;
+  for (const [re, val] of replacements) text = text.replace(re, val);
+  if (text !== before) {
+    fs.writeFileSync(file, text, 'utf8');
+    console.log('[cleaned]', file);
+  }
+}
+
+walk(ROOT);
+console.log('Cleanup complete.');

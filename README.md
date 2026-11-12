@@ -1,13 +1,27 @@
+# Alltech Staffing Platform MVP
 
-# Alltech  MVP – Developer README
+A modular React-based staffing platform with role-based access control and localStorage persistence.
 
-This project is a modular, localStorage-powered staffing platform MVP built in React. It supports full front- and back-office workflows for recruiters, clients, candidates, and admins. Designed in Replit for rapid prototyping and demo readiness.
+## Demo Access
 
-## 🚀 Quick Start
+Use these credentials to test the platform:
+- Email: demo@alltech.com
+- Password: Password123
 
-1. Open in [Replit](https://replit.com/@DDAlltech/AlltechMVP)
-2. Click ▶️ Run to start Vite dev server
-3. Access app via webview or new tab
+## Features
+
+- Role-based dashboards for recruiters, candidates, and clients
+- Document management and onboarding flows  
+- Timesheet and payroll management
+- Client approval workflows
+- Analytics and reporting tools
+- AI-assisted candidate matching
+
+## Local Development
+
+1. Click Run to start the Vite dev server
+2. Access the app via webview or new tab
+3. Use demo credentials to login
 
 ## 🏗️ Architecture
 

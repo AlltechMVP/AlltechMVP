@@ -9,7 +9,7 @@ function CandidateJobBoard() {
 
   const handleApply = (jobId) => {
     if (!applied.includes(jobId)) {
-      setApplied([...applied, jobId]);
+      setApplied([applied, jobId]);
       alert("Application submitted successfully! Our team will contact you soon.");
     }
   };
@@ -36,7 +36,7 @@ return (
         <h1 className="text-2xl font-bold">Available Positions</h1>
         <input
           type="text"
-          placeholder="Search jobs..."
+          placeholder="Search jobs"
           className="px-4 py-2 border rounded-lg"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

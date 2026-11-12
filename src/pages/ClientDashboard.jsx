@@ -1,63 +1,68 @@
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  getDemoClientId, getJobsForClient, getClientById,
+  getTimesheetsForClient, getSubmittedCandidatesForJob
+} from '@/utils/storage';
 
-import { useEffect, useState } from "react";
-import { loadJobOrders } from "../data/jobOrders";
-
-function ClientDashboard() {
-  const [jobs, setJobs] = useState([]);
+export default function ClientDashboard() {
+  const [client, setClient] = useState(null);
+  const [stats, setStats] = useState({ jobs: 0, pendingCandidates: 0, pendingTimecards: 0 });
 
   useEffect(() => {
-    // loadJobOrders() returns the saved job orders (or [] when none exist)
-    setJobs(loadJobOrders());
+    const clientId = getDemoClientId();
+    const cl = getClientById(clientId);
+    setClient(cl);
+
+    const jobs = getJobsForClient(clientId);
+    let pendingCandidates = 0;
+    jobs.forEach(j => {
+      const subs = getSubmittedCandidatesForJob(j.id);
+      pendingCandidates += subs.filter(c => !c.clientDecision).length;
+    });
+
+    const timesheets = getTimesheetsForClient(clientId);
+    const pendingTimecards = timesheets.filter(t => (t.clientApprovalStatus || 'Not Submitted') === 'Submitted').length;
+
+    setStats({ jobs: jobs.length, pendingCandidates, pendingTimecards });
   }, []);
 
-  const handleApproval = (jobId) => {
-    setJobs((prev) =>
-      prev.map((job) =>
-        job.id === jobId ? { ...job, approved: !job.approved } : job
-      )
-    );
-  };
-
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Client Job Dashboard</h1>
-      {jobs.length === 0 ? (
-        <p className="text-gray-500">No job orders yet. New job orders will appear here once created.</p>
-      ) : (
-      <table className="min-w-full border text-left">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-2 border">Job Title</th>
-            <th className="p-2 border">Location</th>
-            <th className="p-2 border">Status</th>
-            <th className="p-2 border">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {jobs.map((job) => (
-            <tr key={job.id}>
-              <td className="p-2 border">{job.title}</td>
-              <td className="p-2 border">{job.location}</td>
-              <td className="p-2 border">
-                {job.approved ? "Approved" : "Pending"}
-              </td>
-              <td className="p-2 border">
-                <button
-                  onClick={() => handleApproval(job.id)}
-                  className={`px-3 py-1 text-white rounded ${
-                    job.approved ? "bg-red-500" : "bg-green-500"
-                  }`}
-                >
-                  {job.approved ? "Revoke" : "Approve"}
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="p-6 max-w-5xl mx-auto">
+      <h1 className="text-2xl font-bold mb-2">Client Portal</h1>
+      {client && <p className="text-gray-500 mb-6">Welcome, {client.contactPerson} &middot; {client.name}</p>}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <Link to="/client/jobs" className="bg-white rounded-lg shadow border p-6 hover:shadow-lg transition">
+          <div className="text-3xl font-bold text-blue-600 mb-1">{stats.jobs}</div>
+          <h3 className="text-sm font-semibold text-gray-700">Active Jobs</h3>
+          <p className="text-xs text-gray-500 mt-1">View and manage your job orders</p>
+        </Link>
+
+        <Link to="/client/jobs" className="bg-white rounded-lg shadow border p-6 hover:shadow-lg transition">
+          <div className="text-3xl font-bold text-amber-600 mb-1">{stats.pendingCandidates}</div>
+          <h3 className="text-sm font-semibold text-gray-700">Candidates Pending Review</h3>
+          <p className="text-xs text-gray-500 mt-1">Approve or reject submitted candidates</p>
+        </Link>
+
+        <Link to="/client/timecards" className="bg-white rounded-lg shadow border p-6 hover:shadow-lg transition">
+          <div className="text-3xl font-bold text-purple-600 mb-1">{stats.pendingTimecards}</div>
+          <h3 className="text-sm font-semibold text-gray-700">Timecards Pending Approval</h3>
+          <p className="text-xs text-gray-500 mt-1">Review and approve submitted timecards</p>
+        </Link>
+      </div>
+
+      {(stats.pendingCandidates > 0 || stats.pendingTimecards > 0) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <h3 className="font-semibold text-amber-800 mb-1">Action Required</h3>
+          <p className="text-sm text-amber-700">
+            You have {stats.pendingCandidates > 0 ? `${stats.pendingCandidates} candidate(s)` : ''}
+            {stats.pendingCandidates > 0 && stats.pendingTimecards > 0 ? ' and ' : ''}
+            {stats.pendingTimecards > 0 ? `${stats.pendingTimecards} timecard(s)` : ''}
+            {' '}awaiting your review.
+          </p>
+        </div>
       )}
     </div>
   );
 }
-
-export default ClientDashboard;

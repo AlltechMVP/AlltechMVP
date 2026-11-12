@@ -8,7 +8,7 @@ function AssignmentTracker() {
   const handlePunchIn = (id) => {
     setData((prev) =>
       prev.map((assign) =>
-        assign.id === id ? { ...assign, punchedIn: !assign.punchedIn } : assign
+        assign.id === id ? { assign, punchedIn: !assign.punchedIn } : assign
       )
     );
     alert("Punch action recorded!");

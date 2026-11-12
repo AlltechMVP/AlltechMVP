@@ -1,3 +1,21 @@
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  padding: 1rem;
+}
+
+.global-ui {
+  position: fixed;
+  right: 1rem;
+  top: 1rem;
+  z-index: 100;
+}
+
 /* Standard page header styling */
 h1.page-header {
   @apply text-3xl font-bold py-4 px-6;

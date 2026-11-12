@@ -18,7 +18,7 @@ const saveJobOrder = (jobData) => {
   const jobs = loadJobOrders();
   jobs.push({
     id: Date.now(),
-    ...jobData,
+    jobData,
     createdAt: new Date().toISOString()
   });
   localStorage.setItem('jobOrders', JSON.stringify(jobs));

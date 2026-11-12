@@ -1,11 +1,15 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const url = import.meta.env.VITE_SUPABASE_URL;
+const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Secrets tool.');
+if (!url || !anon) {
+  // Visible in dev; silent in prod to avoid leaking env hints to users
+  if (import.meta.env.MODE !== 'production') {
+    // eslint-disable-next-line no-console
+    console.error('[Supabase] Missing env: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY');
+  }
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(url ?? '', anon ?? '');

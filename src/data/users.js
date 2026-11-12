@@ -24,7 +24,7 @@ export function getUserByRole(role) {
 export function addUser(userData) {
   const newUser = {
     id: mockUsers.length + 1,
-    ...userData
+    userData
   };
   mockUsers.push(newUser);
   return newUser;
@@ -33,7 +33,7 @@ export function addUser(userData) {
 export function updateUser(id, updates) {
   const userIndex = mockUsers.findIndex(user => user.id === id);
   if (userIndex !== -1) {
-    mockUsers[userIndex] = { ...mockUsers[userIndex], ...updates };
+    mockUsers[userIndex] = { mockUsers[userIndex], updates };
     return mockUsers[userIndex];
   }
   return null;
