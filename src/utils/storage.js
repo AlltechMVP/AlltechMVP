@@ -128,6 +128,36 @@ export function getSubmittedCandidatesForJob(jobId) {
   });
 }
 
+export function hasAppliedToJob(jobId, email) {
+  if (!jobId || !email) return false;
+  const normalized = email.trim().toLowerCase();
+  return getCandidates().some(
+    (c) => c.submittedJobId === jobId && (c.email || '').trim().toLowerCase() === normalized
+  );
+}
+
+export function applyToJob(jobId, { name, email, phone } = {}, by) {
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  if (!jobId || !normalizedEmail || !(name || '').trim()) return null;
+  const existing = getCandidates().find(
+    (c) => c.submittedJobId === jobId && (c.email || '').trim().toLowerCase() === normalizedEmail
+  );
+  if (existing) return { candidate: existing, alreadyApplied: true };
+  const timestamp = now();
+  const candidate = {
+    id: uid(),
+    name: name.trim(),
+    email: normalizedEmail,
+    phone: (phone || '').trim(),
+    status: 'Applied',
+    submittedJobId: jobId,
+    statusHistory: [{ at: timestamp, from: 'New', to: 'Applied', by: by || normalizedEmail, note: 'Applied' }],
+    lastActionAt: timestamp,
+  };
+  setCandidates([...getCandidates(), candidate]);
+  return { candidate, alreadyApplied: false };
+}
+
 export function clientDecideCandidate(candidateId, decision, { note } = {}) {
   const candidates = getCandidates();
   const idx = candidates.findIndex(c => c.id === candidateId);
