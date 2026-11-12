@@ -4,6 +4,8 @@ import Layout from '@/components/layout/Layout.jsx';
 import NotFound from '@/pages/misc/NotFound.jsx';
 import Login from '@/pages/Login.jsx';
 import Signup from '@/pages/Signup.jsx';
+import ForgotPassword from '@/pages/ForgotPassword.jsx';
+import ResetPassword from '@/pages/ResetPassword.jsx';
 import Logout from '@/pages/Logout.jsx';
 import ProtectedRoute from '@/components/protected/ProtectedRoute.jsx';
 import Loader from '@/components/ui/Loader.jsx';
@@ -41,6 +43,8 @@ export default function AppRoutes() {
         {/* Public routes without layout */}
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<Signup />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password" element={<ResetPassword />} />
         <Route path="logout" element={<Logout />} />
 
         {/* All app routes with layout */}
