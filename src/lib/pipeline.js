@@ -26,6 +26,22 @@ const APP_SELECT =
 const JOB_SELECT =
   'id,title,location,rate,openings,status,legacy_id,client_id,clients(name)';
 
+// Supabase reads from the browser are occasionally flaky (a response can
+// drop mid-read even though the server answered). One retry before giving
+// up and falling back to the demo store.
+async function withRetry(fn, attempts = 2, delayMs = 800) {
+  let lastError;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw lastError;
+}
+
 function mapJob(j) {
   if (!j) return null;
   return {
@@ -73,10 +89,10 @@ function mapApplication(a) {
 // --- Reads (Supabase first, demo fallback on error) ------------------------
 
 export async function fetchJobs() {
-  const { data, error } = await supabase
+  const { data, error } = await withRetry(() => supabase
     .from('jobs')
     .select(JOB_SELECT)
-    .order('id');
+    .order('id'));
   if (error) throw error;
   return (data || []).map(mapJob);
 }
@@ -91,19 +107,21 @@ export async function fetchPersons() {
 }
 
 export async function fetchApplications({ jobId } = {}) {
-  let query = supabase.from('applications').select(APP_SELECT).order('updated_at', { ascending: false });
-  if (jobId !== undefined && jobId !== null) query = query.eq('job_id', jobId);
-  const { data, error } = await query;
+  const { data, error } = await withRetry(async () => {
+    let query = supabase.from('applications').select(APP_SELECT).order('updated_at', { ascending: false });
+    if (jobId !== undefined && jobId !== null) query = query.eq('job_id', jobId);
+    return query;
+  });
   if (error) throw error;
   return (data || []).map(mapApplication);
 }
 
 export async function fetchApplication(id) {
-  const { data, error } = await supabase
+  const { data, error } = await withRetry(() => supabase
     .from('applications')
     .select(APP_SELECT)
     .eq('id', id)
-    .single();
+    .single());
   if (error) throw error;
   return mapApplication(data);
 }
@@ -111,16 +129,16 @@ export async function fetchApplication(id) {
 export async function fetchAppliedJobIds(email) {
   const normalized = (email || '').trim().toLowerCase();
   if (!normalized) return [];
-  const { data: persons, error } = await supabase
+  const { data: persons, error } = await withRetry(() => supabase
     .from('candidates')
     .select('id')
-    .eq('email', normalized);
+    .eq('email', normalized));
   if (error) throw error;
   if (!persons || persons.length === 0) return [];
-  const { data: apps, error: appError } = await supabase
+  const { data: apps, error: appError } = await withRetry(() => supabase
     .from('applications')
     .select('job_id')
-    .in('candidate_id', persons.map((p) => p.id));
+    .in('candidate_id', persons.map((p) => p.id)));
   if (appError) throw appError;
   return (apps || []).map((a) => a.job_id);
 }
@@ -128,12 +146,12 @@ export async function fetchAppliedJobIds(email) {
 export async function fetchRecentClientDecisions(days = 30) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  const { data, error } = await supabase
+  const { data, error } = await withRetry(() => supabase
     .from('applications')
     .select(APP_SELECT)
     .not('client_decision', 'is', null)
     .gte('client_decided_at', cutoff.toISOString())
-    .order('client_decided_at', { ascending: false });
+    .order('client_decided_at', { ascending: false }));
   if (error) throw error;
   return (data || []).map((a) => {
     const m = mapApplication(a);

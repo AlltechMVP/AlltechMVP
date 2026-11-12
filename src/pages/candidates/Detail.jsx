@@ -58,14 +58,17 @@ export default function CandidateDetail() {
   const navigate = useNavigate();
   const { addToast } = useToasts();
   const [candidate, setCandidate] = useState(null);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   const load = async () => {
     try {
       const app = await fetchApplication(id);
       setCandidate(attachDemoTwin(app));
+      setUsingFallback(false);
     } catch {
       const demo = getCandidateById(id);
       setCandidate(demo ? mapDemoCandidate(demo) : null);
+      setUsingFallback(true);
     }
   };
 
@@ -115,6 +118,12 @@ export default function CandidateDetail() {
   return (
     <div className="p-4 max-w-3xl mx-auto">
       <button onClick={() => navigate('/candidates')} className="text-blue-600 hover:underline text-sm mb-4 inline-block">&larr; Back to Pipeline</button>
+
+      {usingFallback && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+          Showing local demo data — the shared pipeline is unreachable right now.
+        </p>
+      )}
 
       <div className="bg-white border rounded-xl p-6 space-y-5">
         <div className="flex items-start justify-between">

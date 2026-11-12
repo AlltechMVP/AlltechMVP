@@ -5,7 +5,7 @@ import {
   getAllowedTransitions, changeCandidateStatus, getCandidateById,
 } from '@/utils/storage';
 import {
-  fetchJobs, fetchApplications, syncCandidateToSupabase,
+  fetchJobs, fetchApplications, syncCandidateToSupabase, reconcilePipeline,
 } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty } from '@/components/ui';
@@ -44,25 +44,36 @@ export default function JobCandidates() {
   const [data, setData] = useState([]);
   const [job, setJob] = useState(null);
 
+  const loadSupabase = async () => {
+    const jobs = await fetchJobs();
+    const found = jobs.find((j) => String(j.id) === String(jobId));
+    setJob(found || null);
+    const apps = await fetchApplications({ jobId: Number(jobId) });
+    setData(attachDemoTwins(apps));
+  };
+
   const load = async () => {
     try {
-      const jobs = await fetchJobs();
-      const found = jobs.find((j) => String(j.id) === String(jobId));
-      setJob(found || null);
-      const apps = await fetchApplications({ jobId: Number(jobId) });
-      setData(attachDemoTwins(apps));
+      await loadSupabase();
     } catch {
-      setJob(getJobById(jobId) || null);
-      setData(getCandidates()
-        .filter(c => String(c.submittedJobId) === String(jobId) || String(c.currentJobId) === String(jobId))
-        .map((c) => ({
-          id: c.id,
-          demoCandidateId: c.id,
-          name: c.name,
-          email: c.email || '-',
-          status: normalizeStatus(c.status),
-          lastActionAt: c.lastActionAt || null,
-        })));
+      try {
+        // The shared fetch failed: try the reconcile (it re-syncs and
+        // re-fetches) before falling back to local demo data.
+        await reconcilePipeline();
+        await loadSupabase();
+      } catch {
+        setJob(getJobById(jobId) || null);
+        setData(getCandidates()
+          .filter(c => String(c.submittedJobId) === String(jobId) || String(c.currentJobId) === String(jobId))
+          .map((c) => ({
+            id: c.id,
+            demoCandidateId: c.id,
+            name: c.name,
+            email: c.email || '-',
+            status: normalizeStatus(c.status),
+            lastActionAt: c.lastActionAt || null,
+          })));
+      }
     }
   };
 

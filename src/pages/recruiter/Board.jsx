@@ -41,13 +41,16 @@ export default function RecruiterBoard() {
   const { addToast } = useToasts();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   const load = async () => {
     try {
       const apps = await fetchApplications();
       setRows(attachDemoTwins(apps));
+      setUsingFallback(false);
     } catch {
       setRows(getCandidates().map(mapDemoRow));
+      setUsingFallback(true);
     }
     setLoading(false);
   };
@@ -92,6 +95,11 @@ export default function RecruiterBoard() {
 
   return (
     <div className="p-4 space-y-2">
+      {usingFallback && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+          Showing local demo data — the shared pipeline is unreachable right now. Changes here will sync when it comes back.
+        </p>
+      )}
       {rows.map((r) => {
         const status = normalizeStatus(r.status);
         const allowed = getAllowedTransitions(status);

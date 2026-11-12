@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getJobs, getCandidates, applyToJob } from '@/utils/storage';
 import {
   fetchJobs, fetchApplications, fetchAppliedJobIds, syncCandidateToSupabase,
+  reconcilePipeline,
 } from '@/lib/pipeline';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
@@ -20,31 +21,45 @@ export default function JobsList() {
   const [applyingJob, setApplyingJob] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', phone: '' });
   const [formError, setFormError] = useState('');
+  const [usingFallback, setUsingFallback] = useState(false);
   const { session } = useAuth();
   const { addToast } = useToasts();
 
   const userEmail = session?.user?.email || '';
   const userName = session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || '';
 
+  const loadSupabaseApplications = async (email) => {
+    const apps = await fetchApplications();
+    setApplications(apps);
+    setUsingFallback(false);
+    if (email) {
+      const ids = await fetchAppliedJobIds(email);
+      setAppliedJobIds(ids.map(String));
+    }
+  };
+
   const refreshApplications = async (email) => {
     try {
-      const apps = await fetchApplications();
-      setApplications(apps);
-      if (email) {
-        const ids = await fetchAppliedJobIds(email);
-        setAppliedJobIds(ids.map(String));
-      }
+      await loadSupabaseApplications(email);
     } catch {
-      // Demo fallback: derive from localStorage.
-      const demo = getCandidates();
-      setApplications(demo.map((c) => ({ jobId: c.submittedJobId })));
-      if (email) {
-        const normalized = email.trim().toLowerCase();
-        setAppliedJobIds(
-          demo
-            .filter((c) => (c.email || '').trim().toLowerCase() === normalized)
-            .map((c) => String(c.submittedJobId))
-        );
+      try {
+        // The shared fetch failed: try the reconcile (it re-syncs and
+        // re-fetches) before falling back to local demo data.
+        await reconcilePipeline();
+        await loadSupabaseApplications(email);
+      } catch {
+        // Demo fallback: derive from localStorage.
+        const demo = getCandidates();
+        setApplications(demo.map((c) => ({ jobId: c.submittedJobId })));
+        setUsingFallback(true);
+        if (email) {
+          const normalized = email.trim().toLowerCase();
+          setAppliedJobIds(
+            demo
+              .filter((c) => (c.email || '').trim().toLowerCase() === normalized)
+              .map((c) => String(c.submittedJobId))
+          );
+        }
       }
     }
   };
@@ -56,7 +71,7 @@ export default function JobsList() {
         const data = await fetchJobs();
         if (mounted) setJobs(data);
       } catch {
-        if (mounted) setJobs(getJobs());
+        if (mounted) { setJobs(getJobs()); setUsingFallback(true); }
       }
       if (mounted) refreshApplications(userEmail);
     })();
@@ -152,6 +167,12 @@ export default function JobsList() {
   return (
     <div className="p-4 max-w-6xl mx-auto">
       <h1 className="text-xl font-semibold mb-4">Jobs</h1>
+
+      {usingFallback && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+          Showing local demo data — the shared pipeline is unreachable right now. Changes here will sync when it comes back.
+        </p>
+      )}
 
       {applyingJob && (
         <form onSubmit={submitApply} className="mb-6 border rounded-lg bg-white shadow-sm p-4">

@@ -90,19 +90,21 @@ export default function CandidatesList() {
   const [data, setData] = useState([]);
   const [decisions, setDecisions] = useState([]);
   const [showDecisions, setShowDecisions] = useState(true);
+  const [usingFallback, setUsingFallback] = useState(false);
   const { addToast } = useToasts();
   const navigate = useNavigate();
+
+  const toRows = (list) => attachDemoTwins(list).map((a) => ({
+    ...a,
+    job: a.jobTitle,
+    lastAction: a.lastActionAt ? new Date(a.lastActionAt).toLocaleDateString() : '-',
+    _sortDate: a.lastActionAt || a.createdAt || '',
+  }));
 
   const loadFromSupabase = async () => {
     // Render fast from Supabase, then reconcile in the background (pushes
     // this browser's demo rows up, creates missing twins) and refresh.
     const apps = await fetchApplications();
-    const toRows = (list) => attachDemoTwins(list).map((a) => ({
-      ...a,
-      job: a.jobTitle,
-      lastAction: a.lastActionAt ? new Date(a.lastActionAt).toLocaleDateString() : '-',
-      _sortDate: a.lastActionAt || a.createdAt || '',
-    }));
     const rows = toRows(apps);
     setData(rows);
     setDecisions(deriveDecisions(rows));
@@ -126,8 +128,20 @@ export default function CandidatesList() {
     (async () => {
       try {
         await loadFromSupabase();
+        if (mounted) setUsingFallback(false);
       } catch {
-        if (mounted) loadFromDemo();
+        // The shared fetch failed: try the reconcile (it re-syncs and
+        // re-fetches) before falling back to local demo data.
+        try {
+          const apps = await reconcilePipeline();
+          if (!mounted) return;
+          const rows = toRows(apps);
+          setData(rows);
+          setDecisions(deriveDecisions(rows));
+          setUsingFallback(false);
+        } catch {
+          if (mounted) { loadFromDemo(); setUsingFallback(true); }
+        }
       }
     })();
     return () => { mounted = false; };
@@ -157,16 +171,13 @@ export default function CandidatesList() {
       if (updated) syncCandidateToSupabase(updated).catch(() => {});
       try {
         const apps = await fetchApplications();
-        const rows = attachDemoTwins(apps).map((a) => ({
-          ...a,
-          job: a.jobTitle,
-          lastAction: a.lastActionAt ? new Date(a.lastActionAt).toLocaleDateString() : '-',
-          _sortDate: a.lastActionAt || a.createdAt || '',
-        }));
+        const rows = toRows(apps);
         setData(rows);
         setDecisions(deriveDecisions(rows));
+        setUsingFallback(false);
       } catch {
         loadFromDemo();
+        setUsingFallback(true);
       }
       addToast({ type: 'success', message: `Candidate status updated to "${result}".` });
     } else {
@@ -237,6 +248,12 @@ export default function CandidatesList() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Candidate Pipeline</h1>
       </div>
+
+      {usingFallback && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+          Showing local demo data — the shared pipeline is unreachable right now. Changes here will sync when it comes back.
+        </p>
+      )}
 
       {decisions.length > 0 && showDecisions && (
         <div className="mb-6 border border-blue-200 rounded-xl bg-blue-50/50 overflow-hidden">

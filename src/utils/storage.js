@@ -556,6 +556,7 @@ export function syncCandidateFromAssignment(assignment) {
   const timestamp = now();
   const idx = candidates.findIndex(c => c.id === assignment.candidateId);
   if (idx === -1) return null;
+  const fromStatus = normalizeStatus(candidates[idx].status);
 
   let statusMsg = null;
 
@@ -611,8 +612,20 @@ export function syncCandidateFromAssignment(assignment) {
   }
 
   if (statusMsg) {
+    const c = candidates[idx];
+    // Stamp the change so the Supabase sync treats this assignment flip as
+    // the newest write (timestamp last-write-wins). Without a timestamp the
+    // older Supabase status would win on sync and undo the flip.
+    c.lastActionAt = timestamp;
+    if (normalizeStatus(c.status) !== fromStatus) {
+      c.statusHistory = c.statusHistory || [];
+      c.statusHistory.push({
+        at: timestamp, from: fromStatus, to: normalizeStatus(c.status),
+        by: 'system', note: 'Assignment ' + assignment.status,
+      });
+    }
     setCandidates(candidates);
-    queueSync(candidates[idx]);
+    queueSync(c);
   }
 
   return statusMsg;
