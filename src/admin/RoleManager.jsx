@@ -10,6 +10,7 @@ export default function RoleManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updateMessage, setUpdateMessage] = useState("");
+  const [pendingChange, setPendingChange] = useState(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -35,11 +36,6 @@ export default function RoleManager() {
     const user = users.find(u => u.id === userId);
     if (!user) return;
 
-    const confirm = window.confirm(
-      `Are you sure you want to change role for ${email} from "${user.role}" to "${newRole}"?`
-    );
-    if (!confirm) return;
-
     try {
       const { error: updateError } = await supabase
         .from("profiles")
@@ -62,10 +58,12 @@ export default function RoleManager() {
 
       setUpdateMessage(`Updated role for ${email} successfully`);
       setTimeout(() => setUpdateMessage(""), 3000);
+      setPendingChange(null);
       fetchUsers();
     } catch (err) {
       setError(`Failed to update role: ${err.message}`);
       setTimeout(() => setError(""), 3000);
+      setPendingChange(null);
     }
   };
 
@@ -106,8 +104,14 @@ export default function RoleManager() {
                 <td className="p-2 border">
                   <select
                     aria-label={`Change role for ${user.email}`}
-                    value={user.role}
-                    onChange={(e) => updateRole(user.id, e.target.value, user.email)}
+                    value={pendingChange?.userId === user.id ? pendingChange.newRole : user.role}
+                    onChange={(e) => {
+                      if (e.target.value === user.role) {
+                        setPendingChange(null);
+                      } else {
+                        setPendingChange({ userId: user.id, email: user.email, oldRole: user.role, newRole: e.target.value });
+                      }
+                    }}
                     className="border px-2 py-1 rounded w-full"
                   >
                     {roles.map((r) => (
@@ -116,6 +120,23 @@ export default function RoleManager() {
                       </option>
                     ))}
                   </select>
+                  {pendingChange?.userId === user.id && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                      <span>Change to &ldquo;{pendingChange.newRole}&rdquo;?</span>
+                      <button
+                        onClick={() => updateRole(user.id, pendingChange.newRole, user.email)}
+                        className="bg-blue-600 text-white px-2 py-1 rounded"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setPendingChange(null)}
+                        className="border px-2 py-1 rounded"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
