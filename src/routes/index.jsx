@@ -15,6 +15,7 @@ const RecruiterBoard = lazy(() => import('@/pages/recruiter/Board.jsx'));
 const ClientJobs = lazy(() => import('@/pages/client/Jobs.jsx'));
 const ClientCandidates = lazy(() => import('@/pages/client/Candidates.jsx'));
 const ClientTimecards = lazy(() => import('@/pages/client/Timecards.jsx'));
+const ClientApprovals = lazy(() => import('@/pages/client/Approvals.jsx'));
 const RecruiterDashboard = lazy(() => import('@/pages/RecruiterDashboard.jsx'));
 const ClientDashboard = lazy(() => import('@/pages/ClientDashboard.jsx'));
 const CandidateDashboard = lazy(() => import('@/pages/CandidateDashboard.jsx'));
@@ -76,6 +77,14 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={["client"]}>
                 <ClientDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="client/approvals"
+            element={
+              <ProtectedRoute allowedRoles={["client"]}>
+                <ClientApprovals />
               </ProtectedRoute>
             }
           />

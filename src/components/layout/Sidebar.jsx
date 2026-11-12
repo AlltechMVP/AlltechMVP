@@ -29,6 +29,7 @@ export default function Sidebar() {
           <>
             <li className="pt-1 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Client Portal</li>
             <li><Link to="/client" className={linkCls(pathname === '/client')}>Dashboard</Link></li>
+            <li><Link to="/client/approvals" className={linkCls(pathname === '/client/approvals')}>Approvals</Link></li>
             <li><Link to="/client/jobs" className={linkCls(pathname.startsWith('/client/jobs'))}>Jobs</Link></li>
             <li><Link to="/client/timecards" className={linkCls(pathname === '/client/timecards')}>Timecards</Link></li>
           </>
