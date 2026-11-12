@@ -5,7 +5,6 @@ function CandidateJobBoard() {
   const [applied, setApplied] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [candidates, setCandidates] = useState([]); // Added state for candidates
 
   const handleApply = (jobId) => {
     if (!applied.includes(jobId)) {
@@ -160,21 +159,6 @@ return (
           </div>
         </div>
       )}
-
-      <button
-        onClick={() => {
-          if (window.confirm('Are you sure you want to clear all candidates? This action cannot be undone.')) {
-            localStorage.removeItem("mockCandidates");
-            setCandidates([]);
-            // Show feedback that the operation was successful
-            alert('All candidates have been cleared successfully.');
-          }
-        }}
-        className="mt-8 mb-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
-        aria-label="Clear all candidates"
-      >
-        Clear All Candidates
-      </button>
     </div>
   );
 }

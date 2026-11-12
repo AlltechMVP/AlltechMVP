@@ -73,6 +73,82 @@ export function postPayment(payment) {
   return payment;
 }
 
+export function createInvoicesFromPaidTimesheets() {
+  const today = new Date();
+  const issuedAt = today.toISOString().slice(0, 10);
+  const due = new Date(today.getTime() + 30 * 86400000);
+  const dueDate = due.toISOString().slice(0, 10);
+  const year = today.getFullYear();
+
+  const billable = getTimesheets().filter(
+    (t) => t.payrollStatus === 'Paid' && !t.invoiceId && (t.totalHours || 0) > 0
+  );
+
+  const byClient = {};
+  billable.forEach((t) => {
+    const assignment = getAssignmentById(t.assignmentId);
+    const job = assignment ? getJobById(assignment.jobId) : null;
+    if (!assignment || !job || !job.clientId) return;
+    const candidate = getCandidateById(assignment.candidateId);
+    const rate = assignment.billRate || job.rate || 0;
+    const hours = t.totalHours || 0;
+    const key = job.clientId;
+    if (!byClient[key]) {
+      byClient[key] = { clientId: job.clientId, clientName: job.client_name || job.clientName || '', items: [] };
+    }
+    byClient[key].items.push({
+      timesheetId: t.id,
+      description: `${candidate ? candidate.name : 'Candidate'} - ${job.title} (${hours}hrs @ $${rate})`,
+      hours,
+      rate,
+      amount: hours * rate,
+    });
+  });
+
+  const groups = Object.values(byClient).filter((g) => g.items.length > 0);
+  if (groups.length === 0) return [];
+
+  const invoices = getInvoices();
+  let maxNum = 0;
+  invoices.forEach((inv) => {
+    const m = String(inv.invoiceNumber || '').match(/(\d+)$/);
+    if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+  });
+
+  const created = [];
+  const allTimesheets = getTimesheets();
+  groups.forEach((g) => {
+    maxNum += 1;
+    const num = String(maxNum).padStart(3, '0');
+    const total = g.items.reduce((sum, li) => sum + li.amount, 0);
+    const invoice = {
+      id: `inv-${num}`,
+      clientId: g.clientId,
+      clientName: g.clientName,
+      invoiceNumber: `INV-${year}-${num}`,
+      issuedAt,
+      dueDate,
+      total,
+      amountPaid: 0,
+      balanceDue: total,
+      status: 'Draft',
+      lineItems: g.items.map(({ description, hours, rate, amount }) => ({ description, hours, rate, amount })),
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    invoices.push(invoice);
+    created.push(invoice);
+    g.items.forEach((li) => {
+      const idx = allTimesheets.findIndex((t) => t.id === li.timesheetId);
+      if (idx !== -1) allTimesheets[idx].invoiceId = invoice.id;
+    });
+  });
+
+  setInvoices(invoices);
+  setTimesheets(allTimesheets);
+  return created;
+}
+
 export function getPaymentsForInvoice(invoiceId) {
   return getPayments().filter(p => p.invoiceId === invoiceId);
 }

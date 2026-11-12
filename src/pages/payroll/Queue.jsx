@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   getTimesheets, setTimesheets, getAssignmentById, getCandidateById, getJobById,
+  createInvoicesFromPaidTimesheets,
   now
 } from '@/utils/storage';
 import DataTable from '@/components/table/DataTable.jsx';
@@ -27,6 +28,19 @@ export default function PayrollQueue() {
     setTimesheets(all);
     setData([...all]);
     addToast({ type: 'success', message: `Timesheet marked as "${newStatus}".` });
+  };
+
+  const billableCount = data.filter(t => t.payrollStatus === 'Paid' && !t.invoiceId && (t.totalHours || 0) > 0).length;
+
+  const createInvoices = () => {
+    const created = createInvoicesFromPaidTimesheets();
+    if (created.length === 0) {
+      addToast({ type: 'info', message: 'No paid timesheets ready to invoice.' });
+      return;
+    }
+    setData(getTimesheets());
+    const summary = created.map(i => `${i.invoiceNumber} (${i.clientName}, $${i.total.toFixed(2)})`).join(', ');
+    addToast({ type: 'success', message: `Created ${created.length} invoice${created.length > 1 ? 's' : ''}: ${summary}` });
   };
 
   const rows = useMemo(() => {
@@ -107,6 +121,13 @@ export default function PayrollQueue() {
             {s}
           </button>
         ))}
+        <button
+          onClick={createInvoices}
+          disabled={billableCount === 0}
+          className="ml-auto bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-500"
+        >
+          Create invoices ({billableCount} ready)
+        </button>
       </div>
 
       {rows.length === 0 ? (

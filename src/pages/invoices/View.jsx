@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getInvoiceById, getPaymentsForInvoice, postPayment, uid, now, getClientById } from '@/utils/storage';
+import { getInvoiceById, getPaymentsForInvoice, postPayment, getInvoices, setInvoices, uid, now, getClientById } from '@/utils/storage';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 const statusBadge = (s) => {
@@ -64,6 +64,17 @@ export default function InvoiceView() {
     reload();
   };
 
+  const sendInvoice = () => {
+    const all = getInvoices();
+    const idx = all.findIndex(i => i.id === invoice.id);
+    if (idx === -1) return;
+    all[idx].status = 'Sent';
+    all[idx].updatedAt = now();
+    setInvoices(all);
+    addToast('Invoice sent.', 'success');
+    reload();
+  };
+
   return (
     <div className="p-6 max-w-4xl">
       <div className="mb-4">
@@ -78,6 +89,11 @@ export default function InvoiceView() {
           </div>
           <div className="text-right">
             {statusBadge(invoice.status)}
+            {invoice.status === 'Draft' && (
+              <button onClick={sendInvoice} className="mt-2 ml-auto block bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">
+                Send Invoice
+              </button>
+            )}
           </div>
         </div>
 
