@@ -10,6 +10,20 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null); // { id, email, role }
   const [loading, setLoading] = useState(true);
 
+  // DEV-ONLY role override for testing: changes only the effective role
+  // used for navigation, never the signed-in account. Persisted so it
+  // survives a reload mid-test; cleared on sign-out.
+  const [roleOverride, setRoleOverrideState] = useState(() => {
+    try { return localStorage.getItem('alltech_role_override') || null; } catch { return null; }
+  });
+  const setRoleOverride = (role) => {
+    setRoleOverrideState(role);
+    try {
+      if (role) localStorage.setItem('alltech_role_override', role);
+      else localStorage.removeItem('alltech_role_override');
+    } catch { /* storage unavailable */ }
+  };
+
   // DEV-ONLY: allow role override without Supabase
   const devLoginAs = (role) => {
     if (!isDev) return;
@@ -22,6 +36,8 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem('user');
+    localStorage.removeItem('alltech_role_override');
+    setRoleOverrideState(null);
     setSession(null);
     setProfile(null);
   };
@@ -86,10 +102,12 @@ export function AuthProvider({ children }) {
     loading,
     session,
     profile,
-    role: profile?.role || null,
+    role: roleOverride || profile?.role || null,
+    roleOverride,
+    setRoleOverride,
     devLoginAs,
     signOut,
-  }), [loading, session, profile]);
+  }), [loading, session, profile, roleOverride]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

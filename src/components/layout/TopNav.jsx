@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext.jsx';
-import { isDev } from '@/config/dev';
 import AssistantPanel from '@/components/ai/AssistantPanel.jsx';
 
+const DEV_ROLES = ['recruiter', 'client', 'candidate', 'ceo', 'cfo'];
+
 export default function TopNav() {
-  const { profile, role, devLoginAs, signOut } = useAuth();
+  const { profile, role, roleOverride, setRoleOverride, signOut } = useAuth();
   const [assistantOpen, setAssistantOpen] = useState(false);
 
   useEffect(() => {
@@ -29,15 +30,29 @@ export default function TopNav() {
               {role ? `${role} · ` : ''}{profile.email}
             </span>
           )}
-          {isDev && (
-            <div className="flex items-center gap-1">
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => devLoginAs('recruiter')}>Recruiter</button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => devLoginAs('client')}>Client</button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => devLoginAs('candidate')}>Candidate</button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => devLoginAs('ceo')}>CEO</button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => devLoginAs('cfo')}>CFO</button>
-            </div>
-          )}
+          {/* DEV-ONLY role override for testing. It changes only the role
+              used for navigation, not the signed-in account. Remove before
+              real users rely on this app. */}
+          <div
+            className="flex items-center gap-1 border border-amber-400 bg-amber-50 rounded px-1 py-0.5"
+            title="Dev-only role override for testing. It changes only the role used for navigation, not the signed-in account. Clear it before real use."
+          >
+            <span className="text-[10px] uppercase tracking-wide text-amber-700 px-1">Dev role</span>
+            {DEV_ROLES.map((r) => (
+              <button
+                key={r}
+                className={`px-2 py-1 text-xs border rounded ${roleOverride === r ? 'bg-gray-800 text-white border-gray-800' : 'bg-white'}`}
+                onClick={() => setRoleOverride(r)}
+              >
+                {r.charAt(0).toUpperCase() + r.slice(1)}
+              </button>
+            ))}
+            {roleOverride && (
+              <button className="px-2 py-1 text-xs border rounded bg-white" onClick={() => setRoleOverride(null)}>
+                Reset
+              </button>
+            )}
+          </div>
           <button className="px-2 py-1 text-xs border rounded" onClick={signOut}>Sign out</button>
         </div>
       </div>
