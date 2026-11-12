@@ -224,6 +224,15 @@ function queueSync(demoCandidate) {
     .catch(() => {});
 }
 
+// Slice 7: same pattern for client timesheet decisions — mirror the
+// decided demo timesheet row to Supabase (fire-and-forget, never throws).
+function queueTimesheetSync(demoTimesheet) {
+  if (!demoTimesheet) return;
+  import('@/lib/pipeline.js')
+    .then((m) => m.syncTimesheetToSupabase(demoTimesheet))
+    .catch(() => {});
+}
+
 export function applyToJob(jobId, { name, email, phone } = {}, by) {
   const normalizedEmail = (email || '').trim().toLowerCase();
   if (!jobId || !normalizedEmail || !(name || '').trim()) return null;
@@ -287,6 +296,9 @@ export function clientDecideTimesheet(timesheetId, decision, { note } = {}) {
 
   t.clientApprovalStatus = decision;
   t.clientDecisionNote = note || '';
+  // Slice 7: also mirror the note into approverNote — timesheetPayload
+  // syncs approver_note from approverNote, so the reason reaches Supabase.
+  t.approverNote = note || '';
   t.clientDecidedAt = timestamp;
 
   if (decision === 'Approved') {
@@ -302,6 +314,7 @@ export function clientDecideTimesheet(timesheetId, decision, { note } = {}) {
   }
 
   setTimesheets(timesheets);
+  queueTimesheetSync(timesheets[idx]);
   return decision;
 }
 

@@ -1,5 +1,6 @@
 
 import { Link, useLocation } from "react-router-dom";
+import { isDev } from "@/config/dev";
 
 const linkCls = (active) =>
   `block px-3 py-1.5 rounded-md text-sm ${active ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700 hover:bg-gray-200'}`;
@@ -9,8 +10,10 @@ export default function Sidebar() {
   try { user = JSON.parse(localStorage.getItem('user') || '{}') || {}; } catch { user = {}; }
   // The dev role override (when set) wins, so the sidebar follows the
   // role being tested instead of the signed-in account's real role.
+  // Slice 7: the override is read ONLY in dev — in production the
+  // sidebar always follows the signed-in account's real role.
   let role = user.role;
-  try { role = localStorage.getItem('alltech_role_override') || role; } catch { /* ignore */ }
+  try { if (isDev) role = localStorage.getItem('alltech_role_override') || role; } catch { /* ignore */ }
   const { pathname } = useLocation();
 
   return (

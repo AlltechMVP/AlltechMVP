@@ -6,10 +6,10 @@ import {
   setAssignmentPrefill, getCandidateById,
 } from '@/utils/storage';
 import {
-  fetchApplications, reconcilePipeline, syncCandidateToSupabase,
+  fetchApplications, reconcilePipeline, syncCandidateToSupabase, isRlsDenied,
 } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
-import { Empty } from '@/components/ui';
+import { Empty, AccessDenied } from '@/components/ui';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { useNavigate } from 'react-router-dom';
 
@@ -91,6 +91,9 @@ export default function CandidatesList() {
   const [decisions, setDecisions] = useState([]);
   const [showDecisions, setShowDecisions] = useState(true);
   const [usingFallback, setUsingFallback] = useState(false);
+  // Slice 7: an RLS denial is not an outage — show the denied state and
+  // never fall back to the unscoped demo store.
+  const [denied, setDenied] = useState(false);
   const { addToast } = useToasts();
   const navigate = useNavigate();
 
@@ -129,7 +132,8 @@ export default function CandidatesList() {
       try {
         await loadFromSupabase();
         if (mounted) setUsingFallback(false);
-      } catch {
+      } catch (err) {
+        if (isRlsDenied(err)) { if (mounted) setDenied(true); return; }
         // The shared fetch failed: try the reconcile (it re-syncs and
         // re-fetches) before falling back to local demo data.
         try {
@@ -139,7 +143,8 @@ export default function CandidatesList() {
           setData(rows);
           setDecisions(deriveDecisions(rows));
           setUsingFallback(false);
-        } catch {
+        } catch (err2) {
+          if (isRlsDenied(err2)) { if (mounted) setDenied(true); return; }
           if (mounted) { loadFromDemo(); setUsingFallback(true); }
         }
       }
@@ -175,7 +180,8 @@ export default function CandidatesList() {
         setData(rows);
         setDecisions(deriveDecisions(rows));
         setUsingFallback(false);
-      } catch {
+      } catch (err) {
+        if (isRlsDenied(err)) { setDenied(true); return; }
         loadFromDemo();
         setUsingFallback(true);
       }
@@ -242,6 +248,10 @@ export default function CandidatesList() {
       );
     }},
   ];
+
+  if (denied) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="p-4 max-w-6xl mx-auto">

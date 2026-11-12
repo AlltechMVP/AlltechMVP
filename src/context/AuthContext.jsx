@@ -7,16 +7,26 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null); // { id, email, role }
+  const [profile, setProfile] = useState(null); // { id, email, role, client_id, is_client_approver }
   const [loading, setLoading] = useState(true);
 
   // DEV-ONLY role override for testing: changes only the effective role
   // used for navigation, never the signed-in account. Persisted so it
   // survives a reload mid-test; cleared on sign-out.
+  // Slice 7: the override is DISABLED in production (gated on isDev, not
+  // deleted — local dev and isolated demos with synthetic data keep it).
+  // The backend never sees the override: RLS keys off auth.uid() ->
+  // profiles, which the override cannot touch. A leftover key from a dev
+  // build is cleared on load so it can never change the effective role.
   const [roleOverride, setRoleOverrideState] = useState(() => {
+    if (!isDev) {
+      try { localStorage.removeItem('alltech_role_override'); } catch { /* ignore */ }
+      return null;
+    }
     try { return localStorage.getItem('alltech_role_override') || null; } catch { return null; }
   });
   const setRoleOverride = (role) => {
+    if (!isDev) return;
     setRoleOverrideState(role);
     try {
       if (role) localStorage.setItem('alltech_role_override', role);
@@ -45,7 +55,7 @@ export function AuthProvider({ children }) {
   const loadProfile = async (userId) => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id,email,role')
+      .select('id,email,role,client_id,is_client_approver')
       .eq('id', userId)
       .single();
     if (!error && data) {
@@ -58,15 +68,24 @@ export function AuthProvider({ children }) {
     // still recognised instead of bouncing back to /login.
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    // Slice 7: never trust user_metadata for a privileged role — a new
+    // signup could self-assign one. Only the three low-privilege roles
+    // may come from metadata; anything else defaults to recruiter.
+    const metadataRole = user.user_metadata?.role;
     const fallback = {
       id: user.id,
       email: user.email,
-      role: user.user_metadata?.role || 'recruiter',
+      role: ['recruiter', 'candidate', 'client'].includes(metadataRole) ? metadataRole : 'recruiter',
     };
     setProfile(fallback);
     localStorage.setItem('user', JSON.stringify(fallback));
-    // Self-heal: create the missing profile row for next time.
-    await supabase.from('profiles').upsert(fallback);
+    // Self-heal: create the missing profile row for next time. Only when
+    // the row is genuinely missing (PGRST116) — any other error (network,
+    // missing column, denial) must NOT upsert, or it would overwrite a
+    // real profile row with a default role.
+    if (error && error.code === 'PGRST116') {
+      await supabase.from('profiles').upsert(fallback);
+    }
   };
 
   // Load current session and subscribe to changes
@@ -102,7 +121,9 @@ export function AuthProvider({ children }) {
     loading,
     session,
     profile,
-    role: roleOverride || profile?.role || null,
+    // Slice 7: the dev override applies only in dev. In production the
+    // effective role is always the signed-in account's real profile role.
+    role: (isDev ? roleOverride : null) || profile?.role || null,
     roleOverride,
     setRoleOverride,
     devLoginAs,

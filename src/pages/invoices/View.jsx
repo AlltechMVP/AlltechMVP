@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getInvoiceById, getPaymentsForInvoice, postPayment, getInvoices, setInvoices, getPayments, uid, now, getClientById } from '@/utils/storage';
-import { fetchInvoice, fetchPaymentsForInvoice, reconcileInvoices, syncInvoiceToSupabase, syncPaymentToSupabase } from '@/lib/pipeline';
+import { fetchInvoice, fetchPaymentsForInvoice, reconcileInvoices, syncInvoiceToSupabase, syncPaymentToSupabase, isRlsDenied } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
+import { useAuth } from '@/context/AuthContext.jsx';
+import { AccessDenied } from '@/components/ui';
 
 const statusBadge = (s) => {
   const cls = {
@@ -22,9 +24,17 @@ const statusBadge = (s) => {
 export default function InvoiceView() {
   const { id } = useParams();
   const { addToast } = useToasts();
+  const { role } = useAuth();
+  // Slice 7: sending invoices and posting payments are backoffice-only
+  // actions (UI gating; RLS enforces it on the backend). The route also
+  // admits ceo/cfo/admin/client as read-only viewers.
+  const canManage = role === 'backoffice';
   const [invoice, setInvoice] = useState(null);
   const [payments, setPayments] = useState([]);
   const [usingFallback, setUsingFallback] = useState(false);
+  // Slice 7: an RLS denial is not an outage — show the denied state and
+  // never fall back to the unscoped demo store.
+  const [denied, setDenied] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('ACH');
@@ -43,7 +53,8 @@ export default function InvoiceView() {
         await reconcileInvoices();
         demo = getInvoiceById(id)
           || getInvoices().find((i) => String(i.supabaseInvoiceId) === String(id));
-      } catch {
+      } catch (err) {
+        if (isRlsDenied(err)) throw err;
         demo = null;
       }
     }
@@ -51,7 +62,13 @@ export default function InvoiceView() {
   };
 
   const reload = async () => {
-    const demo = await resolveDemoInvoice();
+    let demo;
+    try {
+      demo = await resolveDemoInvoice();
+    } catch (err) {
+      if (isRlsDenied(err)) { setDenied(true); return; }
+      demo = null;
+    }
     if (!demo) { setInvoice(null); setPayments([]); return; }
     try {
       const row = await fetchInvoice(demo.supabaseInvoiceId || demo.id);
@@ -62,7 +79,8 @@ export default function InvoiceView() {
       setInvoice(mapped);
       setPayments(await fetchPaymentsForInvoice(row.id));
       setUsingFallback(false);
-    } catch {
+    } catch (err) {
+      if (isRlsDenied(err)) { setDenied(true); return; }
       setInvoice({ ...demo, demoInvoiceId: demo.id });
       setPayments(getPaymentsForInvoice(demo.id));
       setUsingFallback(true);
@@ -71,6 +89,7 @@ export default function InvoiceView() {
 
   useEffect(() => { reload(); }, [id]);
 
+  if (denied) return <AccessDenied />;
   if (!invoice) return <div className="p-6">Invoice not found. <Link to="/invoices" className="text-blue-600 hover:underline">Back to Invoices</Link></div>;
 
   const balanceDue = invoice.balanceDue ?? (invoice.total - (invoice.amountPaid || 0));
@@ -146,7 +165,7 @@ export default function InvoiceView() {
           </div>
           <div className="text-right">
             {statusBadge(invoice.status)}
-            {invoice.status === 'Draft' && (
+            {invoice.status === 'Draft' && canManage && (
               <button onClick={sendInvoice} className="mt-2 ml-auto block bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">
                 Send Invoice
               </button>
@@ -203,7 +222,7 @@ export default function InvoiceView() {
       <div className="bg-white border rounded-lg p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Payment History</h2>
-          {balanceDue > 0 && invoice.status !== 'Void' && invoice.status !== 'Draft' && (
+          {balanceDue > 0 && invoice.status !== 'Void' && invoice.status !== 'Draft' && canManage && (
             <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
               {showForm ? 'Cancel' : 'Post Payment'}
             </button>

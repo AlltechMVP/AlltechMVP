@@ -5,10 +5,10 @@ import {
   getAllowedTransitions, changeCandidateStatus, getCandidateById,
 } from '@/utils/storage';
 import {
-  fetchJobs, fetchApplications, syncCandidateToSupabase, reconcilePipeline,
+  fetchJobs, fetchApplications, syncCandidateToSupabase, reconcilePipeline, isRlsDenied,
 } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
-import { Empty } from '@/components/ui';
+import { Empty, AccessDenied } from '@/components/ui';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 const STATUS_COLORS = {
@@ -43,6 +43,9 @@ export default function JobCandidates() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [data, setData] = useState([]);
   const [job, setJob] = useState(null);
+  // Slice 7: an RLS denial is not an outage — show the denied state and
+  // never fall back to the unscoped demo store.
+  const [denied, setDenied] = useState(false);
 
   const loadSupabase = async () => {
     const jobs = await fetchJobs();
@@ -55,13 +58,15 @@ export default function JobCandidates() {
   const load = async () => {
     try {
       await loadSupabase();
-    } catch {
+    } catch (err) {
+      if (isRlsDenied(err)) { setDenied(true); return; }
       try {
         // The shared fetch failed: try the reconcile (it re-syncs and
         // re-fetches) before falling back to local demo data.
         await reconcilePipeline();
         await loadSupabase();
-      } catch {
+      } catch (err2) {
+        if (isRlsDenied(err2)) { setDenied(true); return; }
         setJob(getJobById(jobId) || null);
         setData(getCandidates()
           .filter(c => String(c.submittedJobId) === String(jobId) || String(c.currentJobId) === String(jobId))
@@ -157,6 +162,10 @@ export default function JobCandidates() {
       );
     }},
   ];
+
+  if (denied) {
+    return <AccessDenied />;
+  }
 
   if (!job) {
     return <div className="p-4 text-gray-500">Job not found.</div>;

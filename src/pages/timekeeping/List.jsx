@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getTimesheets, getAssignmentById, getCandidateById, getJobById } from '@/utils/storage';
-import { fetchTimesheets, reconcileTimesheets } from '@/lib/pipeline';
+import { fetchTimesheets, reconcileTimesheets, isRlsDenied } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
-import { Empty } from '@/components/ui';
+import { Empty, AccessDenied } from '@/components/ui';
 
 const STATUS_OPTIONS = ['All', 'Draft', 'Submitted', 'Approved', 'Rejected'];
 const CLIENT_FILTER_OPTIONS = ['All', 'Awaiting Client', 'Client Approved', 'Client Rejected', 'Not Submitted'];
@@ -62,6 +62,9 @@ export default function TimesheetsList() {
   const [clientFilter, setClientFilter] = useState('All');
   const [data, setData] = useState([]);
   const [usingFallback, setUsingFallback] = useState(false);
+  // Slice 7: an RLS denial is not an outage — show the denied state and
+  // never fall back to the unscoped demo store.
+  const [denied, setDenied] = useState(false);
 
   const loadFromSupabase = async () => {
     // Render fast from Supabase, then reconcile in the background (pushes
@@ -85,7 +88,8 @@ export default function TimesheetsList() {
       try {
         await loadFromSupabase();
         if (mounted) setUsingFallback(false);
-      } catch {
+      } catch (err) {
+        if (isRlsDenied(err)) { if (mounted) setDenied(true); return; }
         // The shared fetch failed: try the reconcile (it re-syncs and
         // re-fetches) before falling back to local demo data.
         try {
@@ -93,7 +97,8 @@ export default function TimesheetsList() {
           if (!mounted) return;
           setData(attachDemoTwins(rows).map(toRow));
           setUsingFallback(false);
-        } catch {
+        } catch (err2) {
+          if (isRlsDenied(err2)) { if (mounted) setDenied(true); return; }
           if (mounted) { loadFromDemo(); setUsingFallback(true); }
         }
       }
@@ -158,6 +163,10 @@ export default function TimesheetsList() {
       <Link to={`/timekeeping/${row.demoTimesheetId || row.id}`} className="text-blue-600 hover:underline text-xs">View</Link>
     )},
   ];
+
+  if (denied) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="p-4 max-w-6xl mx-auto">

@@ -4,9 +4,9 @@ import {
   createInvoicesFromPaidTimesheets,
   now
 } from '@/utils/storage';
-import { fetchTimesheets, reconcileTimesheets, syncTimesheetToSupabase, syncInvoiceToSupabase } from '@/lib/pipeline';
+import { fetchTimesheets, reconcileTimesheets, syncTimesheetToSupabase, syncInvoiceToSupabase, isRlsDenied } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
-import { Empty } from '@/components/ui';
+import { Empty, AccessDenied } from '@/components/ui';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 const PAYROLL_STATUS_OPTIONS = ['Ready', 'In Payroll', 'Paid'];
@@ -71,6 +71,9 @@ export default function PayrollQueue() {
   const [statusFilter, setStatusFilter] = useState('Ready');
   const [data, setData] = useState([]);
   const [usingFallback, setUsingFallback] = useState(false);
+  // Slice 7: an RLS denial is not an outage — show the denied state and
+  // never fall back to the unscoped demo store.
+  const [denied, setDenied] = useState(false);
   const { addToast } = useToasts();
 
   const loadFromSupabase = async () => {
@@ -95,7 +98,8 @@ export default function PayrollQueue() {
       try {
         await loadFromSupabase();
         if (mounted) setUsingFallback(false);
-      } catch {
+      } catch (err) {
+        if (isRlsDenied(err)) { if (mounted) setDenied(true); return; }
         // The shared fetch failed: try the reconcile (it re-syncs and
         // re-fetches) before falling back to local demo data.
         try {
@@ -103,7 +107,8 @@ export default function PayrollQueue() {
           if (!mounted) return;
           setData(attachDemoTwins(rows).map(toRow));
           setUsingFallback(false);
-        } catch {
+        } catch (err2) {
+          if (isRlsDenied(err2)) { if (mounted) setDenied(true); return; }
           if (mounted) { loadFromDemo(); setUsingFallback(true); }
         }
       }
@@ -212,6 +217,10 @@ export default function PayrollQueue() {
       return <span className="text-green-700 text-xs font-medium">Paid</span>;
     }},
   ];
+
+  if (denied) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="p-4 max-w-6xl mx-auto">

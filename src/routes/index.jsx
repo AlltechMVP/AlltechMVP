@@ -306,7 +306,7 @@ export default function AppRoutes() {
           <Route
             path="payroll"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedRoles={["backoffice"]}>
                 <PayrollView />
               </ProtectedRoute>
             }
@@ -314,7 +314,7 @@ export default function AppRoutes() {
           <Route
             path="timekeeping/entry"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedRoles={["candidate","recruiter"]}>
                 <TimecardEntry />
               </ProtectedRoute>
             }
@@ -362,11 +362,11 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Timekeeping (accessible to all authenticated users) */}
+          {/* Timekeeping (slice 7: recruiter + backoffice + admin) */}
           <Route
             path="timekeeping"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedRoles={["recruiter","backoffice","admin"]}>
                 <TimesheetsList />
               </ProtectedRoute>
             }
@@ -374,7 +374,7 @@ export default function AppRoutes() {
           <Route
             path="timekeeping/new"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedRoles={["recruiter","backoffice","admin"]}>
                 <TimesheetForm />
               </ProtectedRoute>
             }
@@ -382,7 +382,7 @@ export default function AppRoutes() {
           <Route
             path="timekeeping/:id"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedRoles={["recruiter","backoffice","admin"]}>
                 <TimesheetForm />
               </ProtectedRoute>
             }
@@ -416,21 +416,21 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Payroll Queue (accessible to all authenticated users) */}
+          {/* Payroll Queue (slice 7: backoffice only) */}
           <Route
             path="payroll-queue"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedRoles={["backoffice"]}>
                 <PayrollQueue />
               </ProtectedRoute>
             }
           />
 
-          {/* Invoices */}
+          {/* Invoices (slice 7: backoffice + read-only exec/admin/client) */}
           <Route
             path="invoices"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedRoles={["backoffice","ceo","cfo","admin","client"]}>
                 <InvoicesList />
               </ProtectedRoute>
             }
@@ -438,17 +438,17 @@ export default function AppRoutes() {
           <Route
             path="invoices/:id"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedRoles={["backoffice","ceo","cfo","admin","client"]}>
                 <InvoiceView />
               </ProtectedRoute>
             }
           />
 
-          {/* AR Aging */}
+          {/* AR Aging (slice 7: backoffice + read-only exec/admin/client) */}
           <Route
             path="ar-aging"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedRoles={["backoffice","ceo","cfo","admin","client"]}>
                 <ArAging />
               </ProtectedRoute>
             }

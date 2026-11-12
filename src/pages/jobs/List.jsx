@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 import { getJobs, getCandidates, applyToJob } from '@/utils/storage';
 import {
   fetchJobs, fetchApplications, fetchAppliedJobIds, syncCandidateToSupabase,
-  reconcilePipeline,
+  reconcilePipeline, isRlsDenied,
 } from '@/lib/pipeline';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import DataTable from '@/components/table/DataTable.jsx';
-import { Empty } from '@/components/ui';
+import { Empty, AccessDenied } from '@/components/ui';
 
 // Slice 1 (thin): jobs + applications read from Supabase (shared across
 // sessions) with a demo-store fallback when Supabase is unreachable, so a
@@ -22,6 +22,9 @@ export default function JobsList() {
   const [form, setForm] = useState({ name: '', email: '', phone: '' });
   const [formError, setFormError] = useState('');
   const [usingFallback, setUsingFallback] = useState(false);
+  // Slice 7: an RLS denial is not an outage — show the denied state and
+  // never fall back to the unscoped demo store.
+  const [denied, setDenied] = useState(false);
   const { session } = useAuth();
   const { addToast } = useToasts();
 
@@ -41,13 +44,15 @@ export default function JobsList() {
   const refreshApplications = async (email) => {
     try {
       await loadSupabaseApplications(email);
-    } catch {
+    } catch (err) {
+      if (isRlsDenied(err)) { setDenied(true); return; }
       try {
         // The shared fetch failed: try the reconcile (it re-syncs and
         // re-fetches) before falling back to local demo data.
         await reconcilePipeline();
         await loadSupabaseApplications(email);
-      } catch {
+      } catch (err2) {
+        if (isRlsDenied(err2)) { setDenied(true); return; }
         // Demo fallback: derive from localStorage.
         const demo = getCandidates();
         setApplications(demo.map((c) => ({ jobId: c.submittedJobId })));
@@ -70,8 +75,9 @@ export default function JobsList() {
       try {
         const data = await fetchJobs();
         if (mounted) setJobs(data);
-      } catch {
-        if (mounted) { setJobs(getJobs()); setUsingFallback(true); }
+      } catch (err) {
+        if (isRlsDenied(err)) { if (mounted) setDenied(true); }
+        else if (mounted) { setJobs(getJobs()); setUsingFallback(true); }
       }
       if (mounted) refreshApplications(userEmail);
     })();
@@ -159,6 +165,10 @@ export default function JobsList() {
       </span>
     )},
   ];
+
+  if (denied) {
+    return <AccessDenied />;
+  }
 
   if (jobs.length === 0) {
     return <div className="p-4"><Empty title="No jobs found" /></div>;

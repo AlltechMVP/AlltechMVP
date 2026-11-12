@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import Loader from '@/components/ui/Loader.jsx';
 import Empty from '@/components/ui/Empty.jsx';
+import AccessDenied from '@/components/ui/AccessDenied.jsx';
 import { useWithToast } from '@/utils/withToast.js';
 import {
   getCandidates, normalizeStatus, getAllowedTransitions,
   changeCandidateStatus, getCandidateById,
 } from '@/utils/storage';
-import { fetchApplications, syncCandidateToSupabase } from '@/lib/pipeline';
+import { fetchApplications, syncCandidateToSupabase, isRlsDenied } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 const PIPELINE_STATUSES = ['Applied', 'Reviewed', 'Submitted', 'Interview', 'Hired', 'Rejected'];
@@ -42,15 +43,18 @@ export default function RecruiterBoard() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [usingFallback, setUsingFallback] = useState(false);
+  // Slice 7: an RLS denial is not an outage — show the denied state and
+  // never fall back to the unscoped demo store.
+  const [denied, setDenied] = useState(false);
 
   const load = async () => {
     try {
       const apps = await fetchApplications();
       setRows(attachDemoTwins(apps));
       setUsingFallback(false);
-    } catch {
-      setRows(getCandidates().map(mapDemoRow));
-      setUsingFallback(true);
+    } catch (err) {
+      if (isRlsDenied(err)) { setDenied(true); setRows([]); }
+      else { setRows(getCandidates().map(mapDemoRow)); setUsingFallback(true); }
     }
     setLoading(false);
   };
@@ -91,6 +95,7 @@ export default function RecruiterBoard() {
   };
 
   if (loading) return <div className="p-4"><Loader label="Loading candidates" /></div>;
+  if (denied) return <AccessDenied />;
   if (rows.length === 0) return <div className="p-4"><Empty title="No candidates" hint="Try expanding your filters." /></div>;
 
   return (

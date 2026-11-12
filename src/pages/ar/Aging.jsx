@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getInvoices, getClients } from '@/utils/storage';
-import { fetchInvoices, reconcileInvoices } from '@/lib/pipeline';
+import { fetchInvoices, reconcileInvoices, isRlsDenied } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
+import { AccessDenied } from '@/components/ui';
 
 function computeAgingBuckets(invoices) {
   const today = new Date();
@@ -67,6 +68,9 @@ export default function ArAging() {
   const [drillClient, setDrillClient] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [usingFallback, setUsingFallback] = useState(false);
+  // Slice 7: an RLS denial is not an outage — show the denied state and
+  // never fall back to the unscoped demo store.
+  const [denied, setDenied] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -83,12 +87,14 @@ export default function ArAging() {
         reconcileInvoices()
           .then((fresh) => { apply(attachDemoTwins(fresh)); })
           .catch(() => {});
-      } catch {
+      } catch (err) {
+        if (isRlsDenied(err)) { if (mounted) setDenied(true); return; }
         try {
           const rows = await reconcileInvoices();
           apply(attachDemoTwins(rows));
           setUsingFallback(false);
-        } catch {
+        } catch (err2) {
+          if (isRlsDenied(err2)) { if (mounted) setDenied(true); return; }
           if (mounted) { apply(getInvoices()); setUsingFallback(true); }
         }
       }
@@ -119,6 +125,10 @@ export default function ArAging() {
   }, [drillClient, invoices]);
 
   const drillClientName = drillClient ? (data.find(d => d.clientId === drillClient)?.clientName || drillClient) : '';
+
+  if (denied) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="p-6">

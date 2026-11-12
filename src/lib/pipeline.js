@@ -42,10 +42,39 @@ async function withRetry(fn, attempts = 2, delayMs = 800) {
       return await fn();
     } catch (err) {
       lastError = err;
+      // Slice 7: a denial is not transient — do not retry it.
+      if (isRlsDenied(err)) throw err;
       if (i < attempts - 1) await new Promise((r) => setTimeout(r, delayMs));
     }
   }
   throw lastError;
+}
+
+// Slice 7: an RLS denial (403 / 42501 insufficient_privilege) is a
+// permission denial, NOT an outage. Pages must NOT fall back to the demo
+// store on a denial — the demo store is unscoped and would leak other
+// companies' rows. Network failures still fall back with the amber note.
+// A denial is tagged with `denied: true` so callers can tell it apart
+// from a network failure without parsing the message themselves.
+export function isRlsDenied(error) {
+  if (!error) return false;
+  if (error.code === '42501') return true;
+  const msg = String(error.message || error);
+  return /permission denied|row-level security|insufficient_privilege/i.test(msg);
+}
+
+function asDeniedError(error) {
+  const err = error instanceof Error ? error : new Error(String(error?.message || error));
+  err.denied = true;
+  if (error && error.code) err.code = error.code;
+  return err;
+}
+
+// Throw on any PostgREST error; denials carry `denied: true`.
+function throwChecked(error) {
+  if (!error) return;
+  if (isRlsDenied(error)) throw asDeniedError(error);
+  throw error;
 }
 
 function mapJob(j) {
@@ -99,7 +128,7 @@ export async function fetchJobs() {
     .from('jobs')
     .select(JOB_SELECT)
     .order('id'));
-  if (error) throw error;
+  throwChecked(error);
   return (data || []).map(mapJob);
 }
 
@@ -108,7 +137,7 @@ export async function fetchPersons() {
     .from('candidates')
     .select('id,name,email,phone,status,legacy_id')
     .order('name');
-  if (error) throw error;
+  throwChecked(error);
   return data || [];
 }
 
@@ -118,7 +147,7 @@ export async function fetchApplications({ jobId } = {}) {
     if (jobId !== undefined && jobId !== null) query = query.eq('job_id', jobId);
     return query;
   });
-  if (error) throw error;
+  throwChecked(error);
   return (data || []).map(mapApplication);
 }
 
@@ -128,7 +157,7 @@ export async function fetchApplication(id) {
     .select(APP_SELECT)
     .eq('id', id)
     .single());
-  if (error) throw error;
+  throwChecked(error);
   return mapApplication(data);
 }
 
@@ -139,13 +168,13 @@ export async function fetchAppliedJobIds(email) {
     .from('candidates')
     .select('id')
     .eq('email', normalized));
-  if (error) throw error;
+  throwChecked(error);
   if (!persons || persons.length === 0) return [];
   const { data: apps, error: appError } = await withRetry(() => supabase
     .from('applications')
     .select('job_id')
     .in('candidate_id', persons.map((p) => p.id)));
-  if (appError) throw appError;
+  throwChecked(appError);
   return (apps || []).map((a) => a.job_id);
 }
 
@@ -158,7 +187,7 @@ export async function fetchRecentClientDecisions(days = 30) {
     .not('client_decision', 'is', null)
     .gte('client_decided_at', cutoff.toISOString())
     .order('client_decided_at', { ascending: false }));
-  if (error) throw error;
+  throwChecked(error);
   return (data || []).map((a) => {
     const m = mapApplication(a);
     return {
@@ -378,7 +407,7 @@ export async function reconcilePipeline() {
 /** Demo reset support: clear Supabase pipeline rows (seeded rows are re-synced after). */
 export async function clearSupabasePipeline() {
   const { error: appError } = await supabase.from('applications').delete().neq('id', 0);
-  if (appError) throw appError;
+  throwChecked(appError);
   // Remove sync-created persons (legacy_id is a crypto uuid, not a seed cand-xxx id).
   // Seeded persons (legacy_id cand-001..008) and the legacy Dd row (legacy_id null) stay.
   const { data: persons, error: personError } = await supabase
@@ -389,7 +418,7 @@ export async function clearSupabasePipeline() {
   const extra = (persons || []).filter((p) => !/^cand-\d+$/.test(p.legacy_id || ''));
   if (extra.length > 0) {
     const { error } = await supabase.from('candidates').delete().in('id', extra.map((p) => p.id));
-    if (error) throw error;
+    throwChecked(error);
   }
   return { applicationsCleared: true, personsRemoved: extra.length };
 }
@@ -433,7 +462,7 @@ export async function fetchAssignments() {
     .from('assignments')
     .select(ASSIGNMENT_SELECT)
     .order('updated_at', { ascending: false }));
-  if (error) throw error;
+  throwChecked(error);
   return (data || []).map(mapAssignment);
 }
 
@@ -443,7 +472,7 @@ export async function fetchAssignment(id) {
     .select(ASSIGNMENT_SELECT)
     .eq('id', id)
     .single());
-  if (error) throw error;
+  throwChecked(error);
   return mapAssignment(data);
 }
 
@@ -647,7 +676,7 @@ export async function reconcileAssignments() {
 /** Demo reset support: clear Supabase assignments (seeded rows are re-synced after). */
 export async function clearSupabaseAssignments() {
   const { error } = await supabase.from('assignments').delete().neq('id', 0);
-  if (error) throw error;
+  throwChecked(error);
   return { assignmentsCleared: true };
 }
 
@@ -713,7 +742,7 @@ export async function fetchTimesheets() {
     .from('timesheets')
     .select(TIMESHEET_SELECT)
     .order('updated_at', { ascending: false }));
-  if (error) throw error;
+  throwChecked(error);
   return (data || []).map(mapTimesheet);
 }
 
@@ -723,7 +752,7 @@ export async function fetchTimesheet(id) {
     .select(TIMESHEET_SELECT)
     .eq('id', id)
     .single());
-  if (error) throw error;
+  throwChecked(error);
   return mapTimesheet(data);
 }
 
@@ -1047,7 +1076,7 @@ export async function fetchInvoices() {
     .from('invoices')
     .select(INVOICE_SELECT)
     .order('issued_at', { ascending: false }));
-  if (error) throw error;
+  throwChecked(error);
   return (data || []).map(mapInvoice);
 }
 
@@ -1063,7 +1092,7 @@ export async function fetchInvoice(id) {
       .eq('id', Number(id))
       .single()));
   }
-  if (error) throw error;
+  throwChecked(error);
   return mapInvoice(data);
 }
 
@@ -1073,7 +1102,7 @@ export async function fetchPaymentsForInvoice(invoiceSupabaseId) {
     .select(PAYMENT_SELECT)
     .eq('invoice_id', invoiceSupabaseId)
     .order('received_date', { ascending: true }));
-  if (error) throw error;
+  throwChecked(error);
   return (data || []).map(mapPayment);
 }
 

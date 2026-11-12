@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getInvoices } from '@/utils/storage';
-import { fetchInvoices, reconcileInvoices } from '@/lib/pipeline';
-import { Empty } from '@/components/ui';
+import { fetchInvoices, reconcileInvoices, isRlsDenied } from '@/lib/pipeline';
+import { Empty, AccessDenied } from '@/components/ui';
 import DataTable from '@/components/table/DataTable.jsx';
 
 const statusBadge = (s) => {
@@ -72,6 +72,9 @@ export default function InvoicesList() {
   const [openOnly, setOpenOnly] = useState(false);
   const [data, setData] = useState([]);
   const [usingFallback, setUsingFallback] = useState(false);
+  // Slice 7: an RLS denial is not an outage — show the denied state and
+  // never fall back to the unscoped demo store.
+  const [denied, setDenied] = useState(false);
 
   const loadFromSupabase = async () => {
     // Render fast from Supabase, then reconcile in the background (pushes
@@ -95,7 +98,8 @@ export default function InvoicesList() {
       try {
         await loadFromSupabase();
         if (mounted) setUsingFallback(false);
-      } catch {
+      } catch (err) {
+        if (isRlsDenied(err)) { if (mounted) setDenied(true); return; }
         // The shared fetch failed: try the reconcile (it re-syncs and
         // re-fetches) before falling back to local demo data.
         try {
@@ -103,7 +107,8 @@ export default function InvoicesList() {
           if (!mounted) return;
           setData(attachDemoTwins(rows).map(toRow));
           setUsingFallback(false);
-        } catch {
+        } catch (err2) {
+          if (isRlsDenied(err2)) { if (mounted) setDenied(true); return; }
           if (mounted) { loadFromDemo(); setUsingFallback(true); }
         }
       }
@@ -141,6 +146,10 @@ export default function InvoicesList() {
     }},
     { key: '_actions', header: '', render: (_, r) => <Link to={`/invoices/${r.demoInvoiceId || r.id}`} className="text-blue-600 hover:underline text-sm">View</Link> },
   ];
+
+  if (denied) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="p-6">

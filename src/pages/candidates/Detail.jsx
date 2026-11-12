@@ -4,8 +4,9 @@ import {
   getCandidates, getCandidateById, getJobById,
   normalizeStatus, getAllowedTransitions, changeCandidateStatus,
 } from '@/utils/storage';
-import { fetchApplication, syncCandidateToSupabase } from '@/lib/pipeline';
+import { fetchApplication, syncCandidateToSupabase, isRlsDenied } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
+import { AccessDenied } from '@/components/ui';
 
 const STATUS_COLORS = {
   'Applied': 'bg-gray-100 text-gray-800',
@@ -59,13 +60,17 @@ export default function CandidateDetail() {
   const { addToast } = useToasts();
   const [candidate, setCandidate] = useState(null);
   const [usingFallback, setUsingFallback] = useState(false);
+  // Slice 7: an RLS denial is not an outage — show the denied state and
+  // never fall back to the unscoped demo store.
+  const [denied, setDenied] = useState(false);
 
   const load = async () => {
     try {
       const app = await fetchApplication(id);
       setCandidate(attachDemoTwin(app));
       setUsingFallback(false);
-    } catch {
+    } catch (err) {
+      if (isRlsDenied(err)) { setCandidate(null); setDenied(true); setUsingFallback(false); return; }
       const demo = getCandidateById(id);
       setCandidate(demo ? mapDemoCandidate(demo) : null);
       setUsingFallback(true);
@@ -76,6 +81,10 @@ export default function CandidateDetail() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  if (denied) {
+    return <AccessDenied />;
+  }
 
   if (!candidate) {
     return (

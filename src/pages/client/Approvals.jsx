@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { fetchApplications, reconcilePipeline } from '@/lib/pipeline';
+import { fetchApplications, reconcilePipeline, isRlsDenied } from '@/lib/pipeline';
 import {
   getCandidates, getJobById, getClientById,
   clientDecideCandidate, changeCandidateStatus, normalizeStatus,
 } from '@/utils/storage';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
+import { AccessDenied } from '@/components/ui';
 
 // Slice 6 (thin): client approvals read the SAME applications the demo
 // flow writes — one approval system, not two. The old page read the
@@ -53,6 +54,9 @@ export default function Approvals() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [usingFallback, setUsingFallback] = useState(false);
+  // Slice 7: an RLS denial is not an outage — show the denied state and
+  // never fall back to the unscoped demo store.
+  const [denied, setDenied] = useState(false);
   const [rejectRow, setRejectRow] = useState(null);
   const [rejectNote, setRejectNote] = useState('');
 
@@ -80,14 +84,19 @@ export default function Approvals() {
       try {
         await loadFromSupabase();
         if (mounted) setUsingFallback(false);
-      } catch {
-        try {
-          const fresh = await reconcilePipeline();
-          if (!mounted) return;
-          setRows(fresh.map(toRow).filter(awaitingReview));
-          setUsingFallback(false);
-        } catch {
-          if (mounted) { loadFromDemo(); setUsingFallback(true); }
+      } catch (err) {
+        if (isRlsDenied(err)) {
+          if (mounted) setDenied(true);
+        } else {
+          try {
+            const fresh = await reconcilePipeline();
+            if (!mounted) return;
+            setRows(fresh.map(toRow).filter(awaitingReview));
+            setUsingFallback(false);
+          } catch (err2) {
+            if (isRlsDenied(err2)) { if (mounted) setDenied(true); }
+            else if (mounted) { loadFromDemo(); setUsingFallback(true); }
+          }
         }
       }
       if (mounted) setLoading(false);
@@ -150,6 +159,7 @@ export default function Approvals() {
   };
 
   if (loading) return <div className="p-4">Loading…</div>;
+  if (denied) return <AccessDenied />;
 
   return (
     <div className="p-4">

@@ -6,6 +6,7 @@ import {
   getCandidates, getJobs, getAssignments, getTimesheets
 } from '@/utils/storage';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
+import { useAuth } from '@/context/AuthContext.jsx';
 import { clearSupabasePipeline, reconcilePipeline, clearSupabaseAssignments, reconcileAssignments, clearSupabaseTimesheets, reconcileTimesheets, clearSupabaseInvoices, reconcileInvoices } from '@/lib/pipeline';
 
 const SEV_STYLE = {
@@ -16,6 +17,11 @@ const SEV_STYLE = {
 export default function AdminTools() {
   const navigate = useNavigate();
   const { addToast } = useToasts();
+  // Slice 7: the demo reset is an ADMIN action — only admins see a
+  // working reset button. (The route stays open for viewing; a non-admin
+  // triggering the reset would be denied by RLS at the Supabase step.)
+  const { role } = useAuth();
+  const canReset = role === 'admin';
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [report, setReport] = useState(null);
@@ -35,6 +41,7 @@ export default function AdminTools() {
   }, [runValidation]);
 
   const handleReset = async () => {
+    if (!canReset) return;
     setResetting(true);
     try {
       clearAlltechKeys();
@@ -95,7 +102,9 @@ export default function AdminTools() {
           Clear all local demo data and reseed a fresh dataset that covers the full workflow:
           candidates across multiple statuses, jobs, active and ended assignments, and timesheets in every stage.
         </p>
-        {!confirmReset ? (
+        {!canReset ? (
+          <p className="text-sm text-gray-500">Demo reset is an admin action — sign in as an admin to reset the demo data.</p>
+        ) : !confirmReset ? (
           <button
             onClick={() => setConfirmReset(true)}
             disabled={resetting}
