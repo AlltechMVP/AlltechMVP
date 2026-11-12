@@ -5,6 +5,7 @@ import {
   getAssignmentById, uid, now, syncCandidateFromAssignment,
   getAssignmentPrefill, clearAssignmentPrefill
 } from '@/utils/storage';
+import { syncAssignmentToSupabase, fetchAssignment } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 export default function AssignmentForm() {
@@ -27,17 +28,50 @@ export default function AssignmentForm() {
   });
 
   useEffect(() => {
-    setCandidates(getCandidates());
-    setJobs(getJobs());
+    (async () => {
+      setCandidates(getCandidates());
+      setJobs(getJobs());
 
-    if (isEdit) {
-      const existing = getAssignmentById(id);
-      if (!existing) {
-        addToast({ type: 'error', message: 'Assignment not found.' });
-        navigate('/assignments');
-        return;
-      }
-      if (existing) {
+      if (isEdit) {
+        // Resolve the demo row: by demo id, then by its Supabase id, then
+        // fetch the Supabase row and build a demo twin for it.
+        let existing = getAssignmentById(id)
+          || getAssignments().find((a) => String(a.supabaseAssignmentId) === String(id));
+        if (!existing) {
+          try {
+            const sup = await fetchAssignment(id);
+            const demoCandidate = getCandidates().find((c) => c.supabasePersonId === sup.candidateId)
+              || getCandidates().find((c) => (c.email || '').trim().toLowerCase() === (sup.candidateEmail || '').trim().toLowerCase())
+              || getCandidates().find((c) => String(c.id) === String(sup.legacyCandidateId));
+            const demoJob = getJobs().find((j) => String(j.id) === String(sup.legacyJobId))
+              || getJobs().find((j) => String(j.id) === String(sup.jobId));
+            if (!demoCandidate || !demoJob) throw new Error('no demo twin');
+            existing = {
+              id: sup.legacyId || String(sup.id),
+              candidateId: demoCandidate.id,
+              jobId: demoJob.id,
+              startDate: sup.startDate,
+              endDate: sup.endDate,
+              payRate: sup.payRate,
+              billRate: sup.billRate,
+              status: sup.status,
+              notes: sup.notes,
+              supabaseAssignmentId: sup.id,
+            };
+            const all = getAssignments();
+            if (!all.some((a) => a.id === existing.id)) {
+              all.push({ ...existing, createdAt: sup.createdAt, updatedAt: sup.updatedAt });
+              setAssignments(all);
+            }
+          } catch {
+            existing = null;
+          }
+        }
+        if (!existing) {
+          addToast({ type: 'error', message: 'Assignment not found.' });
+          navigate('/assignments');
+          return;
+        }
         setForm({
           candidateId: existing.candidateId || '',
           jobId: existing.jobId || '',
@@ -48,19 +82,19 @@ export default function AssignmentForm() {
           status: existing.status || 'Active',
           notes: existing.notes || '',
         });
+      } else {
+        const prefill = getAssignmentPrefill();
+        if (prefill) {
+          setForm(prev => ({
+            ...prev,
+            candidateId: prefill.candidateId || '',
+            jobId: prefill.jobId || '',
+          }));
+          clearAssignmentPrefill();
+          addToast({ type: 'info', message: 'Candidate and job pre-filled from client decision.' });
+        }
       }
-    } else {
-      const prefill = getAssignmentPrefill();
-      if (prefill) {
-        setForm(prev => ({
-          ...prev,
-          candidateId: prefill.candidateId || '',
-          jobId: prefill.jobId || '',
-        }));
-        clearAssignmentPrefill();
-        addToast({ type: 'info', message: 'Candidate and job pre-filled from client decision.' });
-      }
-    }
+    })();
   }, [id, isEdit]);
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
@@ -89,7 +123,7 @@ export default function AssignmentForm() {
     const timestamp = now();
 
     if (isEdit) {
-      const idx = all.findIndex(a => a.id === id);
+      const idx = all.findIndex((a) => a.id === id || String(a.supabaseAssignmentId) === String(id));
       if (idx !== -1) {
         all[idx] = {
           ...all[idx],
@@ -123,10 +157,13 @@ export default function AssignmentForm() {
     setAssignments(all);
 
     const savedAssignment = isEdit
-      ? all.find(a => a.id === id)
+      ? all.find((a) => a.id === id || String(a.supabaseAssignmentId) === String(id))
       : all[all.length - 1];
 
     const syncResult = syncCandidateFromAssignment(savedAssignment);
+    // Sync the assignment row itself to Supabase (fire-and-forget; the demo
+    // write above already succeeded).
+    if (savedAssignment) syncAssignmentToSupabase(savedAssignment);
     if (syncResult) {
       addToast({ type: 'success', message: `Assignment saved — candidate status updated to ${syncResult}.` });
     } else {

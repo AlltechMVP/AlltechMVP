@@ -1,17 +1,102 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getAssignments, getCandidateById, getJobById } from '@/utils/storage';
+import { fetchAssignments, reconcileAssignments } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty } from '@/components/ui';
 
 const STATUS_OPTIONS = ['All', 'Active', 'Ended', 'On Hold'];
 
+// Slice 2 (thin): the assignments list reads Supabase (shared across
+// sessions) with a demo-store fallback when Supabase is unreachable.
+// Writes still go to the demo store (Form.jsx) and sync up from there.
+// Each row carries demoAssignmentId so the Edit link opens the demo row
+// the assignment form works on.
+function attachDemoTwins(assignments) {
+  const demoRows = getAssignments();
+  return assignments.map((a) => {
+    const twin = demoRows.find((d) => String(d.supabaseAssignmentId) === String(a.id))
+      || demoRows.find((d) => String(d.id) === String(a.legacyId));
+    return { ...a, demoAssignmentId: twin ? twin.id : null };
+  });
+}
+
+function toRow(a) {
+  return {
+    id: a.id,
+    demoAssignmentId: a.demoAssignmentId || null,
+    candidate: a.candidateName,
+    candidateStatus: a.candidateStatus,
+    job: a.jobTitle,
+    startDate: a.startDate || '-',
+    status: a.status,
+    payRate: a.payRate != null ? `$${a.payRate}` : '-',
+    billRate: a.billRate != null ? `$${a.billRate}` : '-',
+    updated: a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : '-',
+    _sortDate: a.updatedAt || a.createdAt || '',
+  };
+}
+
+function mapDemoRow(a) {
+  const cand = getCandidateById(a.candidateId);
+  const job = getJobById(a.jobId);
+  return {
+    id: a.id,
+    demoAssignmentId: a.id,
+    candidate: cand?.name || a.candidateId,
+    candidateStatus: cand?.status || '-',
+    job: job?.title || a.jobId,
+    startDate: a.startDate || '-',
+    status: a.status,
+    payRate: a.payRate != null ? `$${a.payRate}` : '-',
+    billRate: a.billRate != null ? `$${a.billRate}` : '-',
+    updated: a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : '-',
+    _sortDate: a.updatedAt || a.createdAt || '',
+  };
+}
+
 export default function AssignmentsList() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [data, setData] = useState([]);
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  const loadFromSupabase = async () => {
+    // Render fast from Supabase, then reconcile in the background (pushes
+    // this browser's demo rows up, creates missing twins) and refresh.
+    const rows = await fetchAssignments();
+    setData(attachDemoTwins(rows).map(toRow));
+    reconcileAssignments()
+      .then((fresh) => {
+        setData(attachDemoTwins(fresh).map(toRow));
+      })
+      .catch(() => {});
+  };
+
+  const loadFromDemo = () => {
+    setData(getAssignments().map(mapDemoRow));
+  };
 
   useEffect(() => {
-    setData(getAssignments());
+    let mounted = true;
+    (async () => {
+      try {
+        await loadFromSupabase();
+        if (mounted) setUsingFallback(false);
+      } catch {
+        // The shared fetch failed: try the reconcile (it re-syncs and
+        // re-fetches) before falling back to local demo data.
+        try {
+          const rows = await reconcileAssignments();
+          if (!mounted) return;
+          setData(attachDemoTwins(rows).map(toRow));
+          setUsingFallback(false);
+        } catch {
+          if (mounted) { loadFromDemo(); setUsingFallback(true); }
+        }
+      }
+    })();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const rows = useMemo(() => {
@@ -19,22 +104,7 @@ export default function AssignmentsList() {
     if (statusFilter !== 'All') {
       items = items.filter(a => a.status === statusFilter);
     }
-    return items.map(a => {
-      const cand = getCandidateById(a.candidateId);
-      const job = getJobById(a.jobId);
-      return {
-        id: a.id,
-        candidate: cand?.name || a.candidateId,
-        candidateStatus: cand?.status || '-',
-        job: job?.title || a.jobId,
-        startDate: a.startDate || '-',
-        status: a.status,
-        payRate: a.payRate != null ? `$${a.payRate}` : '-',
-        billRate: a.billRate != null ? `$${a.billRate}` : '-',
-        updated: a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : '-',
-        _sortDate: a.updatedAt || a.createdAt || '',
-      };
-    }).sort((a, b) => (b._sortDate || '').localeCompare(a._sortDate || ''));
+    return [...items].sort((a, b) => (b._sortDate || '').localeCompare(a._sortDate || ''));
   }, [data, statusFilter]);
 
   const columns = [
@@ -60,7 +130,7 @@ export default function AssignmentsList() {
     { key: 'billRate', header: 'Bill Rate' },
     { key: 'updated', header: 'Updated' },
     { key: 'id', header: '', render: (_, row) => (
-      <Link to={`/assignments/${row.id}`} className="text-blue-600 hover:underline text-xs">Edit</Link>
+      <Link to={`/assignments/${row.demoAssignmentId || row.id}`} className="text-blue-600 hover:underline text-xs">Edit</Link>
     )},
   ];
 
@@ -75,6 +145,12 @@ export default function AssignmentsList() {
           Create Assignment
         </Link>
       </div>
+
+      {usingFallback && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+          Showing local demo data — the shared assignments are unreachable right now. Changes here will sync when they come back.
+        </p>
+      )}
 
       <div className="flex items-center gap-3 mb-4">
         <label className="text-sm text-gray-600">Status:</label>

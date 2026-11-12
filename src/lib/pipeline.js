@@ -1,18 +1,22 @@
 import { supabase } from '@/lib/supabase';
-import { getCandidates, setCandidates, normalizeStatus } from '@/utils/storage';
+import {
+  getCandidates, setCandidates, normalizeStatus,
+  getAssignments, setAssignments, getJobs, setJobs, getClients,
+} from '@/utils/storage';
 
 // ---------------------------------------------------------------------------
-// Supabase read layer + demo <-> Supabase sync (migration slice 1, thin).
+// Supabase read layer + demo <-> Supabase sync (migration slices 1-2, thin).
 //
-// Design (see goals/alltech-mvp-rebuild/files/supabase-migration-slice1-plan.md):
-// - The demo store (localStorage) stays the canonical WRITE path in slice 1.
-// - Supabase is the SHARED READ store: pipeline pages read here so two
-//   sessions see the same records. Reads fall back to the demo store when
-//   Supabase is unreachable, so a sales presentation never breaks on wifi.
-// - Every demo write to the pipeline syncs to Supabase write-through,
-//   best-effort, fire-and-forget (the demo write never fails because of it).
-// - reconcilePipeline() runs on pipeline load: both-ways sync with timestamp
-//   last-write-wins (demo lastActionAt vs application updated_at).
+// Design (see goals/alltech-mvp-rebuild/files/supabase-migration-slice*-plan.md):
+// - The demo store (localStorage) stays the canonical WRITE path.
+// - Supabase is the SHARED READ store: pipeline + assignment pages read here
+//   so two sessions see the same records. Reads fall back to the demo store
+//   when Supabase is unreachable, so a sales presentation never breaks on wifi.
+// - Every demo write to the pipeline/assignments syncs to Supabase
+//   write-through, best-effort, fire-and-forget (the demo write never fails
+//   because of it).
+// - reconcilePipeline()/reconcileAssignments() run on page load: both-ways
+//   sync with timestamp last-write-wins.
 // - TEMPORARY: the sync and the demo fallback go away when the write paths
 //   move to Supabase in later slices.
 // ---------------------------------------------------------------------------
@@ -386,4 +390,261 @@ export async function clearSupabasePipeline() {
     if (error) throw error;
   }
   return { applicationsCleared: true, personsRemoved: extra.length };
+}
+
+// --- Assignments (migration slice 2) ---------------------------------------
+
+const ASSIGNMENT_SELECT =
+  'id,status,start_date,end_date,pay_rate,bill_rate,notes,legacy_id,' +
+  'created_at,updated_at,candidate_id,job_id,' +
+  'candidates(id,name,email,phone,status,legacy_id),' +
+  'jobs(id,title,legacy_id,clients(name))';
+
+function mapAssignment(a) {
+  const person = a.candidates || {};
+  const job = a.jobs || {};
+  return {
+    id: a.id,
+    candidateId: a.candidate_id,
+    candidateName: person.name || '—',
+    candidateEmail: person.email || '',
+    candidateStatus: person.status ? normalizeStatus(person.status) : '—',
+    legacyCandidateId: person.legacy_id || null,
+    jobId: a.job_id,
+    jobTitle: job.title || '—',
+    clientName: job.clients?.name || '—',
+    legacyJobId: job.legacy_id || null,
+    status: a.status,
+    startDate: a.start_date,
+    endDate: a.end_date || null,
+    payRate: a.pay_rate,
+    billRate: a.bill_rate,
+    notes: a.notes || '',
+    legacyId: a.legacy_id || null,
+    createdAt: a.created_at || null,
+    updatedAt: a.updated_at || null,
+  };
+}
+
+export async function fetchAssignments() {
+  const { data, error } = await withRetry(() => supabase
+    .from('assignments')
+    .select(ASSIGNMENT_SELECT)
+    .order('updated_at', { ascending: false }));
+  if (error) throw error;
+  return (data || []).map(mapAssignment);
+}
+
+export async function fetchAssignment(id) {
+  const { data, error } = await withRetry(() => supabase
+    .from('assignments')
+    .select(ASSIGNMENT_SELECT)
+    .eq('id', id)
+    .single());
+  if (error) throw error;
+  return mapAssignment(data);
+}
+
+async function resolvePersonId(demoCandidateId) {
+  const demo = getCandidates().find((c) => c.id === demoCandidateId);
+  if (!demo) return null;
+  if (demo.supabasePersonId) return demo.supabasePersonId;
+  const person = await findOrCreatePerson(demo);
+  return person ? person.id : null;
+}
+
+function assignmentPayload(demo, candidateUuid, jobId) {
+  return {
+    candidate_id: candidateUuid,
+    job_id: jobId,
+    status: demo.status || 'Active',
+    start_date: demo.startDate,
+    end_date: demo.endDate || null,
+    pay_rate: demo.payRate ?? null,
+    bill_rate: demo.billRate ?? null,
+    notes: demo.notes || null,
+    legacy_id: String(demo.id),
+    updated_at: demo.updatedAt || new Date().toISOString(),
+  };
+}
+
+function stampDemoAssignment(demo, supabaseId) {
+  const rows = getAssignments();
+  const idx = rows.findIndex((a) => a.id === demo.id);
+  if (idx === -1) return;
+  rows[idx] = { ...rows[idx], supabaseAssignmentId: supabaseId };
+  setAssignments(rows);
+}
+
+function applySupabaseAssignmentToDemo(row, demo) {
+  const rows = getAssignments();
+  const idx = rows.findIndex((a) => a.id === demo.id);
+  if (idx === -1) return;
+  const m = mapAssignment(row);
+  rows[idx] = {
+    ...rows[idx],
+    status: m.status,
+    startDate: m.startDate,
+    endDate: m.endDate,
+    payRate: m.payRate,
+    billRate: m.billRate,
+    notes: m.notes,
+    updatedAt: m.updatedAt || rows[idx].updatedAt,
+    supabaseAssignmentId: row.id,
+  };
+  setAssignments(rows);
+}
+
+/**
+ * Sync one demo assignment row to Supabase. Never throws. The demo id is
+ * the stable key (legacy_id), so a row syncs 1:1. Returns
+ * 'demo' | 'supabase' | 'created' | 'skipped' | 'failed'.
+ */
+export async function syncAssignmentToSupabase(demo) {
+  try {
+    if (!demo || !demo.candidateId || !demo.jobId) return 'skipped';
+    const candidateUuid = await resolvePersonId(demo.candidateId);
+    if (!candidateUuid) return 'skipped';
+    const jobId = await resolveJobId(demo.jobId);
+    if (!jobId) return 'skipped';
+
+    const { data: existing } = await supabase
+      .from('assignments')
+      .select(ASSIGNMENT_SELECT)
+      .eq('legacy_id', String(demo.id))
+      .limit(1);
+    const row = existing && existing.length > 0 ? existing[0] : null;
+
+    if (!row) {
+      const { data: created, error } = await supabase
+        .from('assignments')
+        .insert([assignmentPayload(demo, candidateUuid, jobId)])
+        .select('id')
+        .single();
+      if (error || !created) return 'failed';
+      stampDemoAssignment(demo, created.id);
+      return 'created';
+    }
+
+    stampDemoAssignment(demo, row.id);
+    const demoTime = Date.parse(demo.updatedAt || 0) || 0;
+    const rowTime = Date.parse(row.updated_at || 0) || 0;
+    if (demoTime >= rowTime) {
+      const { error } = await supabase
+        .from('assignments')
+        .update(assignmentPayload(demo, candidateUuid, jobId))
+        .eq('id', row.id);
+      if (error) return 'failed';
+      return 'demo';
+    }
+    applySupabaseAssignmentToDemo(row, demo);
+    return 'supabase';
+  } catch (err) {
+    if (import.meta.env.MODE !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[assignment sync] failed', err);
+    }
+    return 'failed';
+  }
+}
+
+function ensureDemoCandidate(a) {
+  const rows = getCandidates();
+  const byPerson = rows.find((c) => c.supabasePersonId === a.candidateId);
+  if (byPerson) return byPerson.id;
+  const byEmail = rows.find(
+    (c) => (c.email || '').trim().toLowerCase() === (a.candidateEmail || '').trim().toLowerCase()
+  );
+  if (byEmail) return byEmail.id;
+  // Minimal reference row: no submittedJobId, so the pipeline reconcile
+  // ignores it (it is not a pipeline application, just the assignment's person).
+  const id = a.legacyCandidateId || crypto.randomUUID();
+  rows.push({
+    id,
+    name: a.candidateName,
+    email: a.candidateEmail,
+    phone: '',
+    status: a.candidateStatus || 'Applied',
+    submittedJobId: null,
+    statusHistory: [],
+    supabasePersonId: a.candidateId,
+  });
+  setCandidates(rows);
+  return id;
+}
+
+function ensureDemoJob(a) {
+  const jobs = getJobs();
+  const byLegacy = jobs.find((j) => String(j.id) === String(a.legacyJobId));
+  if (byLegacy) return byLegacy.id;
+  const byNumeric = jobs.find((j) => String(j.id) === String(a.jobId));
+  if (byNumeric) return byNumeric.id;
+  const clients = getClients();
+  const client = clients.find((c) => c.name === a.clientName);
+  const id = a.legacyJobId || String(a.jobId);
+  jobs.push({
+    id,
+    title: a.jobTitle,
+    clientId: client ? client.id : 'client-001',
+    client_name: a.clientName,
+    location: '',
+    rate: null,
+    openings: 1,
+    status: 'Open',
+  });
+  setJobs(jobs);
+  return id;
+}
+
+/**
+ * Load-time reconcile for assignments: push this browser's demo assignments
+ * up to Supabase, and create demo twins for Supabase assignments this
+ * browser has never seen. Returns the fresh Supabase assignment list (mapped).
+ */
+export async function reconcileAssignments() {
+  const demoRows = getAssignments();
+  await Promise.all(demoRows.map((d) => syncAssignmentToSupabase(d)));
+
+  const rows = await fetchAssignments();
+  const demoByKey = new Map();
+  for (const d of getAssignments()) {
+    if (d.supabaseAssignmentId) demoByKey.set(String(d.supabaseAssignmentId), d);
+    if (d.id) demoByKey.set(String(d.id), d);
+  }
+  const missing = rows.filter(
+    (a) => !demoByKey.has(String(a.id)) && !demoByKey.has(String(a.legacyId))
+  );
+
+  if (missing.length > 0) {
+    const demoAssignments = getAssignments();
+    for (const a of missing) {
+      const demoCandidateId = ensureDemoCandidate(a);
+      const demoJobId = ensureDemoJob(a);
+      if (!demoCandidateId || !demoJobId) continue;
+      demoAssignments.push({
+        id: a.legacyId || crypto.randomUUID(),
+        candidateId: demoCandidateId,
+        jobId: demoJobId,
+        status: a.status,
+        startDate: a.startDate,
+        endDate: a.endDate || null,
+        payRate: a.payRate,
+        billRate: a.billRate,
+        notes: a.notes || '',
+        createdAt: a.createdAt,
+        updatedAt: a.updatedAt,
+        supabaseAssignmentId: a.id,
+      });
+    }
+    setAssignments(demoAssignments);
+  }
+
+  return rows;
+}
+
+/** Demo reset support: clear Supabase assignments (seeded rows are re-synced after). */
+export async function clearSupabaseAssignments() {
+  const { error } = await supabase.from('assignments').delete().neq('id', 0);
+  if (error) throw error;
+  return { assignmentsCleared: true };
 }
