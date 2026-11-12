@@ -10,7 +10,7 @@ export const ROLE_ROUTES = {
   'sales-rep': '/sales',
   'sales-manager': '/sales-manager',
   recruiter: '/recruiter',
-  candidate: '/candidate/dashboard',
+  candidate: '/candidate',
   client: '/client/approvals',
   backoffice: '/finance/reports',
 };
