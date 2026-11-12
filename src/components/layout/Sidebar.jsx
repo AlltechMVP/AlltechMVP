@@ -7,7 +7,10 @@ const linkCls = (active) =>
 export default function Sidebar() {
   let user = {};
   try { user = JSON.parse(localStorage.getItem('user') || '{}') || {}; } catch { user = {}; }
-  const role = user.role;
+  // The dev role override (when set) wins, so the sidebar follows the
+  // role being tested instead of the signed-in account's real role.
+  let role = user.role;
+  try { role = localStorage.getItem('alltech_role_override') || role; } catch { /* ignore */ }
   const { pathname } = useLocation();
 
   return (
@@ -32,6 +35,31 @@ export default function Sidebar() {
             <li><Link to="/client/approvals" className={linkCls(pathname === '/client/approvals')}>Approvals</Link></li>
             <li><Link to="/client/jobs" className={linkCls(pathname.startsWith('/client/jobs'))}>Jobs</Link></li>
             <li><Link to="/client/timecards" className={linkCls(pathname === '/client/timecards')}>Timecards</Link></li>
+          </>
+        )}
+        {role === 'director' && (
+          <>
+            <li><Link to="/director" className={linkCls(pathname === '/director')}>Director Dashboard</Link></li>
+          </>
+        )}
+        {role === 'branch-manager' && (
+          <>
+            <li><Link to="/branch-manager" className={linkCls(pathname === '/branch-manager')}>Branch Dashboard</Link></li>
+          </>
+        )}
+        {role === 'sales-rep' && (
+          <>
+            <li><Link to="/sales" className={linkCls(pathname === '/sales')}>Sales Pipeline</Link></li>
+          </>
+        )}
+        {role === 'sales-manager' && (
+          <>
+            <li><Link to="/sales-manager" className={linkCls(pathname === '/sales-manager')}>Sales Dashboard</Link></li>
+          </>
+        )}
+        {role === 'backoffice' && (
+          <>
+            <li><Link to="/finance/reports" className={linkCls(pathname === '/finance/reports')}>Finance Reports</Link></li>
           </>
         )}
 

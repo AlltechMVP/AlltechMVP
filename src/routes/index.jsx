@@ -36,6 +36,11 @@ const JobCandidates = lazy(() => import('@/pages/jobs/Candidates.jsx'));
 const InvoicesList = lazy(() => import('@/pages/invoices/List.jsx'));
 const InvoiceView = lazy(() => import('@/pages/invoices/View.jsx'));
 const ArAging = lazy(() => import('@/pages/ar/Aging.jsx'));
+const DirectorDashboard = lazy(() => import('@/manager/DirectorDashboard.jsx'));
+const BranchManagerDashboard = lazy(() => import('@/manager/BranchManagerDashboard.jsx'));
+const SalesManagerDashboard = lazy(() => import('@/manager/SalesManagerDashboard.jsx'));
+const BackOfficeDashboard = lazy(() => import('@/backoffice/BackOfficeDashboard.jsx'));
+const SalesPipeline = lazy(() => import('@/components/sales/SalesPipeline.jsx'));
 
 export default function AppRoutes() {
   return (
@@ -157,6 +162,48 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={["cfo","admin"]}>
                 <CFODashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Management, sales & backoffice routes */}
+          <Route
+            path="director"
+            element={
+              <ProtectedRoute allowedRoles={["director","admin"]}>
+                <DirectorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="branch-manager"
+            element={
+              <ProtectedRoute allowedRoles={["branch-manager","admin"]}>
+                <BranchManagerDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="sales"
+            element={
+              <ProtectedRoute allowedRoles={["sales-rep","admin"]}>
+                <SalesPipeline />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="sales-manager"
+            element={
+              <ProtectedRoute allowedRoles={["sales-manager","admin"]}>
+                <SalesManagerDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="finance/reports"
+            element={
+              <ProtectedRoute allowedRoles={["backoffice","admin"]}>
+                <BackOfficeDashboard />
               </ProtectedRoute>
             }
           />

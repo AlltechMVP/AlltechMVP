@@ -2,7 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext.jsx';
 import AssistantPanel from '@/components/ai/AssistantPanel.jsx';
 
-const DEV_ROLES = ['recruiter', 'client', 'candidate', 'ceo', 'cfo'];
+const DEV_ROLES = [
+  { value: 'recruiter', label: 'Recruiter' },
+  { value: 'client', label: 'Client' },
+  { value: 'candidate', label: 'Candidate' },
+  { value: 'ceo', label: 'CEO' },
+  { value: 'cfo', label: 'CFO' },
+  { value: 'director', label: 'Director' },
+  { value: 'branch-manager', label: 'Branch Mgr' },
+  { value: 'sales-rep', label: 'Sales Rep' },
+  { value: 'sales-manager', label: 'Sales Mgr' },
+  { value: 'backoffice', label: 'Backoffice' },
+];
 
 export default function TopNav() {
   const { profile, role, roleOverride, setRoleOverride, signOut } = useAuth();
@@ -40,11 +51,11 @@ export default function TopNav() {
             <span className="text-[10px] uppercase tracking-wide text-amber-700 px-1">Dev role</span>
             {DEV_ROLES.map((r) => (
               <button
-                key={r}
-                className={`px-2 py-1 text-xs border rounded ${roleOverride === r ? 'bg-gray-800 text-white border-gray-800' : 'bg-white'}`}
-                onClick={() => setRoleOverride(r)}
+                key={r.value}
+                className={`px-2 py-1 text-xs border rounded ${roleOverride === r.value ? 'bg-gray-800 text-white border-gray-800' : 'bg-white'}`}
+                onClick={() => setRoleOverride(r.value)}
               >
-                {r.charAt(0).toUpperCase() + r.slice(1)}
+                {r.label}
               </button>
             ))}
             {roleOverride && (
