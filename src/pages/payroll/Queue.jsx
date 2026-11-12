@@ -148,20 +148,25 @@ export default function PayrollQueue() {
 
   const billableCount = data.filter(t => t.payrollStatus === 'Paid' && !t.invoiceId && (t.totalHours || 0) > 0).length;
 
-  const createInvoices = () => {
+  const createInvoices = async () => {
     const created = createInvoicesFromPaidTimesheets();
     if (created.length === 0) {
       addToast({ type: 'info', message: 'No paid timesheets ready to invoice.' });
       return;
     }
-    // Slice 5: sync the new invoices up, plus the timesheets they stamped
-    // with invoiceId (fire-and-forget; the demo creation already succeeded).
-    created.forEach((inv) => {
-      syncInvoiceToSupabase(inv);
-      getTimesheets()
-        .filter((t) => t.invoiceId === inv.id)
-        .forEach((t) => syncTimesheetToSupabase(t));
-    });
+    // Slice 5: sync the new invoices up FIRST, then the timesheets they
+    // stamped. The timesheet sync resolves the invoice's Supabase id by
+    // lookup, so it must wait until the invoice rows exist — syncing both
+    // concurrently raced and the stamps landed as NULL (verified live
+    // 2026-11-12: INV-2026-009 existed but both timesheets had
+    // invoice_id NULL until a later reconcile fixed them).
+    const results = await Promise.all(created.map((inv) => syncInvoiceToSupabase(inv)));
+    const syncedIds = new Set(
+      created.filter((_, i) => results[i] !== 'failed').map((inv) => inv.id)
+    );
+    getTimesheets()
+      .filter((t) => t.invoiceId && syncedIds.has(t.invoiceId))
+      .forEach((t) => syncTimesheetToSupabase(t));
     setData(getTimesheets().map(mapDemoRow));
     const summary = created.map(i => `${i.invoiceNumber} (${i.clientName}, $${i.total.toFixed(2)})`).join(', ');
     addToast({ type: 'success', message: `Created ${created.length} invoice${created.length > 1 ? 's' : ''}: ${summary}` });
