@@ -1,19 +1,105 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getTimesheets, getAssignmentById, getCandidateById, getJobById } from '@/utils/storage';
+import { fetchTimesheets, reconcileTimesheets } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty } from '@/components/ui';
 
 const STATUS_OPTIONS = ['All', 'Draft', 'Submitted', 'Approved', 'Rejected'];
 const CLIENT_FILTER_OPTIONS = ['All', 'Awaiting Client', 'Client Approved', 'Client Rejected', 'Not Submitted'];
 
+// Slice 3 (thin): the timesheets list reads Supabase (shared across
+// sessions) with a demo-store fallback when Supabase is unreachable.
+// Writes still go to the demo store (Form.jsx) and sync up from there.
+// Each row carries demoTimesheetId so the View link opens the demo row
+// the timesheet form works on.
+function attachDemoTwins(timesheets) {
+  const demoRows = getTimesheets();
+  return timesheets.map((t) => {
+    const twin = demoRows.find((d) => String(d.supabaseTimesheetId) === String(t.id))
+      || demoRows.find((d) => String(d.id) === String(t.legacyId));
+    return { ...t, demoTimesheetId: twin ? twin.id : null };
+  });
+}
+
+function toRow(t) {
+  return {
+    id: t.id,
+    demoTimesheetId: t.demoTimesheetId || null,
+    candidate: t.candidateName,
+    job: t.jobTitle,
+    weekEnding: t.weekEnding || '-',
+    totalHours: t.totalHours ?? 0,
+    status: t.status,
+    clientApproval: t.clientApprovalStatus || 'Not Submitted',
+    payrollStatus: t.payrollStatus || 'Not Ready',
+    updated: t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : '-',
+    _sortDate: t.updatedAt || t.createdAt || '',
+  };
+}
+
+function mapDemoRow(t) {
+  const assignment = getAssignmentById(t.assignmentId);
+  const cand = assignment ? getCandidateById(assignment.candidateId) : null;
+  const job = assignment ? getJobById(assignment.jobId) : null;
+  return {
+    id: t.id,
+    demoTimesheetId: t.id,
+    candidate: cand?.name || '-',
+    job: job?.title || '-',
+    weekEnding: t.weekEnding || '-',
+    totalHours: t.totalHours ?? 0,
+    status: t.status,
+    clientApproval: t.clientApprovalStatus || 'Not Submitted',
+    payrollStatus: t.payrollStatus || 'Not Ready',
+    updated: t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : '-',
+    _sortDate: t.updatedAt || t.createdAt || '',
+  };
+}
+
 export default function TimesheetsList() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [clientFilter, setClientFilter] = useState('All');
   const [data, setData] = useState([]);
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  const loadFromSupabase = async () => {
+    // Render fast from Supabase, then reconcile in the background (pushes
+    // this browser's demo rows up, creates missing twins) and refresh.
+    const rows = await fetchTimesheets();
+    setData(attachDemoTwins(rows).map(toRow));
+    reconcileTimesheets()
+      .then((fresh) => {
+        setData(attachDemoTwins(fresh).map(toRow));
+      })
+      .catch(() => {});
+  };
+
+  const loadFromDemo = () => {
+    setData(getTimesheets().map(mapDemoRow));
+  };
 
   useEffect(() => {
-    setData(getTimesheets());
+    let mounted = true;
+    (async () => {
+      try {
+        await loadFromSupabase();
+        if (mounted) setUsingFallback(false);
+      } catch {
+        // The shared fetch failed: try the reconcile (it re-syncs and
+        // re-fetches) before falling back to local demo data.
+        try {
+          const rows = await reconcileTimesheets();
+          if (!mounted) return;
+          setData(attachDemoTwins(rows).map(toRow));
+          setUsingFallback(false);
+        } catch {
+          if (mounted) { loadFromDemo(); setUsingFallback(true); }
+        }
+      }
+    })();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const rows = useMemo(() => {
@@ -23,7 +109,7 @@ export default function TimesheetsList() {
     }
     if (clientFilter !== 'All') {
       items = items.filter(t => {
-        const cs = t.clientApprovalStatus || 'Not Submitted';
+        const cs = t.clientApproval || 'Not Submitted';
         if (clientFilter === 'Awaiting Client') return cs === 'Submitted';
         if (clientFilter === 'Client Approved') return cs === 'Approved';
         if (clientFilter === 'Client Rejected') return cs === 'Rejected';
@@ -31,23 +117,7 @@ export default function TimesheetsList() {
         return true;
       });
     }
-    return items.map(t => {
-      const assignment = getAssignmentById(t.assignmentId);
-      const cand = assignment ? getCandidateById(assignment.candidateId) : null;
-      const job = assignment ? getJobById(assignment.jobId) : null;
-      return {
-        id: t.id,
-        candidate: cand?.name || '-',
-        job: job?.title || '-',
-        weekEnding: t.weekEnding || '-',
-        totalHours: t.totalHours ?? 0,
-        status: t.status,
-        clientApproval: t.clientApprovalStatus || 'Not Submitted',
-        payrollStatus: t.payrollStatus || 'Not Ready',
-        updated: t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : '-',
-        _sortDate: t.updatedAt || t.createdAt || '',
-      };
-    }).sort((a, b) => (b._sortDate || '').localeCompare(a._sortDate || ''));
+    return [...items].sort((a, b) => (b._sortDate || '').localeCompare(a._sortDate || ''));
   }, [data, statusFilter, clientFilter]);
 
   const payrollColors = {
@@ -85,7 +155,7 @@ export default function TimesheetsList() {
       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${payrollColors[v] || ''}`}>{v}</span>
     )},
     { key: 'id', header: '', render: (_, row) => (
-      <Link to={`/timekeeping/${row.id}`} className="text-blue-600 hover:underline text-xs">View</Link>
+      <Link to={`/timekeeping/${row.demoTimesheetId || row.id}`} className="text-blue-600 hover:underline text-xs">View</Link>
     )},
   ];
 
@@ -100,6 +170,12 @@ export default function TimesheetsList() {
           Create Timesheet
         </Link>
       </div>
+
+      {usingFallback && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+          Showing local demo data — the shared timesheets are unreachable right now. Changes here will sync when they come back.
+        </p>
+      )}
 
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <label className="text-sm text-gray-600">Status:</label>

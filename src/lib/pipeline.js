@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import {
   getCandidates, setCandidates, normalizeStatus,
   getAssignments, setAssignments, getJobs, setJobs, getClients,
+  getTimesheets, setTimesheets,
 } from '@/utils/storage';
 
 // ---------------------------------------------------------------------------
@@ -647,4 +648,334 @@ export async function clearSupabaseAssignments() {
   const { error } = await supabase.from('assignments').delete().neq('id', 0);
   if (error) throw error;
   return { assignmentsCleared: true };
+}
+
+// --- Timesheets (migration slice 3) ----------------------------------------
+
+const TIMESHEET_SELECT =
+  'id,status,client_approval_status,payroll_status,approver_note,week_ending,' +
+  'hours_mon,hours_tue,hours_wed,hours_thu,hours_fri,hours_sat,hours_sun,' +
+  'submitted_at,approved_at,payroll_ready_at,client_decided_at,' +
+  'exceptions,compliance,legacy_id,created_at,updated_at,candidate_id,assignment_id,' +
+  'candidates(id,name,email,legacy_id),' +
+  `assignments(${ASSIGNMENT_SELECT})`;
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function mapTimesheet(t) {
+  const person = t.candidates || {};
+  const asg = t.assignments || {};
+  const job = asg.jobs || {};
+  const hours = [t.hours_mon, t.hours_tue, t.hours_wed, t.hours_thu, t.hours_fri, t.hours_sat, t.hours_sun]
+    .map((h) => Number(h) || 0);
+  const entries = hours.map((h, i) => ({
+    date: t.week_ending ? addDays(t.week_ending, i - 6) : null,
+    hours: h,
+  }));
+  return {
+    id: t.id,
+    assignmentId: asg.legacy_id || null,
+    assignmentSupabaseId: t.assignment_id || null,
+    candidateId: person.legacy_id || null,
+    candidateName: person.name || '—',
+    candidateEmail: person.email || '',
+    jobId: job.legacy_id || null,
+    jobTitle: job.title || '—',
+    clientName: job.clients?.name || '—',
+    weekEnding: t.week_ending || null,
+    entries,
+    totalHours: hours.reduce((s, h) => s + h, 0),
+    status: t.status,
+    clientApprovalStatus: t.client_approval_status || 'Not Submitted',
+    payrollStatus: t.payroll_status || 'Not Ready',
+    approverNote: t.approver_note || '',
+    exceptions: Array.isArray(t.exceptions) ? t.exceptions : [],
+    compliance: t.compliance || {},
+    submittedAt: t.submitted_at || null,
+    approvedAt: t.approved_at || null,
+    payrollReadyAt: t.payroll_ready_at || null,
+    clientDecidedAt: t.client_decided_at || null,
+    legacyId: t.legacy_id || null,
+    createdAt: t.created_at || null,
+    updatedAt: t.updated_at || null,
+  };
+}
+
+export async function fetchTimesheets() {
+  const { data, error } = await withRetry(() => supabase
+    .from('timesheets')
+    .select(TIMESHEET_SELECT)
+    .order('updated_at', { ascending: false }));
+  if (error) throw error;
+  return (data || []).map(mapTimesheet);
+}
+
+export async function fetchTimesheet(id) {
+  const { data, error } = await withRetry(() => supabase
+    .from('timesheets')
+    .select(TIMESHEET_SELECT)
+    .eq('id', id)
+    .single());
+  if (error) throw error;
+  return mapTimesheet(data);
+}
+
+async function resolveAssignmentSupabaseId(demoAssignmentId) {
+  const demo = getAssignments().find((a) => a.id === demoAssignmentId);
+  if (demo && demo.supabaseAssignmentId) return demo.supabaseAssignmentId;
+  const { data } = await supabase
+    .from('assignments')
+    .select('id')
+    .eq('legacy_id', String(demoAssignmentId))
+    .limit(1);
+  return data && data.length > 0 ? data[0].id : null;
+}
+
+function timesheetPayload(demo, candidateUuid, assignmentSupabaseId) {
+  const hours = [0, 0, 0, 0, 0, 0, 0];
+  (demo.entries || []).forEach((e, i) => {
+    if (i < 7) hours[i] = Number(e.hours) || 0;
+  });
+  return {
+    candidate_id: candidateUuid,
+    assignment_id: assignmentSupabaseId,
+    week_ending: demo.weekEnding || null,
+    hours_mon: hours[0],
+    hours_tue: hours[1],
+    hours_wed: hours[2],
+    hours_thu: hours[3],
+    hours_fri: hours[4],
+    hours_sat: hours[5],
+    hours_sun: hours[6],
+    status: demo.status || 'Draft',
+    payroll_status: demo.payrollStatus || 'Not Ready',
+    client_approval_status: demo.clientApprovalStatus || 'Not Submitted',
+    approver_note: demo.approverNote || null,
+    submitted_at: demo.submittedAt || null,
+    approved_at: demo.approvedAt || null,
+    payroll_ready_at: demo.payrollReadyAt || null,
+    client_decided_at: demo.clientDecidedAt || null,
+    exceptions: demo.exceptions || [],
+    compliance: demo.compliance || {},
+    legacy_id: String(demo.id),
+    updated_at: demo.updatedAt || new Date().toISOString(),
+  };
+}
+
+function stampDemoTimesheet(demo, supabaseId) {
+  const rows = getTimesheets();
+  const idx = rows.findIndex((t) => t.id === demo.id);
+  if (idx === -1) return;
+  rows[idx] = { ...rows[idx], supabaseTimesheetId: supabaseId };
+  setTimesheets(rows);
+}
+
+function applySupabaseTimesheetToDemo(row, demo) {
+  const rows = getTimesheets();
+  const idx = rows.findIndex((t) => t.id === demo.id);
+  if (idx === -1) return;
+  const m = mapTimesheet(row);
+  rows[idx] = {
+    ...rows[idx],
+    status: m.status,
+    clientApprovalStatus: m.clientApprovalStatus,
+    payrollStatus: m.payrollStatus,
+    approverNote: m.approverNote,
+    entries: m.entries,
+    totalHours: m.totalHours,
+    weekEnding: m.weekEnding,
+    exceptions: m.exceptions,
+    compliance: m.compliance,
+    submittedAt: m.submittedAt,
+    approvedAt: m.approvedAt,
+    payrollReadyAt: m.payrollReadyAt,
+    clientDecidedAt: m.clientDecidedAt,
+    updatedAt: m.updatedAt || rows[idx].updatedAt,
+    supabaseTimesheetId: row.id,
+  };
+  setTimesheets(rows);
+}
+
+// Derived mirror: the CEO/CFO Weekly Hours chart reads timecards, so each
+// synced timesheet keeps a matching timecard row (keyed by assignment+week).
+async function syncTimecardMirror(demo, assignmentSupabaseId) {
+  try {
+    if (!assignmentSupabaseId || !demo.weekEnding) return;
+    const weekStart = addDays(demo.weekEnding, -6);
+    const totalHours = (demo.entries || []).reduce((s, e) => s + (Number(e.hours) || 0), 0);
+    const payload = {
+      assignment_id: assignmentSupabaseId,
+      week_start: weekStart,
+      total_hours: totalHours,
+      status: demo.status || 'Draft',
+    };
+    const { data: existing } = await supabase
+      .from('timecards')
+      .select('id')
+      .eq('assignment_id', assignmentSupabaseId)
+      .eq('week_start', weekStart)
+      .limit(1);
+    const row = existing && existing.length > 0 ? existing[0] : null;
+    if (row) {
+      await supabase.from('timecards').update(payload).eq('id', row.id);
+    } else {
+      await supabase.from('timecards').insert([payload]);
+    }
+  } catch {
+    // Mirror failure must not fail the timesheet sync.
+  }
+}
+
+/**
+ * Sync one demo timesheet row to Supabase. Never throws. The demo id is the
+ * stable key (legacy_id). Returns 'demo' | 'supabase' | 'created' |
+ * 'skipped' | 'failed'.
+ */
+export async function syncTimesheetToSupabase(demo) {
+  try {
+    if (!demo || !demo.assignmentId || !demo.weekEnding) return 'skipped';
+    const assignment = getAssignments().find((a) => a.id === demo.assignmentId);
+    if (!assignment) return 'skipped';
+    const candidateUuid = await resolvePersonId(assignment.candidateId);
+    if (!candidateUuid) return 'skipped';
+    const assignmentSupabaseId = await resolveAssignmentSupabaseId(demo.assignmentId);
+    if (!assignmentSupabaseId) return 'skipped';
+
+    const { data: existing } = await supabase
+      .from('timesheets')
+      .select(TIMESHEET_SELECT)
+      .eq('legacy_id', String(demo.id))
+      .limit(1);
+    const row = existing && existing.length > 0 ? existing[0] : null;
+
+    if (!row) {
+      const { data: created, error } = await supabase
+        .from('timesheets')
+        .insert([timesheetPayload(demo, candidateUuid, assignmentSupabaseId)])
+        .select('id')
+        .single();
+      if (error || !created) return 'failed';
+      stampDemoTimesheet(demo, created.id);
+      await syncTimecardMirror(demo, assignmentSupabaseId);
+      return 'created';
+    }
+
+    stampDemoTimesheet(demo, row.id);
+    const demoTime = Date.parse(demo.updatedAt || 0) || 0;
+    const rowTime = Date.parse(row.updated_at || 0) || 0;
+    if (demoTime >= rowTime) {
+      const { error } = await supabase
+        .from('timesheets')
+        .update(timesheetPayload(demo, candidateUuid, assignmentSupabaseId))
+        .eq('id', row.id);
+      if (error) return 'failed';
+      await syncTimecardMirror(demo, assignmentSupabaseId);
+      return 'demo';
+    }
+    applySupabaseTimesheetToDemo(row, demo);
+    return 'supabase';
+  } catch (err) {
+    if (import.meta.env.MODE !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[timesheet sync] failed', err);
+    }
+    return 'failed';
+  }
+}
+
+function ensureDemoAssignment(mapped) {
+  const rows = getAssignments();
+  const bySupabase = rows.find((a) => String(a.supabaseAssignmentId) === String(mapped.id));
+  if (bySupabase) return bySupabase.id;
+  const byLegacy = rows.find((a) => String(a.id) === String(mapped.legacyId));
+  if (byLegacy) return byLegacy.id;
+  const demoCandidateId = ensureDemoCandidate(mapped);
+  const demoJobId = ensureDemoJob(mapped);
+  if (!demoCandidateId || !demoJobId) return null;
+  const id = mapped.legacyId || crypto.randomUUID();
+  rows.push({
+    id,
+    candidateId: demoCandidateId,
+    jobId: demoJobId,
+    status: mapped.status || 'Active',
+    startDate: mapped.startDate,
+    endDate: mapped.endDate || null,
+    payRate: mapped.payRate,
+    billRate: mapped.billRate,
+    notes: mapped.notes || '',
+    createdAt: mapped.createdAt,
+    updatedAt: mapped.updatedAt,
+    supabaseAssignmentId: mapped.id,
+  });
+  setAssignments(rows);
+  return id;
+}
+
+/**
+ * Load-time reconcile for timesheets: push this browser's demo timesheets
+ * up to Supabase, and create demo twins for Supabase timesheets this
+ * browser has never seen. Returns the fresh Supabase timesheet list (mapped).
+ */
+export async function reconcileTimesheets() {
+  const demoRows = getTimesheets();
+  await Promise.all(demoRows.map((d) => syncTimesheetToSupabase(d)));
+
+  const rows = await fetchTimesheets();
+  const demoByKey = new Map();
+  for (const d of getTimesheets()) {
+    if (d.supabaseTimesheetId) demoByKey.set(String(d.supabaseTimesheetId), d);
+    if (d.id) demoByKey.set(String(d.id), d);
+  }
+  const missing = rows.filter(
+    (t) => !demoByKey.has(String(t.id)) && !demoByKey.has(String(t.legacyId))
+  );
+
+  if (missing.length > 0) {
+    const demoTimesheets = getTimesheets();
+    for (const t of missing) {
+      // fetchAssignment already returns the mapped assignment shape.
+      const mappedAsg = t.assignmentSupabaseId
+        ? await fetchAssignment(t.assignmentSupabaseId)
+        : null;
+      if (!mappedAsg) continue;
+      const demoAssignmentId = ensureDemoAssignment(mappedAsg);
+      if (!demoAssignmentId) continue;
+      demoTimesheets.push({
+        id: t.legacyId || crypto.randomUUID(),
+        assignmentId: demoAssignmentId,
+        weekEnding: t.weekEnding,
+        entries: t.entries,
+        totalHours: t.totalHours,
+        status: t.status,
+        clientApprovalStatus: t.clientApprovalStatus,
+        payrollStatus: t.payrollStatus,
+        approverNote: t.approverNote || null,
+        exceptions: t.exceptions,
+        compliance: t.compliance,
+        submittedAt: t.submittedAt,
+        approvedAt: t.approvedAt,
+        payrollReadyAt: t.payrollReadyAt,
+        clientDecidedAt: t.clientDecidedAt,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+        supabaseTimesheetId: t.id,
+      });
+    }
+    setTimesheets(demoTimesheets);
+  }
+
+  return rows;
+}
+
+/** Demo reset support: clear Supabase timesheets + timecards (re-synced after). */
+export async function clearSupabaseTimesheets() {
+  const { error: tsError } = await supabase.from('timesheets').delete().neq('id', 0);
+  if (tsError) throw tsError;
+  const { error: tcError } = await supabase.from('timecards').delete().neq('id', 0);
+  if (tcError) throw tcError;
+  return { timesheetsCleared: true, timecardsCleared: true };
 }

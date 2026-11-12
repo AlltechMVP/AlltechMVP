@@ -5,6 +5,7 @@ import {
   getTimesheetById, getAssignmentById, getCandidateById, getJobById,
   uid, now, runTimesheetCompliance, applyTimesheetCompliance
 } from '@/utils/storage';
+import { syncTimesheetToSupabase, reconcileTimesheets } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -37,17 +38,30 @@ export default function TimesheetForm() {
   const [liveExceptions, setLiveExceptions] = useState([]);
 
   useEffect(() => {
-    const allAssign = getAssignments().filter(a => a.status === 'Active');
-    setAssignmentsList(allAssign);
+    (async () => {
+      const allAssign = getAssignments().filter(a => a.status === 'Active');
+      setAssignmentsList(allAssign);
 
-    if (isEdit) {
-      const existing = getTimesheetById(id);
-      if (!existing) {
-        addToast({ type: 'error', message: 'Timesheet not found.' });
-        navigate('/timekeeping');
-        return;
-      }
-      if (existing) {
+      if (isEdit) {
+        // Resolve the demo row: by demo id, then by its Supabase id; if
+        // neither exists locally, reconcile (which creates the demo twin)
+        // and look again.
+        let existing = getTimesheetById(id)
+          || getTimesheets().find((t) => String(t.supabaseTimesheetId) === String(id));
+        if (!existing) {
+          try {
+            await reconcileTimesheets();
+            existing = getTimesheetById(id)
+              || getTimesheets().find((t) => String(t.supabaseTimesheetId) === String(id));
+          } catch {
+            existing = null;
+          }
+        }
+        if (!existing) {
+          addToast({ type: 'error', message: 'Timesheet not found.' });
+          navigate('/timekeeping');
+          return;
+        }
         setAssignmentId(existing.assignmentId);
         setWeekEnding(existing.weekEnding);
         setEntries(existing.entries || []);
@@ -63,7 +77,7 @@ export default function TimesheetForm() {
           if (linkedAssignment) setAssignmentsList(prev => [...prev, linkedAssignment]);
         }
       }
-    }
+    })();
   }, [id, isEdit]);
 
   useEffect(() => {
@@ -131,7 +145,7 @@ export default function TimesheetForm() {
 
     let savedRecord;
     if (isEdit) {
-      const idx = all.findIndex(t => t.id === id);
+      const idx = all.findIndex((t) => t.id === id || String(t.supabaseTimesheetId) === String(id));
       if (idx !== -1) {
         savedRecord = { ...all[idx], ...record };
         applyTimesheetCompliance(savedRecord);
@@ -149,6 +163,9 @@ export default function TimesheetForm() {
     if (savedRecord) {
       setPayrollStatus(savedRecord.payrollStatus || 'Not Ready');
       setLiveExceptions(savedRecord.exceptions || []);
+      // Sync the timesheet row itself to Supabase (fire-and-forget; the
+      // demo write above already succeeded).
+      syncTimesheetToSupabase(savedRecord);
     }
 
     let msg = `Timesheet ${newStatus === 'Draft' ? 'saved' : newStatus.toLowerCase()}.`;

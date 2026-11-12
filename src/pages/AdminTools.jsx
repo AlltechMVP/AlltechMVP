@@ -6,7 +6,7 @@ import {
   getCandidates, getJobs, getAssignments, getTimesheets
 } from '@/utils/storage';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
-import { clearSupabasePipeline, reconcilePipeline, clearSupabaseAssignments, reconcileAssignments } from '@/lib/pipeline';
+import { clearSupabasePipeline, reconcilePipeline, clearSupabaseAssignments, reconcileAssignments, clearSupabaseTimesheets, reconcileTimesheets } from '@/lib/pipeline';
 
 const SEV_STYLE = {
   error: 'bg-red-100 text-red-800 border-red-200',
@@ -37,16 +37,19 @@ export default function AdminTools() {
     clearAlltechKeys();
     seedDemoData();
     setConfirmReset(false);
-    // Slice 1-2 (thin): the shared pipeline and assignments live in Supabase
-    // too. Clear them and re-sync the fresh seed up, so a presentation starts
-    // clean in both stores. Best-effort: the demo reset itself never fails
-    // because of this. Order matters: clear assignments first (they reference
-    // persons), reconcile assignments last (persons/jobs must exist first).
+    // Slice 1-3 (thin): the shared pipeline, assignments, and timesheets live
+    // in Supabase too. Clear them and re-sync the fresh seed up, so a
+    // presentation starts clean in both stores. Best-effort: the demo reset
+    // itself never fails because of this. Order matters: clear assignments
+    // first (they reference persons), reconcile timesheets last (they
+    // reference assignments).
     try {
       await clearSupabaseAssignments();
       await clearSupabasePipeline();
+      await clearSupabaseTimesheets();
       await reconcilePipeline();
       await reconcileAssignments();
+      await reconcileTimesheets();
     } catch {
       addToast({ type: 'error', message: 'Demo data reset locally; shared reset failed — it will re-sync on next load.' });
     }
