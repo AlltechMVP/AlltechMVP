@@ -35,7 +35,22 @@ export function AuthProvider({ children }) {
     if (!error && data) {
       setProfile(data);
       localStorage.setItem('user', JSON.stringify(data));
+      return;
     }
+    // No profile row yet (e.g. a restored or newly signed-up account):
+    // fall back to the role stored on the auth user, so the session is
+    // still recognised instead of bouncing back to /login.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const fallback = {
+      id: user.id,
+      email: user.email,
+      role: user.user_metadata?.role || 'recruiter',
+    };
+    setProfile(fallback);
+    localStorage.setItem('user', JSON.stringify(fallback));
+    // Self-heal: create the missing profile row for next time.
+    await supabase.from('profiles').upsert(fallback);
   };
 
   // Load current session and subscribe to changes
