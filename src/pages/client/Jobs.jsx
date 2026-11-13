@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  getDemoClientId, getJobsForClient, getClientById,
+  getJobsForClient, getClientById,
   getSubmittedCandidatesForJob
 } from '@/utils/storage';
+import { useDemoClientId } from '@/lib/useDemoClientId';
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty } from '@/components/ui';
 
@@ -17,12 +18,13 @@ export default function ClientJobs() {
   const [jobs, setJobs] = useState([]);
   const [client, setClient] = useState(null);
   const [statusFilter, setStatusFilter] = useState('All');
+  const demoClientId = useDemoClientId();
 
   useEffect(() => {
-    const clientId = getDemoClientId();
+    const clientId = demoClientId;
     setClient(getClientById(clientId));
     setJobs(getJobsForClient(clientId));
-  }, []);
+  }, [demoClientId]);
 
   const rows = useMemo(() => {
     let items = jobs;

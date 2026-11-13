@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  getDemoClientId, getJobsForClient, getClientById,
+  getJobsForClient, getClientById,
   getTimesheetsForClient, getSubmittedCandidatesForJob
 } from '@/utils/storage';
+import { useDemoClientId } from '@/lib/useDemoClientId';
 
 export default function ClientDashboard() {
   const [client, setClient] = useState(null);
   const [stats, setStats] = useState({ jobs: 0, pendingCandidates: 0, pendingTimecards: 0 });
+  const demoClientId = useDemoClientId();
 
   useEffect(() => {
-    const clientId = getDemoClientId();
+    const clientId = demoClientId;
     const cl = getClientById(clientId);
     setClient(cl);
 
@@ -25,7 +27,7 @@ export default function ClientDashboard() {
     const pendingTimecards = timesheets.filter(t => (t.clientApprovalStatus || 'Not Submitted') === 'Submitted').length;
 
     setStats({ jobs: jobs.length, pendingCandidates, pendingTimecards });
-  }, []);
+  }, [demoClientId]);
 
   return (
     <div className="p-6 max-w-5xl mx-auto">

@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getInvoices } from '@/utils/storage';
 import { fetchInvoices, reconcileInvoices, isRlsDenied } from '@/lib/pipeline';
+import { useDemoClientId } from '@/lib/useDemoClientId';
+import { useAuth } from '@/context/AuthContext.jsx';
 import { Empty, AccessDenied } from '@/components/ui';
 import DataTable from '@/components/table/DataTable.jsx';
 
@@ -75,21 +77,27 @@ export default function InvoicesList() {
   // Slice 7: an RLS denial is not an outage — show the denied state and
   // never fall back to the unscoped demo store.
   const [denied, setDenied] = useState(false);
+  // A client sees only their own company's invoices. Internal staff see
+  // all of them. The app filters because RLS alone does not scope the
+  // demo database or the persona switcher.
+  const { role } = useAuth();
+  const demoClientId = useDemoClientId();
+  const inScope = (inv) => role !== 'client' || inv.clientId === demoClientId;
 
   const loadFromSupabase = async () => {
     // Render fast from Supabase, then reconcile in the background (pushes
     // this browser's demo rows up, creates missing twins) and refresh.
     const rows = await fetchInvoices();
-    setData(attachDemoTwins(rows).map(toRow));
+    setData(attachDemoTwins(rows.filter(inScope)).map(toRow));
     reconcileInvoices()
       .then((fresh) => {
-        setData(attachDemoTwins(fresh).map(toRow));
+        setData(attachDemoTwins(fresh.filter(inScope)).map(toRow));
       })
       .catch(() => {});
   };
 
   const loadFromDemo = () => {
-    setData(getInvoices().map(mapDemoRow));
+    setData(getInvoices().filter(inScope).map(mapDemoRow));
   };
 
   useEffect(() => {
@@ -105,7 +113,7 @@ export default function InvoicesList() {
         try {
           const rows = await reconcileInvoices();
           if (!mounted) return;
-          setData(attachDemoTwins(rows).map(toRow));
+          setData(attachDemoTwins(rows.filter(inScope)).map(toRow));
           setUsingFallback(false);
         } catch (err2) {
           if (isRlsDenied(err2)) { if (mounted) setDenied(true); return; }
@@ -114,8 +122,7 @@ export default function InvoicesList() {
       }
     })();
     return () => { mounted = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [demoClientId, role]);
 
   const filtered = useMemo(() => {
     let list = data;

@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getJobById, getSubmittedCandidatesForJob,
-  clientDecideCandidate, normalizeStatus, getDemoClientId
+  clientDecideCandidate, normalizeStatus
 } from '@/utils/storage';
+import { useDemoClientId } from '@/lib/useDemoClientId';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
-import { Empty } from '@/components/ui';
+import { Empty, AccessDenied } from '@/components/ui';
 
 const STATUS_COLORS = {
   'Submitted': 'bg-indigo-100 text-indigo-800',
@@ -23,6 +24,7 @@ export default function ClientCandidates() {
   const { jobId } = useParams();
   const navigate = useNavigate();
   const { addToast } = useToasts();
+  const demoClientId = useDemoClientId();
   const [job, setJob] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [filter, setFilter] = useState('All');
@@ -80,6 +82,12 @@ export default function ClientCandidates() {
         </div>
       </div>
     );
+  }
+
+  // A client may only open their own company's order — a job id typed
+  // into the URL must not show another company's candidates.
+  if (job.clientId !== demoClientId) {
+    return <AccessDenied />;
   }
 
   return (

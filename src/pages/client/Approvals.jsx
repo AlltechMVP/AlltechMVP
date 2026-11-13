@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchApplications, reconcilePipeline, isRlsDenied } from '@/lib/pipeline';
+import { useDemoClientId } from '@/lib/useDemoClientId';
 import {
   getCandidates, getJobById, getClientById,
   clientDecideCandidate, changeCandidateStatus, normalizeStatus,
@@ -51,6 +52,7 @@ function awaitingReview(row) {
 
 export default function Approvals() {
   const { addToast } = useToasts();
+  const demoClientId = useDemoClientId();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [usingFallback, setUsingFallback] = useState(false);
@@ -61,11 +63,13 @@ export default function Approvals() {
   const [rejectNote, setRejectNote] = useState('');
 
   const loadFromSupabase = async () => {
+    // Rows are filtered in the app to the client's company — RLS alone
+    // does not scope the demo database or the persona switcher.
     const apps = await fetchApplications();
-    setRows(apps.map(toRow).filter(awaitingReview));
+    setRows(apps.filter((a) => a.clientLegacyId === demoClientId).map(toRow).filter(awaitingReview));
     reconcilePipeline()
       .then((fresh) => {
-        setRows(fresh.map(toRow).filter(awaitingReview));
+        setRows(fresh.filter((a) => a.clientLegacyId === demoClientId).map(toRow).filter(awaitingReview));
       })
       .catch(() => {});
   };
@@ -73,7 +77,11 @@ export default function Approvals() {
   const loadFromDemo = () => {
     setRows(
       getCandidates()
-        .filter((c) => c.submittedJobId && awaitingReview(mapDemoRow(c)))
+        .filter((c) => {
+          if (!c.submittedJobId) return false;
+          const job = getJobById(c.submittedJobId);
+          return job && job.clientId === demoClientId && awaitingReview(mapDemoRow(c));
+        })
         .map(mapDemoRow)
     );
   };
@@ -91,7 +99,7 @@ export default function Approvals() {
           try {
             const fresh = await reconcilePipeline();
             if (!mounted) return;
-            setRows(fresh.map(toRow).filter(awaitingReview));
+            setRows(fresh.filter((a) => a.clientLegacyId === demoClientId).map(toRow).filter(awaitingReview));
             setUsingFallback(false);
           } catch (err2) {
             if (isRlsDenied(err2)) { if (mounted) setDenied(true); }
@@ -102,8 +110,7 @@ export default function Approvals() {
       if (mounted) setLoading(false);
     })();
     return () => { mounted = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [demoClientId]);
 
   // Resolve the demo candidate id for a decision; reconcile first if the
   // row has no demo twin yet.
