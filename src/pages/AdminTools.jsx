@@ -7,7 +7,7 @@ import {
 } from '@/utils/storage';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { useCapabilities } from '@/lib/capabilities';
-import { clearSupabasePipeline, reconcilePipeline, clearSupabaseAssignments, reconcileAssignments, clearSupabaseTimesheets, reconcileTimesheets, clearSupabaseInvoices, reconcileInvoices } from '@/lib/pipeline';
+import { clearSupabasePipeline, reconcilePipeline, clearSupabaseAssignments, reconcileAssignments, clearSupabaseTimesheets, reconcileTimesheets, clearSupabaseInvoices, reconcileInvoices, clearSupabaseClientsJobsCrm, reconcileClients, reconcileJobs, reconcileContacts, reconcileActivities, reconcileFollowUps } from '@/lib/pipeline';
 
 const SEV_STYLE = {
   error: 'bg-red-100 text-red-800 border-red-200',
@@ -53,16 +53,26 @@ export default function AdminTools() {
       // up, so a presentation starts clean in both stores. Best-effort: the
       // demo reset itself never fails because of this. Order matters: clear
       // assignments first (they reference persons), reconcile invoices last
-      // (invoice creation stamps timesheets).
+      // (invoice creation stamps timesheets). The CRM + non-seed client/job
+      // clear runs after invoices (nothing references clients/jobs anymore)
+      // and before the reconciles; the client/job/CRM reconciles then
+      // re-push any seed row missing from Supabase and pull nothing down
+      // (CRM tables are empty, non-seed rows are gone).
       try {
         await clearSupabaseAssignments();
         await clearSupabasePipeline();
         await clearSupabaseTimesheets();
         await clearSupabaseInvoices();
+        await clearSupabaseClientsJobsCrm();
         await reconcilePipeline();
         await reconcileAssignments();
         await reconcileTimesheets();
         await reconcileInvoices();
+        await reconcileClients();
+        await reconcileJobs();
+        await reconcileContacts();
+        await reconcileActivities();
+        await reconcileFollowUps();
       } catch {
         addToast({ type: 'error', message: 'Demo data reset locally; shared reset failed — it will re-sync on next load.' });
       }

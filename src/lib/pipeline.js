@@ -464,6 +464,46 @@ export async function clearSupabasePipeline() {
   return { applicationsCleared: true, personsRemoved: extra.length };
 }
 
+/** Demo reset support: clear CRM rows and non-seed clients/jobs.
+ * The CRM tables (contacts, activities, follow_ups) have NO seed rows, so
+ * they are deleted entirely. Clients/jobs keep exactly what the demo store
+ * holds after seeding (client-001..004, job-001..006) — the seed set is read
+ * from the demo store, not hard-coded, so a future seed change is kept
+ * automatically. Anything else (e.g. Pinnacle Staffing, Northwind Traders,
+ * their orders) is removed.
+ * MUST run after the other clears (assignments, applications, timesheets,
+ * invoices) so no rows still reference the clients/jobs being deleted, and
+ * AFTER seedDemoData() so the demo store holds the seed. The reconciles
+ * after the reset re-push any seed row that was missing from Supabase.
+ * Filtered in JS like clearSupabasePipeline: a PostgREST NOT IN skips NULL
+ * legacy_id rows, and a NULL legacy_id is never a seed row. */
+export async function clearSupabaseClientsJobsCrm() {
+  // CRM tables have no seed rows: delete everything. Order: follow_ups
+  // references activities, activities references contacts.
+  for (const table of ['follow_ups', 'activities', 'contacts']) {
+    const { error } = await supabase.from(table).delete().neq('id', 0);
+    throwChecked(error);
+  }
+  // Non-seed jobs first (they reference clients), then non-seed clients.
+  const seedJobIds = new Set(getJobs().map((j) => String(j.id)));
+  const { data: jobs, error: jobError } = await supabase.from('jobs').select('id,legacy_id');
+  if (jobError) throw jobError;
+  const extraJobs = (jobs || []).filter((j) => !seedJobIds.has(String(j.legacy_id)));
+  if (extraJobs.length > 0) {
+    const { error } = await supabase.from('jobs').delete().in('id', extraJobs.map((j) => j.id));
+    throwChecked(error);
+  }
+  const seedClientIds = new Set(getClients().map((c) => String(c.id)));
+  const { data: clients, error: clientError } = await supabase.from('clients').select('id,legacy_id');
+  if (clientError) throw clientError;
+  const extraClients = (clients || []).filter((c) => !seedClientIds.has(String(c.legacy_id)));
+  if (extraClients.length > 0) {
+    const { error } = await supabase.from('clients').delete().in('id', extraClients.map((c) => c.id));
+    throwChecked(error);
+  }
+  return { crmCleared: true, jobsRemoved: extraJobs.length, clientsRemoved: extraClients.length };
+}
+
 // --- Assignments (migration slice 2) ---------------------------------------
 
 const ASSIGNMENT_SELECT =

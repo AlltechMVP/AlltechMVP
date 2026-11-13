@@ -1083,6 +1083,11 @@ export function seedDemoData() {
   safeSet(KEYS.timesheets, demoTimesheets);
   safeSet(KEYS.invoices, demoInvoices);
   safeSet(KEYS.payments, demoPayments);
+  // CRM collections have no seed rows: explicitly empty, so a reset never
+  // leaves a stale contact, activity, or follow-up behind locally.
+  safeSet(KEYS.contacts, []);
+  safeSet(KEYS.activities, []);
+  safeSet(KEYS.followUps, []);
   safeSet(KEYS.payrollQueue, []);
   safeSet(KEYS.payrollRuns, []);
   localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
