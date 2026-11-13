@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { isDemoMode, canUseRoleSwitcher } from '@/config/dev';
-import { INTERNAL_ROLES } from '@/utils/roleUtils';
+import { useCapabilities } from '@/lib/capabilities';
 import QuickAdd from '@/components/QuickAdd.jsx';
 import QuickAddCandidate from '@/components/QuickAddCandidate.jsx';
 import AssistantPanel from '@/components/ai/AssistantPanel.jsx';
@@ -22,6 +22,7 @@ const DEV_ROLES = [
 
 export default function TopNav() {
   const { profile, role, roleOverride, setRoleOverride, signOut } = useAuth();
+  const { hasCapability } = useCapabilities();
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddCandidateOpen, setQuickAddCandidateOpen] = useState(false);
@@ -50,11 +51,13 @@ export default function TopNav() {
           </span>
         )}
         <div className="flex items-center gap-2">
-          {INTERNAL_ROLES.includes(role) && (
-            <>
-              <button className="px-2 py-1 text-xs border rounded bg-blue-600 text-white border-blue-600" onClick={() => setQuickAddOpen(true)}>Quick Add Prospect</button>
-              <button className="px-2 py-1 text-xs border rounded bg-blue-600 text-white border-blue-600" onClick={() => setQuickAddCandidateOpen(true)}>Quick Add Candidate</button>
-            </>
+          {/* Slice 7: Quick Add buttons are capability-gated (same caps as
+              the actions they open), not role-gated. */}
+          {hasCapability('crm.manage') && (
+            <button className="px-2 py-1 text-xs border rounded bg-blue-600 text-white border-blue-600" onClick={() => setQuickAddOpen(true)}>Quick Add Prospect</button>
+          )}
+          {hasCapability('candidates.quickadd') && (
+            <button className="px-2 py-1 text-xs border rounded bg-blue-600 text-white border-blue-600" onClick={() => setQuickAddCandidateOpen(true)}>Quick Add Candidate</button>
           )}
           <button className="px-2 py-1 text-xs border rounded" onClick={() => setAssistantOpen(true)}>Help</button>
           {profile?.email && (

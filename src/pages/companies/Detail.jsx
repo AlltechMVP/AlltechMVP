@@ -11,6 +11,7 @@ import {
   reconcileJobs, isRlsDenied,
 } from '@/lib/pipeline';
 import { useAuth } from '@/context/AuthContext.jsx';
+import { useCapabilities } from '@/lib/capabilities';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { Empty, AccessDenied } from '@/components/ui';
 
@@ -25,6 +26,9 @@ export default function CompanyDetail() {
   const navigate = useNavigate();
   const { session } = useAuth();
   const { addToast } = useToasts();
+  // Slice 7: converting a prospect and opening an order are capability
+  // actions (crm.manage / jobs.manage — all internal staff by default).
+  const { hasCapability } = useCapabilities();
   const userEmail = session?.user?.email || '';
 
   const [company, setCompany] = useState(null);
@@ -199,7 +203,7 @@ export default function CompanyDetail() {
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${company.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
             {company.status}
           </span>
-          {company.status === 'Prospect' && (
+          {company.status === 'Prospect' && hasCapability('crm.manage') && (
             <button onClick={handleConvert} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
               Convert to Client
             </button>
@@ -360,9 +364,11 @@ export default function CompanyDetail() {
       <section className="bg-white border rounded-xl p-4 mt-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold">Orders</h2>
-          <button onClick={() => navigate(`/jobs/new?clientId=${company.id}`)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-            Open an Order
-          </button>
+          {hasCapability('jobs.manage') && (
+            <button onClick={() => navigate(`/jobs/new?clientId=${company.id}`)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+              Open an Order
+            </button>
+          )}
         </div>
         {orders.length === 0 ? (
           <p className="text-sm text-gray-500">No orders yet for this company.</p>

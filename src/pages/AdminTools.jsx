@@ -6,7 +6,7 @@ import {
   getCandidates, getJobs, getAssignments, getTimesheets
 } from '@/utils/storage';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
-import { useAuth } from '@/context/AuthContext.jsx';
+import { useCapabilities } from '@/lib/capabilities';
 import { clearSupabasePipeline, reconcilePipeline, clearSupabaseAssignments, reconcileAssignments, clearSupabaseTimesheets, reconcileTimesheets, clearSupabaseInvoices, reconcileInvoices } from '@/lib/pipeline';
 
 const SEV_STYLE = {
@@ -17,11 +17,12 @@ const SEV_STYLE = {
 export default function AdminTools() {
   const navigate = useNavigate();
   const { addToast } = useToasts();
-  // Slice 7: the demo reset is an ADMIN action — only admins see a
-  // working reset button. (The route stays open for viewing; a non-admin
-  // triggering the reset would be denied by RLS at the Supabase step.)
-  const { role } = useAuth();
-  const canReset = role === 'admin';
+  // Slice 7: the demo reset is a demo.reset action — only roles holding it
+  // (admin by default) see a working reset button. (The route stays open
+  // for viewing; a non-admin triggering the reset would be denied by RLS
+  // at the Supabase step.)
+  const { hasCapability } = useCapabilities();
+  const canReset = hasCapability('demo.reset');
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [report, setReport] = useState(null);

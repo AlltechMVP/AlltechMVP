@@ -9,6 +9,7 @@ import {
   fetchJobs, fetchApplications, fetchPersons, syncCandidateToSupabase, reconcilePipeline, isRlsDenied,
 } from '@/lib/pipeline';
 import { useAuth } from '@/context/AuthContext.jsx';
+import { useCapabilities } from '@/lib/capabilities';
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty, AccessDenied } from '@/components/ui';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
@@ -44,6 +45,10 @@ export default function JobCandidates() {
   const navigate = useNavigate();
   const { addToast } = useToasts();
   const { session } = useAuth();
+  // Slice 7: Quick Add Candidate is a candidates.quickadd action (all
+  // internal staff by default). This route is auth-only, so the button is
+  // hidden from client/candidate users.
+  const { hasCapability } = useCapabilities();
   const [statusFilter, setStatusFilter] = useState('All');
   const [data, setData] = useState([]);
   const [job, setJob] = useState(null);
@@ -245,12 +250,14 @@ export default function JobCandidates() {
         >
           {FILTER_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <button
-          onClick={() => setQuickAddOpen(true)}
-          className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
-        >
-          Quick Add Candidate
-        </button>
+        {hasCapability('candidates.quickadd') && (
+          <button
+            onClick={() => setQuickAddOpen(true)}
+            className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+          >
+            Quick Add Candidate
+          </button>
+        )}
       </div>
 
       {/* Submit an existing candidate to this order */}
