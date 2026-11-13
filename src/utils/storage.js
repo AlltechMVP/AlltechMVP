@@ -259,7 +259,101 @@ export function hasAppliedToJob(jobId, email) {
   if (!jobId || !email) return false;
   const normalized = email.trim().toLowerCase();
   return getCandidates().some(
-    (c) => c.submittedJobId === jobId && (c.email || '').trim().toLowerCase() === normalized
+    (c) => String(c.submittedJobId) === String(jobId) && (c.email || '').trim().toLowerCase() === normalized
+  );
+}
+
+// ATS/CRM milestone (slice 6): one candidate profile, one recruiting
+// record per order.
+//
+// The demo store's `candidates` rows are per-(person, job) APPLICATION
+// mirrors: each row carries the recruiting stage for one order
+// (`submittedJobId` + `status`). That is deliberate — every stage write
+// (changeCandidateStatus) keys off the row's job, so collapsing the demo
+// store to one row per email would make a stage change on one order
+// overwrite the stage on another order. The PERSON registry is the
+// shared store: `findOrCreatePerson` in pipeline.js finds-or-creates the
+// Supabase `candidates` row by email, so one email stays one person with
+// one `applications` row per order. The helpers below keep the demo side
+// consistent with that: identity is found-or-created by email, and each
+// submission creates only the per-order application mirror.
+
+// First demo row for an email (the person anchor for that email).
+export function findCandidateByEmail(email) {
+  const normalized = (email || '').trim().toLowerCase();
+  if (!normalized) return null;
+  return getCandidates().find((c) => (c.email || '').trim().toLowerCase() === normalized) || null;
+}
+
+// Quick Add Candidate: create a candidate RECORD only — no application,
+// no login access (login access is provisioned separately, never by
+// Quick Add). Find-or-create by email: if a person with this email
+// already exists, return the existing row instead of creating a duplicate.
+export function createCandidate({ name, email, phone } = {}) {
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  if (!normalizedEmail || !(name || '').trim()) return null;
+  const existing = findCandidateByEmail(normalizedEmail);
+  if (existing) return { candidate: existing, alreadyExists: true };
+  const timestamp = now();
+  const candidate = {
+    id: uid(),
+    name: name.trim(),
+    email: normalizedEmail,
+    phone: (phone || '').trim(),
+    status: 'Applied',
+    submittedJobId: null,
+    statusHistory: [{ at: timestamp, from: 'New', to: 'Applied', by: normalizedEmail, note: 'Candidate record created' }],
+    lastActionAt: timestamp,
+  };
+  setCandidates([...getCandidates(), candidate]);
+  queuePersonSync(candidate);
+  return { candidate, alreadyExists: false };
+}
+
+// Submit an EXISTING candidate (demo person row) to an order. Creates the
+// per-order application mirror for (person, job) with its own stage;
+// returns the existing mirror when the candidate is already on this order.
+export function submitCandidateToJob(candidateId, jobId, by) {
+  if (!candidateId || !jobId) return null;
+  const rows = getCandidates();
+  const person = rows.find((c) => c.id === candidateId);
+  if (!person) return null;
+  const normalizedEmail = (person.email || '').trim().toLowerCase();
+  const existing = rows.find(
+    (c) => String(c.submittedJobId) === String(jobId) && (c.email || '').trim().toLowerCase() === normalizedEmail
+  );
+  if (existing) return { candidate: existing, alreadySubmitted: true };
+  const timestamp = now();
+  const candidate = {
+    id: uid(),
+    name: person.name,
+    email: normalizedEmail,
+    phone: person.phone || '',
+    status: 'Applied',
+    submittedJobId: jobId,
+    statusHistory: [{ at: timestamp, from: 'New', to: 'Applied', by: by || 'recruiter', note: 'Submitted by recruiter' }],
+    lastActionAt: timestamp,
+  };
+  setCandidates([...rows, candidate]);
+  queueSync(candidate);
+  return { candidate, alreadySubmitted: false };
+}
+
+// ATS/CRM milestone: a candidate may hold more than one Active assignment
+// — unrelated assignments are preserved, never auto-ended. Callers use
+// this to WARN (not block) when placing a candidate who already has an
+// Active assignment. Matched by email, since one person can have several
+// demo rows (one per order).
+export function getActiveAssignmentsForPerson(email, excludeAssignmentId) {
+  const normalized = (email || '').trim().toLowerCase();
+  if (!normalized) return [];
+  const ids = new Set(
+    getCandidates()
+      .filter((c) => (c.email || '').trim().toLowerCase() === normalized)
+      .map((c) => c.id)
+  );
+  return getAssignments().filter(
+    (a) => ids.has(a.candidateId) && a.status === 'Active' && a.id !== excludeAssignmentId
   );
 }
 
@@ -272,6 +366,17 @@ function queueSync(demoCandidate) {
   if (!demoCandidate) return;
   import('@/lib/pipeline.js')
     .then((m) => m.syncCandidateToSupabase(demoCandidate))
+    .catch(() => {});
+}
+
+// ATS/CRM milestone (slice 6): same pattern for a candidate RECORD with no
+// application yet (Quick Add). Ensures the person exists in the shared
+// store so other sessions can find them before they are submitted to an
+// order. Never throws; the demo write never waits on it.
+function queuePersonSync(demoCandidate) {
+  if (!demoCandidate) return;
+  import('@/lib/pipeline.js')
+    .then((m) => m.syncPersonToSupabase(demoCandidate))
     .catch(() => {});
 }
 
@@ -447,16 +552,23 @@ export function convertCompanyToClient(clientId, by) {
 export function applyToJob(jobId, { name, email, phone } = {}, by) {
   const normalizedEmail = (email || '').trim().toLowerCase();
   if (!jobId || !normalizedEmail || !(name || '').trim()) return null;
+  // Duplicate for THIS job?
   const existing = getCandidates().find(
-    (c) => c.submittedJobId === jobId && (c.email || '').trim().toLowerCase() === normalizedEmail
+    (c) => String(c.submittedJobId) === String(jobId) && (c.email || '').trim().toLowerCase() === normalizedEmail
   );
   if (existing) return { candidate: existing, alreadyApplied: true };
+  // Find-or-create the PERSON by email: reuse the existing person's
+  // identity (phone) instead of creating a second person. The new demo
+  // row is the per-order application mirror for (person, job); the shared
+  // store keeps one person row per email (findOrCreatePerson in
+  // pipeline.js) with one application row per order.
+  const person = findCandidateByEmail(normalizedEmail);
   const timestamp = now();
   const candidate = {
     id: uid(),
     name: name.trim(),
     email: normalizedEmail,
-    phone: (phone || '').trim(),
+    phone: (phone || '').trim() || (person?.phone || ''),
     status: 'Applied',
     submittedJobId: jobId,
     statusHistory: [{ at: timestamp, from: 'New', to: 'Applied', by: by || normalizedEmail, note: 'Applied' }],
@@ -798,15 +910,11 @@ export function syncCandidateFromAssignment(assignment) {
   let statusMsg = null;
 
   if (assignment.status === 'Active') {
-    assignments.forEach(a => {
-      if (a.id !== assignment.id && a.candidateId === assignment.candidateId && a.status === 'Active') {
-        a.status = 'Ended';
-        a.notes = (a.notes ? a.notes + ' | ' : '') + 'Auto-ended: new active assignment created.';
-        a.updatedAt = timestamp;
-      }
-    });
-    setAssignments(assignments);
-
+    // ATS/CRM milestone: preserve unrelated Active assignments. Creating
+    // a new Active assignment NO LONGER ends the candidate's other Active
+    // assignments (the old blanket auto-end is removed). Callers warn
+    // when the candidate already has an Active assignment instead —
+    // see getActiveAssignmentsForPerson() — but never block or end.
     candidates[idx].status = 'Active Assignment';
     candidates[idx].activeAssignmentId = assignment.id;
     candidates[idx].currentJobId = assignment.jobId;

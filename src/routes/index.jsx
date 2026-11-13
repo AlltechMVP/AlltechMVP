@@ -36,6 +36,7 @@ const TimesheetForm = lazy(() => import('@/pages/timekeeping/Form.jsx'));
 const PayrollQueue = lazy(() => import('@/pages/payroll/Queue.jsx'));
 const AdminTools = lazy(() => import('@/pages/AdminTools.jsx'));
 const CandidatesList = lazy(() => import('@/pages/candidates/List.jsx'));
+const CandidateSearch = lazy(() => import('@/pages/candidates/Search.jsx'));
 const CandidateDetail = lazy(() => import('@/pages/candidates/Detail.jsx'));
 const JobCandidates = lazy(() => import('@/pages/jobs/Candidates.jsx'));
 const InvoicesList = lazy(() => import('@/pages/invoices/List.jsx'));
@@ -441,6 +442,14 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={[]}>
                 <CandidatesList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="candidates/search"
+            element={
+              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+                <CandidateSearch />
               </ProtectedRoute>
             }
           />

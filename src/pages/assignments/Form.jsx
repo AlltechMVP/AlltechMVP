@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   getCandidates, getJobs, getAssignments, setAssignments,
-  getAssignmentById, uid, now, syncCandidateFromAssignment,
-  getAssignmentPrefill, clearAssignmentPrefill
+  getAssignmentById, uid, now, syncCandidateFromAssignment, normalizeStatus,
+  getAssignmentPrefill, clearAssignmentPrefill, getActiveAssignmentsForPerson,
 } from '@/utils/storage';
-import { syncAssignmentToSupabase, fetchAssignment } from '@/lib/pipeline';
+import { syncAssignmentToSupabase, fetchAssignment, fetchJobs } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 export default function AssignmentForm() {
@@ -30,7 +30,28 @@ export default function AssignmentForm() {
   useEffect(() => {
     (async () => {
       setCandidates(getCandidates());
-      setJobs(getJobs());
+      // ATS/CRM milestone (slice 6): the demo store is the job list, but
+      // the seeded jobs' pay rates live on the shared store (backfilled
+      // from real assignment rates). Merge them in by legacy id so the
+      // rate pre-fill below works for seeded orders too.
+      let demoJobs = getJobs();
+      try {
+        const shared = await fetchJobs();
+        const byLegacy = new Map(shared.map((j) => [String(j.legacyId), j]));
+        demoJobs = demoJobs.map((j) => {
+          const sup = byLegacy.get(String(j.id));
+          if (!sup) return j;
+          return {
+            ...j,
+            rate: j.rate ?? sup.rate,
+            payRate: j.payRate ?? sup.payRate,
+            requirements: j.requirements || sup.requirements || '',
+          };
+        });
+      } catch {
+        // Shared store unreachable — demo rates only; manual entry still works.
+      }
+      setJobs(demoJobs);
 
       if (isEdit) {
         // Resolve the demo row: by demo id, then by its Supabase id, then
@@ -99,6 +120,56 @@ export default function AssignmentForm() {
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
+  // ATS/CRM milestone (slice 6): pre-fill the rates from the selected
+  // order — bill from the job's rate, pay from its pay_rate — when the
+  // fields are still empty. The user can still override both.
+  const handleJobChange = (jobIdValue) => {
+    const selected = jobs.find((j) => String(j.id) === String(jobIdValue));
+    setForm((prev) => ({
+      ...prev,
+      jobId: jobIdValue,
+      payRate: prev.payRate === '' && selected?.payRate != null ? String(selected.payRate) : prev.payRate,
+      billRate: prev.billRate === '' && selected?.rate != null ? String(selected.rate) : prev.billRate,
+    }));
+  };
+
+  // Candidates submitted to the selected order first (Hired first), then
+  // everyone else — one row per person (deduped by email), so a candidate
+  // on two orders appears once.
+  const STAGE_RANK = { Hired: 0, Submitted: 1, Interview: 2, Reviewed: 3, Applied: 4 };
+  const candidateOptions = useMemo(() => {
+    const onJob = (c) => form.jobId
+      ? (String(c.submittedJobId) === String(form.jobId) || String(c.currentJobId) === String(form.jobId))
+      : false;
+    const ordered = [...candidates].sort((a, b) => {
+      const aOn = onJob(a) ? 0 : 1;
+      const bOn = onJob(b) ? 0 : 1;
+      if (aOn !== bOn) return aOn - bOn;
+      return (STAGE_RANK[normalizeStatus(a.status)] ?? 5) - (STAGE_RANK[normalizeStatus(b.status)] ?? 5);
+    });
+    const byEmail = new Map();
+    for (const c of ordered) {
+      const email = (c.email || '').trim().toLowerCase();
+      if (email) {
+        if (!byEmail.has(email)) byEmail.set(email, c);
+      } else if (!byEmail.has(c.id)) {
+        byEmail.set(c.id, c);
+      }
+    }
+    return [...byEmail.values()];
+  }, [candidates, form.jobId]);
+
+  // ATS/CRM milestone (slice 6): warn — don't block, don't end — when the
+  // selected candidate already has an Active assignment. The other
+  // assignment is preserved.
+  const selectedCandidate = candidates.find((c) => c.id === form.candidateId) || null;
+  const otherActive = selectedCandidate
+    ? getActiveAssignmentsForPerson(selectedCandidate.email, isEdit ? id : null)
+    : [];
+  const otherActiveJob = otherActive.length > 0
+    ? jobs.find((j) => String(j.id) === String(otherActive[0].jobId))
+    : null;
+
   const handleSave = (e) => {
     e.preventDefault();
 
@@ -164,10 +235,13 @@ export default function AssignmentForm() {
     // Sync the assignment row itself to Supabase (fire-and-forget; the demo
     // write above already succeeded).
     if (savedAssignment) syncAssignmentToSupabase(savedAssignment);
+    const preservedNote = otherActive.length > 0
+      ? ` Note: ${selectedCandidate?.name || 'This candidate'} already had an Active assignment (${otherActiveJob?.title || 'another order'}) — it was preserved, not ended.`
+      : '';
     if (syncResult) {
-      addToast({ type: 'success', message: `Assignment saved — candidate status updated to ${syncResult}.` });
+      addToast({ type: 'success', message: `Assignment saved — candidate status updated to ${syncResult}.${preservedNote}` });
     } else {
-      addToast({ type: 'success', message: isEdit ? 'Assignment updated.' : 'Assignment created.' });
+      addToast({ type: 'success', message: `${isEdit ? 'Assignment updated.' : 'Assignment created.'}${preservedNote}` });
     }
     navigate('/assignments');
   };
@@ -184,13 +258,23 @@ export default function AssignmentForm() {
           <label className={labelCls}>Candidate *</label>
           <select value={form.candidateId} onChange={e => update('candidateId', e.target.value)} className={inputCls}>
             <option value="">Select a candidate</option>
-            {candidates.map(c => <option key={c.id} value={c.id}>{c.name} ({c.email})</option>)}
+            {candidateOptions.map(c => <option key={c.id} value={c.id}>{c.name} ({c.email}){form.jobId && (String(c.submittedJobId) === String(form.jobId) || String(c.currentJobId) === String(form.jobId)) ? ' — on this order' : ''}</option>)}
           </select>
+          {form.jobId && candidateOptions.some((c) => String(c.submittedJobId) === String(form.jobId) || String(c.currentJobId) === String(form.jobId)) && (
+            <p className="text-xs text-gray-500 mt-1">Candidates submitted to this order are listed first.</p>
+          )}
+          {otherActive.length > 0 && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mt-2">
+              Heads up: {selectedCandidate?.name} already has an Active assignment
+              {otherActiveJob ? ` (${otherActiveJob.title})` : ''}. Creating this one will keep both —
+              the existing assignment will NOT be ended.
+            </p>
+          )}
         </div>
 
         <div>
           <label className={labelCls}>Job *</label>
-          <select value={form.jobId} onChange={e => update('jobId', e.target.value)} className={inputCls}>
+          <select value={form.jobId} onChange={e => handleJobChange(e.target.value)} className={inputCls}>
             <option value="">Select a job</option>
             {jobs.map(j => <option key={j.id} value={j.id}>{j.title} - {j.client_name || j.client || 'N/A'}</option>)}
           </select>
