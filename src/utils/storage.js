@@ -73,6 +73,33 @@ export function postPayment(payment) {
   return payment;
 }
 
+// Paid, uninvoiced timesheets that cannot be billed because no bill rate
+// resolves for them (missing assignment/job/client, or no rate on the
+// assignment or its job). Invoice generation skips these instead of
+// silently creating $0 lines; the payroll queue surfaces them so the
+// missing rate can be fixed.
+export function getUnbillablePaidTimesheets() {
+  const billable = getTimesheets().filter(
+    (t) => t.payrollStatus === 'Paid' && !t.invoiceId && (t.totalHours || 0) > 0
+  );
+  const missing = [];
+  billable.forEach((t) => {
+    const assignment = getAssignmentById(t.assignmentId);
+    const job = assignment ? getJobById(assignment.jobId) : null;
+    const candidate = assignment ? getCandidateById(assignment.candidateId) : null;
+    const label = `${candidate ? candidate.name : 'Candidate'} - ${job ? job.title : 'Unknown job'}`;
+    if (!assignment || !job || !job.clientId) {
+      missing.push({ timesheetId: t.id, label, reason: 'missing assignment, job, or client' });
+      return;
+    }
+    const rate = assignment.billRate || job.rate || 0;
+    if (!rate) {
+      missing.push({ timesheetId: t.id, label, reason: 'no bill rate on the assignment or job' });
+    }
+  });
+  return missing;
+}
+
 export function createInvoicesFromPaidTimesheets() {
   const today = new Date();
   const issuedAt = today.toISOString().slice(0, 10);
@@ -80,8 +107,12 @@ export function createInvoicesFromPaidTimesheets() {
   const dueDate = due.toISOString().slice(0, 10);
   const year = today.getFullYear();
 
+  // Slice 1 (ATS/CRM milestone): unbillable timesheets are reported, not billed.
+  const missingRates = getUnbillablePaidTimesheets();
+  const missingIds = new Set(missingRates.map((m) => m.timesheetId));
+
   const billable = getTimesheets().filter(
-    (t) => t.payrollStatus === 'Paid' && !t.invoiceId && (t.totalHours || 0) > 0
+    (t) => t.payrollStatus === 'Paid' && !t.invoiceId && (t.totalHours || 0) > 0 && !missingIds.has(t.id)
   );
 
   const byClient = {};
@@ -106,7 +137,11 @@ export function createInvoicesFromPaidTimesheets() {
   });
 
   const groups = Object.values(byClient).filter((g) => g.items.length > 0);
-  if (groups.length === 0) return [];
+  if (groups.length === 0) {
+    const none = [];
+    none.missingRates = missingRates;
+    return none;
+  }
 
   const invoices = getInvoices();
   let maxNum = 0;
@@ -132,7 +167,9 @@ export function createInvoicesFromPaidTimesheets() {
       amountPaid: 0,
       balanceDue: total,
       status: 'Draft',
-      lineItems: g.items.map(({ description, hours, rate, amount }) => ({ description, hours, rate, amount })),
+      // Slice 1 (ATS/CRM milestone): keep timesheetId on each stored line
+      // item so a draft line links back to its source timesheet.
+      lineItems: g.items.map(({ timesheetId, description, hours, rate, amount }) => ({ timesheetId, description, hours, rate, amount })),
       createdAt: now(),
       updatedAt: now(),
     };
@@ -146,6 +183,7 @@ export function createInvoicesFromPaidTimesheets() {
 
   setInvoices(invoices);
   setTimesheets(allTimesheets);
+  created.missingRates = missingRates;
   return created;
 }
 

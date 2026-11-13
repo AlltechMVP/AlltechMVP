@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   getTimesheets, setTimesheets, getAssignmentById, getCandidateById, getJobById,
-  createInvoicesFromPaidTimesheets,
+  createInvoicesFromPaidTimesheets, getUnbillablePaidTimesheets,
   now
 } from '@/utils/storage';
 import { fetchTimesheets, reconcileTimesheets, syncTimesheetToSupabase, syncInvoiceToSupabase, isRlsDenied } from '@/lib/pipeline';
@@ -153,10 +153,19 @@ export default function PayrollQueue() {
 
   const billableCount = data.filter(t => t.payrollStatus === 'Paid' && !t.invoiceId && (t.totalHours || 0) > 0).length;
 
+  // Slice 1 (ATS/CRM milestone): paid timesheets that cannot be invoiced
+  // because no bill rate resolves — shown before the user generates a draft.
+  const missingRates = useMemo(() => getUnbillablePaidTimesheets(), [data]);
+
   const createInvoices = async () => {
     const created = createInvoicesFromPaidTimesheets();
+    const missing = created.missingRates || [];
     if (created.length === 0) {
-      addToast({ type: 'info', message: 'No paid timesheets ready to invoice.' });
+      if (missing.length > 0) {
+        addToast({ type: 'info', message: `No invoices created — ${missing.length} paid timesheet${missing.length > 1 ? 's have' : ' has'} no bill rate: ${missing.map((m) => m.label).join('; ')}` });
+      } else {
+        addToast({ type: 'info', message: 'No paid timesheets ready to invoice.' });
+      }
       return;
     }
     // Slice 5: sync the new invoices up FIRST, then the timesheets they
@@ -175,6 +184,9 @@ export default function PayrollQueue() {
     setData(getTimesheets().map(mapDemoRow));
     const summary = created.map(i => `${i.invoiceNumber} (${i.clientName}, $${i.total.toFixed(2)})`).join(', ');
     addToast({ type: 'success', message: `Created ${created.length} invoice${created.length > 1 ? 's' : ''}: ${summary}` });
+    if (missing.length > 0) {
+      addToast({ type: 'info', message: `Skipped ${missing.length} paid timesheet${missing.length > 1 ? 's' : ''} with no bill rate: ${missing.map((m) => m.label).join('; ')}` });
+    }
   };
 
   const rows = useMemo(() => {
@@ -225,6 +237,21 @@ export default function PayrollQueue() {
   return (
     <div className="p-4 max-w-6xl mx-auto">
       <h1 className="text-xl font-semibold mb-4">Payroll Queue</h1>
+
+      <p className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded px-3 py-2 mb-4">
+        Simulated payroll — no real money moves. Marking a timesheet Paid only changes its status; invoices created here are drafts.
+      </p>
+
+      {missingRates.length > 0 && (
+        <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+          <p className="font-medium mb-1">Missing bill rate — {missingRates.length} paid timesheet{missingRates.length > 1 ? 's' : ''} cannot be invoiced yet:</p>
+          <ul className="list-disc list-inside">
+            {missingRates.map((m) => (
+              <li key={m.timesheetId}>{m.label} ({m.reason})</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {usingFallback && (
         <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
