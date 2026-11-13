@@ -694,7 +694,11 @@ export async function clearSupabaseAssignments() {
 
 const CLIENT_SELECT =
   'id,name,industry,location,contact_person,contact_email,billing_email,phone,' +
-  'status,legacy_id,created_at,updated_at';
+  'status,legacy_id';
+// NOTE (Slice 5 fix): the clients table has NO created_at/updated_at
+// columns on either project (live schema), so they are not selected here.
+// Selecting them made every fetchClients() fail with 42703 and broke the
+// whole CRM sync path (the Companies pages fell back to demo data).
 
 const CONTACT_SELECT =
   'id,client_id,name,email,phone,title,is_primary,legacy_id,created_at,updated_at';
@@ -719,8 +723,6 @@ function mapClient(c) {
     billingEmail: c.billing_email || '',
     phone: c.phone || '',
     status: c.status || 'Active',
-    createdAt: c.created_at || null,
-    updatedAt: c.updated_at || null,
   };
 }
 
@@ -833,6 +835,9 @@ function clientPayload(demo) {
   // billing_email / phone are not carried by demo rows: only send them
   // when the demo row has them, so an update never nulls a value that was
   // set elsewhere.
+  // NOTE (Slice 5 fix): the clients table has no updated_at column (live
+  // schema on both projects) — sending it made every client INSERT fail
+  // with PGRST204, so new companies never reached Supabase.
   return {
     name: demo.name,
     industry: demo.industry || null,
@@ -843,7 +848,6 @@ function clientPayload(demo) {
     ...(demo.phone ? { phone: demo.phone } : {}),
     status: demo.status || 'Active',
     legacy_id: String(demo.id),
-    updated_at: demo.updatedAt || new Date().toISOString(),
   };
 }
 
@@ -887,6 +891,10 @@ function followUpPayload(demo, clientSupabaseId, contactSupabaseId, activitySupa
 }
 
 function jobPayload(demo, clientSupabaseId) {
+  // NOTE (Slice 5 fix): the jobs table has created_at (DB default) but no
+  // updated_at column (live schema on both projects) — sending it made
+  // every job INSERT fail with PGRST204, so new orders never reached
+  // Supabase.
   return {
     client_id: clientSupabaseId,
     title: demo.title,
@@ -897,7 +905,6 @@ function jobPayload(demo, clientSupabaseId) {
     openings: demo.openings ?? 1,
     status: demo.status || 'Open',
     legacy_id: String(demo.id),
-    updated_at: demo.updatedAt || new Date().toISOString(),
   };
 }
 
@@ -942,7 +949,10 @@ function stampDemoJob(demo, supabaseId) {
 }
 
 // Sync one demo client row to Supabase. Never throws. Returns
-// 'demo' | 'supabase' | 'created' | 'skipped' | 'failed'.
+// 'demo' | 'created' | 'skipped' | 'failed'.
+// NOTE (Slice 5 fix): the clients table has no updated_at, so there is no
+// server timestamp to compare for last-write-wins. The demo store is the
+// canonical write path, so the demo row always wins on sync.
 export async function syncClientToSupabase(demo) {
   try {
     if (!demo || !demo.name) return 'skipped';
@@ -963,24 +973,12 @@ export async function syncClientToSupabase(demo) {
       return 'created';
     }
     stampDemoClient(demo, row.id);
-    const demoTime = Date.parse(demo.updatedAt || 0) || 0;
-    const rowTime = Date.parse(row.updated_at || 0) || 0;
-    if (demoTime >= rowTime) {
-      const { error } = await supabase
-        .from('clients')
-        .update(clientPayload(demo))
-        .eq('id', row.id);
-      if (error) return 'failed';
-      return 'demo';
-    }
-    const rows = getClients();
-    const idx = rows.findIndex((c) => c.id === demo.id);
-    if (idx !== -1) {
-      const m = mapClient(row);
-      rows[idx] = { ...rows[idx], ...m, id: rows[idx].id, supabaseClientId: row.id };
-      setClients(rows);
-    }
-    return 'supabase';
+    const { error } = await supabase
+      .from('clients')
+      .update(clientPayload(demo))
+      .eq('id', row.id);
+    if (error) return 'failed';
+    return 'demo';
   } catch (err) {
     if (import.meta.env.MODE !== 'production') {
       // eslint-disable-next-line no-console
@@ -1146,35 +1144,15 @@ export async function syncJobToSupabase(demo) {
       return 'created';
     }
     stampDemoJob(demo, row.id);
-    const demoTime = Date.parse(demo.updatedAt || 0) || 0;
-    const rowTime = Date.parse(row.updated_at || 0) || 0;
-    if (demoTime >= rowTime) {
-      const { error } = await supabase
-        .from('jobs')
-        .update(jobPayload(demo, clientSupabaseId))
-        .eq('id', row.id);
-      if (error) return 'failed';
-      return 'demo';
-    }
-    const jobs = getJobs();
-    const idx = jobs.findIndex((j) => j.id === demo.id);
-    if (idx !== -1) {
-      const m = mapJob(row);
-      jobs[idx] = {
-        ...jobs[idx],
-        title: m.title,
-        location: m.location,
-        rate: m.rate,
-        payRate: m.payRate,
-        requirements: m.requirements,
-        openings: m.openings,
-        status: m.status,
-        client_name: m.client_name,
-        supabaseJobId: row.id,
-      };
-      setJobs(jobs);
-    }
-    return 'supabase';
+    // NOTE (Slice 5 fix): the jobs table has no updated_at, so there is
+    // no server timestamp to compare for last-write-wins. The demo store
+    // is the canonical write path, so the demo row always wins on sync.
+    const { error } = await supabase
+      .from('jobs')
+      .update(jobPayload(demo, clientSupabaseId))
+      .eq('id', row.id);
+    if (error) return 'failed';
+    return 'demo';
   } catch (err) {
     if (import.meta.env.MODE !== 'production') {
       // eslint-disable-next-line no-console
@@ -1212,8 +1190,6 @@ export async function reconcileClients() {
         billingEmail: c.billingEmail,
         phone: c.phone,
         status: c.status,
-        createdAt: c.createdAt,
-        updatedAt: c.updatedAt,
         supabaseClientId: c.supabaseClientId,
       });
     }
