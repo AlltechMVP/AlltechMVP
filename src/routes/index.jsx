@@ -10,7 +10,6 @@ import Logout from '@/pages/Logout.jsx';
 import ProtectedRoute from '@/components/protected/ProtectedRoute.jsx';
 import Loader from '@/components/ui/Loader.jsx';
 import { flagEnabled } from '@/config/flags.js';
-import { INTERNAL_ROLES } from '@/utils/roleUtils';
 
 const RecruiterBoard = lazy(() => import('@/pages/recruiter/Board.jsx'));
 const ClientJobs = lazy(() => import('@/pages/client/Jobs.jsx'));
@@ -61,6 +60,7 @@ const TimecardEntry = lazy(() => import('@/pages/TimecardEntry.jsx'));
 const ImportExportCenter = lazy(() => import('@/pages/ImportExportCenter.jsx'));
 const NotificationCenter = lazy(() => import('@/pages/NotificationCenter.jsx'));
 const RoleManager = lazy(() => import('@/admin/RoleManager.jsx'));
+const Permissions = lazy(() => import('@/pages/admin/Permissions.jsx'));
 
 export default function AppRoutes() {
   return (
@@ -82,7 +82,7 @@ export default function AppRoutes() {
           <Route
             path="recruiter"
             element={
-              <ProtectedRoute allowedRoles={["recruiter"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.recruiter.view"]}>
                 <RecruiterDashboard />
               </ProtectedRoute>
             }
@@ -90,7 +90,7 @@ export default function AppRoutes() {
           <Route
             path="recruiter/board"
             element={
-              <ProtectedRoute allowedRoles={["recruiter"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.recruiter.view"]}>
                 <RecruiterBoard />
               </ProtectedRoute>
             }
@@ -100,7 +100,7 @@ export default function AppRoutes() {
           <Route
             path="client"
             element={
-              <ProtectedRoute allowedRoles={["client"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.client.view"]}>
                 <ClientDashboard />
               </ProtectedRoute>
             }
@@ -108,7 +108,7 @@ export default function AppRoutes() {
           <Route
             path="client/approvals"
             element={
-              <ProtectedRoute allowedRoles={["client"]}>
+              <ProtectedRoute allowedCapabilities={["pipeline.decide_client"]}>
                 <ClientApprovals />
               </ProtectedRoute>
             }
@@ -116,7 +116,7 @@ export default function AppRoutes() {
           <Route
             path="client/jobs"
             element={
-              <ProtectedRoute allowedRoles={["client"]}>
+              <ProtectedRoute allowedCapabilities={["client.portal.view"]}>
                 <ClientJobs />
               </ProtectedRoute>
             }
@@ -124,7 +124,7 @@ export default function AppRoutes() {
           <Route
             path="client/jobs/:jobId/candidates"
             element={
-              <ProtectedRoute allowedRoles={["client"]}>
+              <ProtectedRoute allowedCapabilities={["client.portal.view"]}>
                 <ClientCandidates />
               </ProtectedRoute>
             }
@@ -132,7 +132,7 @@ export default function AppRoutes() {
           <Route
             path="client/timecards"
             element={
-              <ProtectedRoute allowedRoles={["client"]}>
+              <ProtectedRoute allowedCapabilities={["timesheets.approve_client"]}>
                 <ClientTimecards />
               </ProtectedRoute>
             }
@@ -142,7 +142,7 @@ export default function AppRoutes() {
           <Route
             path="candidate"
             element={
-              <ProtectedRoute allowedRoles={["candidate"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.candidate.view"]}>
                 <CandidateDashboard />
               </ProtectedRoute>
             }
@@ -152,7 +152,7 @@ export default function AppRoutes() {
           <Route
             path="admin"
             element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.admin.view"]}>
                 <AdminDashboard />
               </ProtectedRoute>
             }
@@ -162,7 +162,7 @@ export default function AppRoutes() {
           <Route
             path="jobs"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <JobsList />
               </ProtectedRoute>
             }
@@ -170,7 +170,7 @@ export default function AppRoutes() {
           <Route
             path="jobs/new"
             element={
-              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+              <ProtectedRoute allowedCapabilities={["jobs.manage"]}>
                 <JobForm />
               </ProtectedRoute>
             }
@@ -178,7 +178,7 @@ export default function AppRoutes() {
           <Route
             path="jobs/:id/edit"
             element={
-              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+              <ProtectedRoute allowedCapabilities={["jobs.manage"]}>
                 <JobForm />
               </ProtectedRoute>
             }
@@ -188,7 +188,7 @@ export default function AppRoutes() {
           <Route
             path="companies"
             element={
-              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+              <ProtectedRoute allowedCapabilities={["crm.manage"]}>
                 <CompaniesList />
               </ProtectedRoute>
             }
@@ -196,7 +196,7 @@ export default function AppRoutes() {
           <Route
             path="companies/new"
             element={
-              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+              <ProtectedRoute allowedCapabilities={["crm.manage"]}>
                 <CompaniesNew />
               </ProtectedRoute>
             }
@@ -204,7 +204,7 @@ export default function AppRoutes() {
           <Route
             path="companies/:id"
             element={
-              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+              <ProtectedRoute allowedCapabilities={["crm.manage"]}>
                 <CompanyDetail />
               </ProtectedRoute>
             }
@@ -214,7 +214,7 @@ export default function AppRoutes() {
           <Route
             path="ceo"
             element={
-              <ProtectedRoute allowedRoles={["ceo","admin"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.ceo.view"]}>
                 <CEODashboard />
               </ProtectedRoute>
             }
@@ -222,7 +222,7 @@ export default function AppRoutes() {
           <Route
             path="cfo"
             element={
-              <ProtectedRoute allowedRoles={["cfo","admin"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.cfo.view"]}>
                 <CFODashboard />
               </ProtectedRoute>
             }
@@ -232,7 +232,7 @@ export default function AppRoutes() {
           <Route
             path="director"
             element={
-              <ProtectedRoute allowedRoles={["director","admin"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.director.view"]}>
                 <DirectorDashboard />
               </ProtectedRoute>
             }
@@ -240,7 +240,7 @@ export default function AppRoutes() {
           <Route
             path="branch-manager"
             element={
-              <ProtectedRoute allowedRoles={["branch-manager","admin"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.branch_manager.view"]}>
                 <BranchManagerDashboard />
               </ProtectedRoute>
             }
@@ -248,7 +248,7 @@ export default function AppRoutes() {
           <Route
             path="sales"
             element={
-              <ProtectedRoute allowedRoles={["sales-rep","admin"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.sales_rep.view"]}>
                 <SalesPipeline />
               </ProtectedRoute>
             }
@@ -256,7 +256,7 @@ export default function AppRoutes() {
           <Route
             path="sales-manager"
             element={
-              <ProtectedRoute allowedRoles={["sales-manager","admin"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.sales_manager.view"]}>
                 <SalesManagerDashboard />
               </ProtectedRoute>
             }
@@ -264,7 +264,7 @@ export default function AppRoutes() {
           <Route
             path="finance/reports"
             element={
-              <ProtectedRoute allowedRoles={["backoffice","admin"]}>
+              <ProtectedRoute allowedCapabilities={["dashboard.backoffice.view"]}>
                 <BackOfficeDashboard />
               </ProtectedRoute>
             }
@@ -274,7 +274,7 @@ export default function AppRoutes() {
           <Route
             path="scheduler"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <Scheduler />
               </ProtectedRoute>
             }
@@ -282,7 +282,7 @@ export default function AppRoutes() {
           <Route
             path="settings/account"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <AccountSettings />
               </ProtectedRoute>
             }
@@ -290,7 +290,7 @@ export default function AppRoutes() {
           <Route
             path="admin/reports"
             element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedCapabilities={["reports.view", "dashboard.admin.view"]}>
                 <AdminReports />
               </ProtectedRoute>
             }
@@ -298,15 +298,23 @@ export default function AppRoutes() {
           <Route
             path="admin/roles"
             element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedCapabilities={["roles.assign"]}>
                 <RoleManager />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin/permissions"
+            element={
+              <ProtectedRoute allowedCapabilities={["permissions.manage"]}>
+                <Permissions />
               </ProtectedRoute>
             }
           />
           <Route
             path="assignments/tracker"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <AssignmentTracker />
               </ProtectedRoute>
             }
@@ -314,7 +322,7 @@ export default function AppRoutes() {
           <Route
             path="settings/billing"
             element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedCapabilities={["settings.manage"]}>
                 <BillingSettings />
               </ProtectedRoute>
             }
@@ -322,7 +330,7 @@ export default function AppRoutes() {
           <Route
             path="candidate/jobs"
             element={
-              <ProtectedRoute allowedRoles={["candidate"]}>
+              <ProtectedRoute allowedCapabilities={["candidate.apply", "dashboard.candidate.view"]}>
                 <CandidateJobBoard />
               </ProtectedRoute>
             }
@@ -330,7 +338,7 @@ export default function AppRoutes() {
           <Route
             path="client/metrics"
             element={
-              <ProtectedRoute allowedRoles={["client"]}>
+              <ProtectedRoute allowedCapabilities={["client.portal.view"]}>
                 <ClientMetrics />
               </ProtectedRoute>
             }
@@ -338,7 +346,7 @@ export default function AppRoutes() {
           <Route
             path="client/portal"
             element={
-              <ProtectedRoute allowedRoles={["client"]}>
+              <ProtectedRoute allowedCapabilities={["client.portal.view"]}>
                 <ClientPortal />
               </ProtectedRoute>
             }
@@ -346,7 +354,7 @@ export default function AppRoutes() {
           <Route
             path="settings/compliance"
             element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedCapabilities={["settings.manage"]}>
                 <ComplianceSettings />
               </ProtectedRoute>
             }
@@ -354,7 +362,7 @@ export default function AppRoutes() {
           <Route
             path="payroll"
             element={
-              <ProtectedRoute allowedRoles={["backoffice"]}>
+              <ProtectedRoute allowedCapabilities={["payroll.view", "payroll.prepare"]}>
                 <PayrollView />
               </ProtectedRoute>
             }
@@ -370,7 +378,7 @@ export default function AppRoutes() {
           <Route
             path="tools/import-export"
             element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedCapabilities={["settings.manage"]}>
                 <ImportExportCenter />
               </ProtectedRoute>
             }
@@ -378,7 +386,7 @@ export default function AppRoutes() {
           <Route
             path="notifications"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <NotificationCenter />
               </ProtectedRoute>
             }
@@ -388,7 +396,7 @@ export default function AppRoutes() {
           <Route
             path="assignments"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <AssignmentsList />
               </ProtectedRoute>
             }
@@ -396,7 +404,7 @@ export default function AppRoutes() {
           <Route
             path="assignments/new"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <AssignmentForm />
               </ProtectedRoute>
             }
@@ -404,7 +412,7 @@ export default function AppRoutes() {
           <Route
             path="assignments/:id"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <AssignmentForm />
               </ProtectedRoute>
             }
@@ -414,7 +422,7 @@ export default function AppRoutes() {
           <Route
             path="timekeeping"
             element={
-              <ProtectedRoute allowedRoles={["recruiter","backoffice","admin"]}>
+              <ProtectedRoute allowedCapabilities={["timesheets.approve_internal"]}>
                 <TimesheetsList />
               </ProtectedRoute>
             }
@@ -422,7 +430,7 @@ export default function AppRoutes() {
           <Route
             path="timekeeping/new"
             element={
-              <ProtectedRoute allowedRoles={["recruiter","backoffice","admin"]}>
+              <ProtectedRoute allowedCapabilities={["timesheets.approve_internal"]}>
                 <TimesheetForm />
               </ProtectedRoute>
             }
@@ -430,7 +438,7 @@ export default function AppRoutes() {
           <Route
             path="timekeeping/:id"
             element={
-              <ProtectedRoute allowedRoles={["recruiter","backoffice","admin"]}>
+              <ProtectedRoute allowedCapabilities={["timesheets.approve_internal"]}>
                 <TimesheetForm />
               </ProtectedRoute>
             }
@@ -440,7 +448,7 @@ export default function AppRoutes() {
           <Route
             path="candidates"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <CandidatesList />
               </ProtectedRoute>
             }
@@ -448,7 +456,7 @@ export default function AppRoutes() {
           <Route
             path="candidates/search"
             element={
-              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+              <ProtectedRoute allowedCapabilities={["candidates.search"]}>
                 <CandidateSearch />
               </ProtectedRoute>
             }
@@ -456,7 +464,7 @@ export default function AppRoutes() {
           <Route
             path="candidates/:id"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <CandidateDetail />
               </ProtectedRoute>
             }
@@ -466,7 +474,7 @@ export default function AppRoutes() {
           <Route
             path="jobs/:jobId/candidates"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <JobCandidates />
               </ProtectedRoute>
             }
@@ -476,7 +484,7 @@ export default function AppRoutes() {
           <Route
             path="payroll-queue"
             element={
-              <ProtectedRoute allowedRoles={["backoffice"]}>
+              <ProtectedRoute allowedCapabilities={["payroll.view", "payroll.prepare"]}>
                 <PayrollQueue />
               </ProtectedRoute>
             }
@@ -486,7 +494,7 @@ export default function AppRoutes() {
           <Route
             path="invoices"
             element={
-              <ProtectedRoute allowedRoles={["backoffice","ceo","cfo","admin","client"]}>
+              <ProtectedRoute allowedCapabilities={["invoices.view"]}>
                 <InvoicesList />
               </ProtectedRoute>
             }
@@ -494,7 +502,7 @@ export default function AppRoutes() {
           <Route
             path="invoices/:id"
             element={
-              <ProtectedRoute allowedRoles={["backoffice","ceo","cfo","admin","client"]}>
+              <ProtectedRoute allowedCapabilities={["invoices.view"]}>
                 <InvoiceView />
               </ProtectedRoute>
             }
@@ -504,7 +512,7 @@ export default function AppRoutes() {
           <Route
             path="ar-aging"
             element={
-              <ProtectedRoute allowedRoles={["backoffice","ceo","cfo","admin","client"]}>
+              <ProtectedRoute allowedCapabilities={["ar.view"]}>
                 <ArAging />
               </ProtectedRoute>
             }
@@ -514,7 +522,7 @@ export default function AppRoutes() {
           <Route
             path="tools"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <AdminTools />
               </ProtectedRoute>
             }
@@ -524,7 +532,7 @@ export default function AppRoutes() {
           <Route
             path="kb"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute allowedCapabilities={[]}>
                 <BrowseKb />
               </ProtectedRoute>
             }

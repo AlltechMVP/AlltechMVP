@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getInvoiceById, getPaymentsForInvoice, postPayment, getInvoices, setInvoices, getPayments, uid, now, getClientById } from '@/utils/storage';
 import { fetchInvoice, fetchPaymentsForInvoice, reconcileInvoices, syncInvoiceToSupabase, syncPaymentToSupabase, isRlsDenied } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
-import { useAuth } from '@/context/AuthContext.jsx';
+import { useCapabilities } from '@/lib/capabilities';
 import { AccessDenied } from '@/components/ui';
 
 const statusBadge = (s) => {
@@ -24,11 +24,12 @@ const statusBadge = (s) => {
 export default function InvoiceView() {
   const { id } = useParams();
   const { addToast } = useToasts();
-  const { role } = useAuth();
-  // Slice 7: sending invoices and posting payments are backoffice-only
-  // actions (UI gating; RLS enforces it on the backend). The route also
-  // admits ceo/cfo/admin/client as read-only viewers.
-  const canManage = role === 'backoffice';
+  const { hasCapability } = useCapabilities();
+  // Slice 7: sending invoices and posting payments are separate privileged
+  // actions (invoices.send / payments.post — backoffice by default). The
+  // route also admits ceo/cfo/admin/client as read-only viewers.
+  const canSend = hasCapability('invoices.send');
+  const canPost = hasCapability('payments.post');
   const [invoice, setInvoice] = useState(null);
   const [payments, setPayments] = useState([]);
   const [usingFallback, setUsingFallback] = useState(false);
@@ -165,7 +166,7 @@ export default function InvoiceView() {
           </div>
           <div className="text-right">
             {statusBadge(invoice.status)}
-            {invoice.status === 'Draft' && canManage && (
+            {invoice.status === 'Draft' && canSend && (
               <button onClick={sendInvoice} className="mt-2 ml-auto block bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">
                 Send Invoice
               </button>
@@ -222,7 +223,7 @@ export default function InvoiceView() {
       <div className="bg-white border rounded-lg p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Payment History</h2>
-          {balanceDue > 0 && invoice.status !== 'Void' && invoice.status !== 'Draft' && canManage && (
+          {balanceDue > 0 && invoice.status !== 'Void' && invoice.status !== 'Draft' && canPost && (
             <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
               {showForm ? 'Cancel' : 'Post Payment'}
             </button>

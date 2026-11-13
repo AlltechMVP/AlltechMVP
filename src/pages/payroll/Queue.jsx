@@ -8,6 +8,7 @@ import { fetchTimesheets, reconcileTimesheets, syncTimesheetToSupabase, syncInvo
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty, AccessDenied } from '@/components/ui';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
+import { useCapabilities } from '@/lib/capabilities';
 
 const PAYROLL_STATUS_OPTIONS = ['Ready', 'In Payroll', 'Paid'];
 
@@ -75,6 +76,10 @@ export default function PayrollQueue() {
   // never fall back to the unscoped demo store.
   const [denied, setDenied] = useState(false);
   const { addToast } = useToasts();
+  // Slice 7: creating invoices from payroll is an invoices.manage action
+  // (backoffice + admin by default). The route is backoffice-only, so this
+  // only matters if the route gate is ever widened.
+  const { hasCapability } = useCapabilities();
 
   const loadFromSupabase = async () => {
     // Render fast from Supabase, then reconcile in the background (pushes
@@ -276,7 +281,8 @@ export default function PayrollQueue() {
         ))}
         <button
           onClick={createInvoices}
-          disabled={billableCount === 0}
+          disabled={billableCount === 0 || !hasCapability('invoices.manage')}
+          title={hasCapability('invoices.manage') ? '' : 'You do not have permission to create invoices.'}
           className="ml-auto bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-500"
         >
           Create invoices ({billableCount} ready)

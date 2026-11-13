@@ -11,6 +11,7 @@ import {
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty, AccessDenied } from '@/components/ui';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
+import { useCapabilities } from '@/lib/capabilities';
 import { useNavigate } from 'react-router-dom';
 import QuickAddCandidate from '@/components/QuickAddCandidate.jsx';
 
@@ -99,6 +100,10 @@ export default function CandidatesList() {
   const [denied, setDenied] = useState(false);
   const { addToast } = useToasts();
   const navigate = useNavigate();
+  // Slice 7: Quick Add Candidate (candidates.quickadd) and Create Assignment
+  // (assignments.manage) are capability actions. This route is auth-only,
+  // so the buttons are hidden from users who lack the capability.
+  const { hasCapability } = useCapabilities();
 
   const toRows = (list) => attachDemoTwins(list).map((a) => ({
     ...a,
@@ -299,12 +304,14 @@ export default function CandidatesList() {
                 </div>
                 <div className="flex gap-2 shrink-0">
                   {d.decision === 'Approved' ? (
-                    <button
-                      onClick={() => handleCreateAssignment(d.demoCandidateId, d.jobId)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-medium"
-                    >
-                      Create Assignment
-                    </button>
+                    hasCapability('assignments.manage') && (
+                      <button
+                        onClick={() => handleCreateAssignment(d.demoCandidateId, d.jobId)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-medium"
+                      >
+                        Create Assignment
+                      </button>
+                    )
                   ) : (
                     <Link
                       to={`/candidates/${d.applicationId}`}
@@ -336,12 +343,14 @@ export default function CandidatesList() {
         >
           {FILTER_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <button
-          onClick={() => setQuickAddOpen(true)}
-          className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
-        >
-          Quick Add Candidate
-        </button>
+        {hasCapability('candidates.quickadd') && (
+          <button
+            onClick={() => setQuickAddOpen(true)}
+            className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+          >
+            Quick Add Candidate
+          </button>
+        )}
       </div>
 
       {rows.length === 0 ? (

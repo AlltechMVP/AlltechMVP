@@ -7,11 +7,18 @@ import {
 } from '@/utils/storage';
 import { syncAssignmentToSupabase, fetchAssignment, fetchJobs } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
+import { useCapabilities } from '@/lib/capabilities';
 
 export default function AssignmentForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToast } = useToasts();
+  // Slice 7: creating / editing an assignment is an assignments.manage
+  // action (all internal staff by default). The route is auth-only, so the
+  // submit is hidden from users who lack the capability (RLS enforces it
+  // on the backend too).
+  const { hasCapability } = useCapabilities();
+  const canManageAssignments = hasCapability('assignments.manage');
   const isEdit = Boolean(id);
 
   const [candidates, setCandidates] = useState([]);
@@ -317,9 +324,15 @@ export default function AssignmentForm() {
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-            {isEdit ? 'Update Assignment' : 'Create Assignment'}
-          </button>
+          {canManageAssignments ? (
+            <button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+              {isEdit ? 'Update Assignment' : 'Create Assignment'}
+            </button>
+          ) : (
+            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              You do not have permission to create or edit assignments.
+            </p>
+          )}
           <button type="button" onClick={() => navigate('/assignments')} className="border px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
             Cancel
           </button>
