@@ -1,7 +1,7 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { isDev } from '@/config/dev';
+import { isDev, canUseRoleSwitcher } from '@/config/dev';
 
 const AuthContext = createContext(null);
 
@@ -10,23 +10,25 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null); // { id, email, role, client_id, is_client_approver }
   const [loading, setLoading] = useState(true);
 
-  // DEV-ONLY role override for testing: changes only the effective role
-  // used for navigation, never the signed-in account. Persisted so it
-  // survives a reload mid-test; cleared on sign-out.
-  // Slice 7: the override is DISABLED in production (gated on isDev, not
-  // deleted — local dev and isolated demos with synthetic data keep it).
+  // DEV + DEMO role override for testing/presenting: changes only the
+  // effective role used for navigation, never the signed-in account.
+  // Persisted so it survives a reload mid-test; cleared on sign-out.
+  // Slice 7: the override is DISABLED in production (gated on
+  // canUseRoleSwitcher — local dev + Demo Mode only, not deleted).
   // The backend never sees the override: RLS keys off auth.uid() ->
   // profiles, which the override cannot touch. A leftover key from a dev
   // build is cleared on load so it can never change the effective role.
+  // In Demo Mode the demo database runs permissive demo-appropriate
+  // rules, so the UI persona is authoritative there.
   const [roleOverride, setRoleOverrideState] = useState(() => {
-    if (!isDev) {
+    if (!canUseRoleSwitcher) {
       try { localStorage.removeItem('alltech_role_override'); } catch { /* ignore */ }
       return null;
     }
     try { return localStorage.getItem('alltech_role_override') || null; } catch { return null; }
   });
   const setRoleOverride = (role) => {
-    if (!isDev) return;
+    if (!canUseRoleSwitcher) return;
     setRoleOverrideState(role);
     try {
       if (role) localStorage.setItem('alltech_role_override', role);
@@ -121,9 +123,10 @@ export function AuthProvider({ children }) {
     loading,
     session,
     profile,
-    // Slice 7: the dev override applies only in dev. In production the
-    // effective role is always the signed-in account's real profile role.
-    role: (isDev ? roleOverride : null) || profile?.role || null,
+    // Slice 7: the override applies only in dev + Demo Mode. In
+    // production the effective role is always the signed-in account's
+    // real profile role.
+    role: (canUseRoleSwitcher ? roleOverride : null) || profile?.role || null,
     roleOverride,
     setRoleOverride,
     devLoginAs,

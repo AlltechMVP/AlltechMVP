@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext.jsx';
-import { isDev } from '@/config/dev';
+import { isDemoMode, canUseRoleSwitcher } from '@/config/dev';
 import AssistantPanel from '@/components/ai/AssistantPanel.jsx';
 
 const DEV_ROLES = [
@@ -36,6 +36,14 @@ export default function TopNav() {
     <header className="w-full border-b bg-white/70 backdrop-blur">
       <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
         <div className="font-semibold">Alltech</div>
+        {isDemoMode && (
+          <span
+            className="ml-2 px-2 py-0.5 text-[10px] uppercase tracking-wide font-semibold rounded bg-violet-100 text-violet-800 border border-violet-300"
+            title="Demo Mode — synthetic data only. The persona switcher lets you view the app as any role; nothing here is real customer data."
+          >
+            Demo
+          </span>
+        )}
         <div className="flex items-center gap-2">
           <button className="px-2 py-1 text-xs border rounded" onClick={() => setAssistantOpen(true)}>Help</button>
           {profile?.email && (
@@ -43,17 +51,20 @@ export default function TopNav() {
               {role ? `${role} · ` : ''}{profile.email}
             </span>
           )}
-          {/* Slice 7: the dev role override renders ONLY in dev. It changes
+          {/* The role override renders ONLY in dev + Demo Mode. It changes
               only the role used for navigation, not the signed-in account.
-              It stays for local development and isolated demos with
-              synthetic data; production (and anywhere real customer data
-              is used) never shows it. */}
-          {isDev && (
+              In Demo Mode it is the persona switcher for presenting: the
+              demo database runs permissive demo-appropriate rules, so the
+              selected persona is authoritative there. Production (and
+              anywhere real customer data is used) never shows it. */}
+          {canUseRoleSwitcher && (
           <div
             className="flex items-center gap-1 border border-amber-400 bg-amber-50 rounded px-1 py-0.5"
-            title="Dev-only role override for testing. It changes only the role used for navigation, not the signed-in account. Clear it before real use."
+            title={isDemoMode
+              ? "Demo persona switcher — view the app as any role. Synthetic demo data only."
+              : "Dev-only role override for testing. It changes only the role used for navigation, not the signed-in account. Clear it before real use."}
           >
-            <span className="text-[10px] uppercase tracking-wide text-amber-700 px-1">Dev role</span>
+            <span className="text-[10px] uppercase tracking-wide text-amber-700 px-1">{isDemoMode ? 'View as' : 'Dev role'}</span>
             {DEV_ROLES.map((r) => (
               <button
                 key={r.value}
