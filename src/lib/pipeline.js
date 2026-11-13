@@ -222,29 +222,44 @@ async function resolveJobId(demoJobId) {
   return data.id;
 }
 
+// ATS/CRM milestone (slice 6): one person row per email. Concurrent syncs
+// for the same email (reconcilePipeline syncs demo rows in parallel) must
+// not each insert a person row — serialize the lookup per email so all
+// concurrent callers share the single find-or-create.
+const personLookupInflight = new Map();
+
 async function findOrCreatePerson(demo) {
   const email = (demo.email || '').trim().toLowerCase();
-  const { data } = await supabase
-    .from('candidates')
-    .select('id,status,legacy_id')
-    .eq('email', email)
-    .limit(1);
-  if (data && data.length > 0) return data[0];
-  const id = crypto.randomUUID();
-  const { data: created, error } = await supabase
-    .from('candidates')
-    .insert([{
-      id,
-      name: demo.name,
-      email,
-      phone: demo.phone || '',
-      status: normalizeStatus(demo.status),
-      legacy_id: demo.id || null,
-    }])
-    .select('id,status,legacy_id')
-    .single();
-  if (error || !created) return null;
-  return created;
+  if (personLookupInflight.has(email)) return personLookupInflight.get(email);
+  const lookup = (async () => {
+    const { data } = await supabase
+      .from('candidates')
+      .select('id,status,legacy_id')
+      .eq('email', email)
+      .limit(1);
+    if (data && data.length > 0) return data[0];
+    const id = crypto.randomUUID();
+    const { data: created, error } = await supabase
+      .from('candidates')
+      .insert([{
+        id,
+        name: demo.name,
+        email,
+        phone: demo.phone || '',
+        status: normalizeStatus(demo.status),
+        legacy_id: demo.id || null,
+      }])
+      .select('id,status,legacy_id')
+      .single();
+    if (error || !created) return null;
+    return created;
+  })();
+  personLookupInflight.set(email, lookup);
+  try {
+    return await lookup;
+  } finally {
+    personLookupInflight.delete(email);
+  }
 }
 
 function demoTimestamp(demo) {
@@ -298,6 +313,28 @@ function applicationPayload(demo, personId, jobId) {
     submitted_at: demo.submittedAt || null,
     updated_at: demo.lastActionAt || new Date().toISOString(),
   };
+}
+
+/**
+ * Ensure a candidate RECORD exists in the shared store (person only, no
+ * application). Used by Quick Add Candidate so the record is visible to
+ * other sessions before it is submitted to an order. Never throws.
+ * Returns 'created' | 'skipped' | 'failed'.
+ */
+export async function syncPersonToSupabase(demo) {
+  try {
+    if (!demo || !demo.email) return 'skipped';
+    const person = await findOrCreatePerson(demo);
+    if (!person) return 'failed';
+    stampDemoRow(demo, { personId: person.id });
+    return 'created';
+  } catch (err) {
+    if (import.meta.env.MODE !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[pipeline sync] failed', err);
+    }
+    return 'failed';
+  }
 }
 
 /**

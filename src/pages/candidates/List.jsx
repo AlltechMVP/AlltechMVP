@@ -12,6 +12,7 @@ import DataTable from '@/components/table/DataTable.jsx';
 import { Empty, AccessDenied } from '@/components/ui';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { useNavigate } from 'react-router-dom';
+import QuickAddCandidate from '@/components/QuickAddCandidate.jsx';
 
 const FILTER_OPTIONS = ['All', 'Applied', 'Reviewed', 'Submitted', 'Interview', 'Hired', 'Rejected', 'Active Assignment', 'Assignment Ended'];
 
@@ -87,6 +88,8 @@ function deriveDecisions(rows, days = 30) {
 
 export default function CandidatesList() {
   const [statusFilter, setStatusFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [data, setData] = useState([]);
   const [decisions, setDecisions] = useState([]);
   const [showDecisions, setShowDecisions] = useState(true);
@@ -196,6 +199,14 @@ export default function CandidatesList() {
     if (statusFilter !== 'All') {
       items = items.filter(c => normalizeStatus(c.status) === statusFilter);
     }
+    // ATS/CRM milestone (slice 6): search the pipeline by name/email.
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      items = items.filter((c) =>
+        (c.name || '').toLowerCase().includes(q)
+        || (c.email || '').toLowerCase().includes(q)
+      );
+    }
     return items.map(c => {
       const status = normalizeStatus(c.status);
       return {
@@ -210,7 +221,7 @@ export default function CandidatesList() {
         demoCandidateId: c.demoCandidateId,
       };
     }).sort((a, b) => (b._sortDate || '').localeCompare(a._sortDate || ''));
-  }, [data, statusFilter]);
+  }, [data, statusFilter, searchQuery]);
 
   const columns = [
     { key: 'name', header: 'Candidate', render: (v, row) => (
@@ -310,6 +321,13 @@ export default function CandidatesList() {
       )}
 
       <div className="flex items-center gap-3 mb-4">
+        <input
+          type="text"
+          placeholder="Search by name or email"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="border rounded px-3 py-1.5 text-sm w-72"
+        />
         <label className="text-sm text-gray-600">Status:</label>
         <select
           value={statusFilter}
@@ -318,6 +336,12 @@ export default function CandidatesList() {
         >
           {FILTER_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+        <button
+          onClick={() => setQuickAddOpen(true)}
+          className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+        >
+          Quick Add Candidate
+        </button>
       </div>
 
       {rows.length === 0 ? (
@@ -325,6 +349,15 @@ export default function CandidatesList() {
       ) : (
         <DataTable columns={columns} rows={rows} pageSize={10} />
       )}
+
+      <QuickAddCandidate
+        open={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        onCreated={() => {
+          // Reload the pipeline so the new record shows up.
+          loadFromSupabase().catch(() => loadFromDemo());
+        }}
+      />
     </div>
   );
 }

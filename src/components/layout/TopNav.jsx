@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext.jsx';
 import { isDemoMode, canUseRoleSwitcher } from '@/config/dev';
 import { INTERNAL_ROLES } from '@/utils/roleUtils';
 import QuickAdd from '@/components/QuickAdd.jsx';
+import QuickAddCandidate from '@/components/QuickAddCandidate.jsx';
 import AssistantPanel from '@/components/ai/AssistantPanel.jsx';
 
 const DEV_ROLES = [
@@ -23,6 +24,7 @@ export default function TopNav() {
   const { profile, role, roleOverride, setRoleOverride, signOut } = useAuth();
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddCandidateOpen, setQuickAddCandidateOpen] = useState(false);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -49,7 +51,10 @@ export default function TopNav() {
         )}
         <div className="flex items-center gap-2">
           {INTERNAL_ROLES.includes(role) && (
-            <button className="px-2 py-1 text-xs border rounded bg-blue-600 text-white border-blue-600" onClick={() => setQuickAddOpen(true)}>Quick Add Prospect</button>
+            <>
+              <button className="px-2 py-1 text-xs border rounded bg-blue-600 text-white border-blue-600" onClick={() => setQuickAddOpen(true)}>Quick Add Prospect</button>
+              <button className="px-2 py-1 text-xs border rounded bg-blue-600 text-white border-blue-600" onClick={() => setQuickAddCandidateOpen(true)}>Quick Add Candidate</button>
+            </>
           )}
           <button className="px-2 py-1 text-xs border rounded" onClick={() => setAssistantOpen(true)}>Help</button>
           {profile?.email && (
@@ -91,6 +96,7 @@ export default function TopNav() {
         </div>
       </div>
       <QuickAdd open={quickAddOpen} onClose={() => setQuickAddOpen(false)} />
+      <QuickAddCandidate open={quickAddCandidateOpen} onClose={() => setQuickAddCandidateOpen(false)} />
       <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
     </header>
   );

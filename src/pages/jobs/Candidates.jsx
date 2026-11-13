@@ -3,13 +3,16 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getCandidates, getJobById, normalizeStatus,
   getAllowedTransitions, changeCandidateStatus, getCandidateById,
+  findCandidateByEmail, createCandidate, submitCandidateToJob,
 } from '@/utils/storage';
 import {
-  fetchJobs, fetchApplications, syncCandidateToSupabase, reconcilePipeline, isRlsDenied,
+  fetchJobs, fetchApplications, fetchPersons, syncCandidateToSupabase, reconcilePipeline, isRlsDenied,
 } from '@/lib/pipeline';
+import { useAuth } from '@/context/AuthContext.jsx';
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty, AccessDenied } from '@/components/ui';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
+import QuickAddCandidate from '@/components/QuickAddCandidate.jsx';
 
 const STATUS_COLORS = {
   'Applied': 'bg-gray-100 text-gray-800',
@@ -40,12 +43,35 @@ export default function JobCandidates() {
   const { jobId } = useParams();
   const navigate = useNavigate();
   const { addToast } = useToasts();
+  const { session } = useAuth();
   const [statusFilter, setStatusFilter] = useState('All');
   const [data, setData] = useState([]);
   const [job, setJob] = useState(null);
   // Slice 7: an RLS denial is not an outage — show the denied state and
   // never fall back to the unscoped demo store.
   const [denied, setDenied] = useState(false);
+  // ATS/CRM milestone (slice 6): submit an EXISTING candidate to this
+  // order, or Quick Add a new one with this order pre-selected.
+  const [talent, setTalent] = useState([]);
+  const [talentQuery, setTalentQuery] = useState('');
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+
+  const userEmail = session?.user?.email || '';
+
+  const loadTalent = async () => {
+    try {
+      const people = await fetchPersons();
+      setTalent(people.map((p) => ({ name: p.name, email: p.email || '', phone: p.phone || '' })));
+    } catch (err) {
+      if (isRlsDenied(err)) { setDenied(true); return; }
+      const byEmail = new Map();
+      for (const c of getCandidates()) {
+        const email = (c.email || '').trim().toLowerCase();
+        if (email && !byEmail.has(email)) byEmail.set(email, { name: c.name, email: c.email, phone: c.phone || '' });
+      }
+      setTalent([...byEmail.values()]);
+    }
+  };
 
   const loadSupabase = async () => {
     const jobs = await fetchJobs();
@@ -84,8 +110,35 @@ export default function JobCandidates() {
 
   useEffect(() => {
     load();
+    loadTalent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
+
+  const handleSubmitExisting = async (person) => {
+    // Ensure a demo row exists for this person (create the record if the
+    // person only exists in the shared store), then submit to this order.
+    let demo = findCandidateByEmail(person.email);
+    if (!demo) {
+      const created = createCandidate({ name: person.name, email: person.email, phone: person.phone });
+      if (!created) {
+        addToast({ type: 'error', message: 'Could not find the local record for this candidate.' });
+        return;
+      }
+      demo = created.candidate;
+    }
+    const result = submitCandidateToJob(demo.id, jobId, userEmail || 'recruiter');
+    if (!result) {
+      addToast({ type: 'error', message: 'Could not submit the candidate. Please try again.' });
+      return;
+    }
+    if (result.alreadySubmitted) {
+      addToast({ message: `${person.name} is already on this order.`, kind: 'success' });
+      return;
+    }
+    syncCandidateToSupabase(result.candidate).catch(() => {});
+    addToast({ message: `${person.name} submitted to ${job?.title || 'this order'} as Applied.`, kind: 'success' });
+    await load();
+  };
 
   const handleAction = async (applicationId, newStatus) => {
     let note;
@@ -192,6 +245,55 @@ export default function JobCandidates() {
         >
           {FILTER_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+        <button
+          onClick={() => setQuickAddOpen(true)}
+          className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+        >
+          Quick Add Candidate
+        </button>
+      </div>
+
+      {/* Submit an existing candidate to this order */}
+      <div className="mb-6 border rounded-xl bg-white p-4">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Submit an existing candidate to this order</h2>
+        <p className="text-xs text-gray-500 mb-3">Search the talent pool — submitting creates a recruiting record for this order only; the candidate&apos;s stage on other orders is untouched.</p>
+        <input
+          type="text"
+          placeholder="Search by name, email, or phone"
+          value={talentQuery}
+          onChange={(e) => setTalentQuery(e.target.value)}
+          className="border rounded px-3 py-1.5 text-sm w-80 mb-3"
+        />
+        {(() => {
+          const q = talentQuery.trim().toLowerCase();
+          const onOrder = new Set(data.map((d) => (d.email || '').trim().toLowerCase()));
+          const matches = talent
+            .filter((p) => !onOrder.has((p.email || '').trim().toLowerCase()))
+            .filter((p) => !q
+              || (p.name || '').toLowerCase().includes(q)
+              || (p.email || '').toLowerCase().includes(q)
+              || (p.phone || '').toLowerCase().includes(q));
+          if (talent.length === 0) return <p className="text-sm text-gray-500">No candidates in the talent pool yet.</p>;
+          if (matches.length === 0) return <p className="text-sm text-gray-500">{q ? 'No matching candidates outside this order.' : 'Everyone in the talent pool is already on this order.'}</p>;
+          return (
+            <ul className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+              {matches.slice(0, 10).map((p) => (
+                <li key={p.email} className="py-2 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <span className="font-medium text-sm text-gray-900">{p.name}</span>
+                    <span className="text-xs text-gray-500 ml-2">{p.email}{p.phone ? ` · ${p.phone}` : ''}</span>
+                  </div>
+                  <button
+                    onClick={() => handleSubmitExisting(p)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-xs font-medium shrink-0"
+                  >
+                    Submit to this order
+                  </button>
+                </li>
+              ))}
+            </ul>
+          );
+        })()}
       </div>
 
       {rows.length === 0 ? (
@@ -199,6 +301,14 @@ export default function JobCandidates() {
       ) : (
         <DataTable columns={columns} rows={rows} pageSize={10} />
       )}
+
+      <QuickAddCandidate
+        open={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        jobId={jobId}
+        jobTitle={job?.title}
+        onCreated={() => load()}
+      />
     </div>
   );
 }
