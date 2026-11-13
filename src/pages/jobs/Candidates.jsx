@@ -140,7 +140,7 @@ export default function JobCandidates() {
       addToast({ message: `${person.name} is already on this order.`, kind: 'success' });
       return;
     }
-    syncCandidateToSupabase(result.candidate).catch(() => {});
+    await syncCandidateToSupabase(result.candidate);
     addToast({ message: `${person.name} submitted to ${job?.title || 'this order'} as Applied.`, kind: 'success' });
     await load();
   };
@@ -160,7 +160,7 @@ export default function JobCandidates() {
     const result = changeCandidateStatus(demoId, newStatus, { note });
     if (result) {
       const updated = getCandidateById(demoId);
-      if (updated) syncCandidateToSupabase(updated).catch(() => {});
+      if (updated) await syncCandidateToSupabase(updated);
       await load();
       addToast({ type: 'success', message: `Candidate status updated to "${result}".` });
     } else {

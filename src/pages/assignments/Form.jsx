@@ -177,7 +177,7 @@ export default function AssignmentForm() {
     ? jobs.find((j) => String(j.id) === String(otherActive[0].jobId))
     : null;
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
 
     if (!form.candidateId || !form.jobId || !form.startDate) {
@@ -239,9 +239,11 @@ export default function AssignmentForm() {
       : all[all.length - 1];
 
     const syncResult = syncCandidateFromAssignment(savedAssignment);
-    // Sync the assignment row itself to Supabase (fire-and-forget; the demo
-    // write above already succeeded).
-    if (savedAssignment) syncAssignmentToSupabase(savedAssignment);
+    // Sync the assignment row itself to Supabase before navigating, so
+    // the list the user lands on re-fetches after the sync has landed
+    // (a fire-and-forget sync here loses the race and the new
+    // assignment only appears after a manual reload).
+    if (savedAssignment) await syncAssignmentToSupabase(savedAssignment);
     const preservedNote = otherActive.length > 0
       ? ` Note: ${selectedCandidate?.name || 'This candidate'} already had an Active assignment (${otherActiveJob?.title || 'another order'}) — it was preserved, not ended.`
       : '';

@@ -162,7 +162,7 @@ export default function TalentSearch() {
       addToast({ message: `${person.name} is already on that order.`, kind: 'success' });
       return;
     }
-    syncCandidateToSupabase(result.candidate).catch(() => {});
+    await syncCandidateToSupabase(result.candidate);
     const job = jobs.find((j) => String(j.id) === String(jobId));
     addToast({ message: `${person.name} submitted to ${job?.title || 'the order'} as Applied.`, kind: 'success' });
     await load();

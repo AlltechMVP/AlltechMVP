@@ -181,7 +181,7 @@ export default function CandidatesList() {
     const result = changeCandidateStatus(demoId, newStatus, { note });
     if (result) {
       const updated = getCandidateById(demoId);
-      if (updated) syncCandidateToSupabase(updated).catch(() => {});
+      if (updated) await syncCandidateToSupabase(updated);
       try {
         const apps = await fetchApplications();
         const rows = toRows(apps);
