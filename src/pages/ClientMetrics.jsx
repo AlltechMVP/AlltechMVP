@@ -2,16 +2,16 @@ import React from 'react';
 import {
   getCandidates,
   getAssignments,
-  getDemoClientId,
   getClientById,
   getJobsForClient,
   getTimesheetsForClient,
   getCandidateById,
   getAssignmentById,
 } from '../utils/storage';
+import { useDemoClientId } from '../lib/useDemoClientId';
 
 function ClientMetrics() {
-  const clientId = getDemoClientId();
+  const clientId = useDemoClientId();
   const client = getClientById(clientId);
   const jobs = getJobsForClient(clientId);
   const jobIds = jobs.map((j) => j.id);

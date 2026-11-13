@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  getDemoClientId, getTimesheetsForClient,
+  getTimesheetsForClient,
   getAssignmentById, getCandidateById, getJobById, getClientById,
   clientDecideTimesheet, getTimesheets
 } from '@/utils/storage';
 import { fetchTimesheets, reconcileTimesheets, isRlsDenied } from '@/lib/pipeline';
-import { useAuth } from '@/context/AuthContext.jsx';
+import { useDemoClientId } from '@/lib/useDemoClientId';
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty, AccessDenied } from '@/components/ui';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
@@ -18,12 +18,14 @@ const CLIENT_STATUS_COLORS = {
 };
 
 // Slice 7 (thin): timecard approvals read Supabase timesheets (shared
-// across sessions, RLS-filtered to the signed-in client's company) with a
-// demo-store fallback filtered to the client's company when Supabase is
-// unreachable. Decisions still go through the demo store (the canonical
-// write path) and sync up from there via queueTimesheetSync in
-// clientDecideTimesheet. Each row carries demoTimesheetId so decisions
-// keep working on the demo row.
+// across sessions) with a demo-store fallback filtered to the client's
+// company when Supabase is unreachable. Rows are also filtered in the app
+// to the signed-in client's company — RLS alone does not scope the demo
+// database (permissive dev policies) or the persona switcher (which fakes
+// the role without a client profile). Decisions still go through the demo
+// store (the canonical write path) and sync up from there via
+// queueTimesheetSync in clientDecideTimesheet. Each row carries
+// demoTimesheetId so decisions keep working on the demo row.
 function attachDemoTwins(timesheets) {
   const demoRows = getTimesheets();
   return timesheets.map((t) => {
@@ -68,7 +70,7 @@ function mapDemoRow(t) {
 
 export default function ClientTimecards() {
   const { addToast } = useToasts();
-  const { profile } = useAuth();
+  const demoClientId = useDemoClientId();
   const [timesheets, setTimesheets] = useState([]);
   const [client, setClient] = useState(null);
   const [filter, setFilter] = useState('Pending');
@@ -79,26 +81,18 @@ export default function ClientTimecards() {
   // never fall back to the unscoped demo store.
   const [denied, setDenied] = useState(false);
 
-  // The demo fallback client is the signed-in user's company: profiles
-  // client_id 1-4 maps to the seeded demo ids client-001..004. Unknown
-  // (no client link yet) falls back to the demo client.
-  const demoClientId = useMemo(() => {
-    const cid = profile?.client_id;
-    if (cid !== undefined && cid !== null && cid !== '') {
-      return `client-${String(cid).padStart(3, '0')}`;
-    }
-    return getDemoClientId();
-  }, [profile?.client_id]);
-
+  // The client whose rows this page may show (the signed-in user's
+  // company, or the demo client when the session has no client link).
   const loadFromSupabase = async () => {
-    // Render fast from Supabase (RLS filters to the client's company),
-    // then reconcile in the background and refresh.
+    // Render fast from Supabase, then reconcile in the background and
+    // refresh. Rows are filtered in the app to the client's company —
+    // RLS alone does not scope the demo database or the persona switcher.
     const rows = await fetchTimesheets();
-    setTimesheets(attachDemoTwins(rows).map(toRow));
+    setTimesheets(attachDemoTwins(rows.filter((t) => t.clientLegacyId === demoClientId)).map(toRow));
     setClient(getClientById(demoClientId));
     reconcileTimesheets()
       .then((fresh) => {
-        setTimesheets(attachDemoTwins(fresh).map(toRow));
+        setTimesheets(attachDemoTwins(fresh.filter((t) => t.clientLegacyId === demoClientId)).map(toRow));
       })
       .catch(() => {});
   };
@@ -121,7 +115,7 @@ export default function ClientTimecards() {
         try {
           const rows = await reconcileTimesheets();
           if (!mounted) return;
-          setTimesheets(attachDemoTwins(rows).map(toRow));
+          setTimesheets(attachDemoTwins(rows.filter((t) => t.clientLegacyId === demoClientId)).map(toRow));
           setClient(getClientById(demoClientId));
           setUsingFallback(false);
         } catch (err2) {

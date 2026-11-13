@@ -29,7 +29,7 @@ const APP_SELECT =
   'id,status,history,client_decision,client_decision_note,client_decided_at,' +
   'rejected_reason,submitted_at,created_at,updated_at,candidate_id,job_id,' +
   'candidates(id,name,email,phone,status,legacy_id),' +
-  'jobs(id,title,legacy_id,clients(name))';
+  'jobs(id,title,legacy_id,clients(id,legacy_id,name))';
 
 const JOB_SELECT =
   'id,title,location,rate,pay_rate,requirements,openings,status,legacy_id,client_id,clients(name)';
@@ -110,6 +110,7 @@ function mapApplication(a) {
     jobId: a.job_id,
     jobTitle: job.title || '—',
     clientName: job.clients?.name || '—',
+    clientLegacyId: job.clients?.legacy_id || null,
     legacyCandidateId: person.legacy_id || null,
     legacyJobId: job.legacy_id || null,
     status: normalizeStatus(a.status),
@@ -510,7 +511,7 @@ const ASSIGNMENT_SELECT =
   'id,status,start_date,end_date,pay_rate,bill_rate,notes,legacy_id,' +
   'created_at,updated_at,candidate_id,job_id,' +
   'candidates(id,name,email,phone,status,legacy_id),' +
-  'jobs(id,title,legacy_id,clients(name))';
+  'jobs(id,title,legacy_id,clients(id,legacy_id,name))';
 
 function mapAssignment(a) {
   const person = a.candidates || {};
@@ -1459,6 +1460,7 @@ function mapTimesheet(t) {
     jobId: job.legacy_id || null,
     jobTitle: job.title || '—',
     clientName: job.clients?.name || '—',
+    clientLegacyId: job.clients?.legacy_id || null,
     weekEnding: t.week_ending || null,
     entries,
     totalHours: hours.reduce((s, h) => s + h, 0),

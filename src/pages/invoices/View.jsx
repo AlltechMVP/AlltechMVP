@@ -4,6 +4,8 @@ import { getInvoiceById, getPaymentsForInvoice, postPayment, getInvoices, setInv
 import { fetchInvoice, fetchPaymentsForInvoice, reconcileInvoices, syncInvoiceToSupabase, syncPaymentToSupabase, isRlsDenied } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { useCapabilities } from '@/lib/capabilities';
+import { useDemoClientId } from '@/lib/useDemoClientId';
+import { useAuth } from '@/context/AuthContext.jsx';
 import { AccessDenied } from '@/components/ui';
 
 const statusBadge = (s) => {
@@ -36,6 +38,10 @@ export default function InvoiceView() {
   // Slice 7: an RLS denial is not an outage — show the denied state and
   // never fall back to the unscoped demo store.
   const [denied, setDenied] = useState(false);
+  // A client may only open their own company's invoice — the list filters
+  // too, but a direct /invoices/:id link must not bypass it.
+  const { role } = useAuth();
+  const demoClientId = useDemoClientId();
   const [showForm, setShowForm] = useState(false);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('ACH');
@@ -91,6 +97,7 @@ export default function InvoiceView() {
   useEffect(() => { reload(); }, [id]);
 
   if (denied) return <AccessDenied />;
+  if (role === 'client' && invoice && invoice.clientId !== demoClientId) return <AccessDenied />;
   if (!invoice) return <div className="p-6">Invoice not found. <Link to="/invoices" className="text-blue-600 hover:underline">Back to Invoices</Link></div>;
 
   const balanceDue = invoice.balanceDue ?? (invoice.total - (invoice.amountPaid || 0));
