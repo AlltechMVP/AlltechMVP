@@ -31,7 +31,7 @@ export function QuickAddCandidateForm({ jobId, jobTitle, onCancel, onCreated }) 
     return findCandidateByEmail(email);
   }, [form.email]);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim()) {
       setError('Name and email are required.');
@@ -49,7 +49,7 @@ export function QuickAddCandidateForm({ jobId, jobTitle, onCancel, onCreated }) 
       if (result && !result.alreadySubmitted) {
         submitted = true;
         candidate = result.candidate;
-        syncCandidateToSupabase(candidate).catch(() => {});
+        await syncCandidateToSupabase(candidate);
       } else if (result?.alreadySubmitted) {
         submitted = true;
       }

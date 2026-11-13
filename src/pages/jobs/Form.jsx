@@ -98,7 +98,7 @@ export default function JobForm() {
 
   const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!form.clientId) {
       addToast({ type: 'error', message: 'Client is required.' });
@@ -166,9 +166,11 @@ export default function JobForm() {
     const savedJob = isEdit
       ? all.find((j) => j.id === id || String(j.supabaseJobId) === String(id))
       : all[all.length - 1];
-    // Sync the job row itself to Supabase (fire-and-forget; the demo
-    // write above already succeeded).
-    if (savedJob) syncJobToSupabase(savedJob);
+    // Sync the job row itself to Supabase before navigating, so the
+    // list the user lands on re-fetches after the sync has landed
+    // (a fire-and-forget sync here loses the race and the new order
+    // only appears after a manual reload).
+    if (savedJob) await syncJobToSupabase(savedJob);
     addToast({ type: 'success', message: isEdit ? 'Order updated.' : 'Order created.' });
     if (!isEdit && fromClientId) navigate(`/companies/${fromClientId}`);
     else navigate('/jobs');

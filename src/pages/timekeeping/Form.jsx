@@ -110,7 +110,7 @@ export default function TimesheetForm() {
     setEntries(prev => prev.map((e, i) => i === idx ? { ...e, hours: h } : e));
   };
 
-  const saveTimesheet = (newStatus, noteOverride) => {
+  const saveTimesheet = async (newStatus, noteOverride) => {
     if (!assignmentId || !weekEnding) {
       addToast({ type: 'error', message: 'Assignment and Week Ending are required.' });
       return;
@@ -163,9 +163,11 @@ export default function TimesheetForm() {
     if (savedRecord) {
       setPayrollStatus(savedRecord.payrollStatus || 'Not Ready');
       setLiveExceptions(savedRecord.exceptions || []);
-      // Sync the timesheet row itself to Supabase (fire-and-forget; the
-      // demo write above already succeeded).
-      syncTimesheetToSupabase(savedRecord);
+      // Sync the timesheet row itself to Supabase before navigating, so
+      // the list the user lands on re-fetches after the sync has landed
+      // (a fire-and-forget sync here loses the race and the new
+      // timesheet only appears after a manual reload).
+      await syncTimesheetToSupabase(savedRecord);
     }
 
     let msg = `Timesheet ${newStatus === 'Draft' ? 'saved' : newStatus.toLowerCase()}.`;

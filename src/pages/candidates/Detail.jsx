@@ -116,7 +116,7 @@ export default function CandidateDetail() {
     const result = changeCandidateStatus(demoId, newStatus, { note });
     if (result) {
       const updated = getCandidateById(demoId);
-      if (updated) syncCandidateToSupabase(updated).catch(() => {});
+      if (updated) await syncCandidateToSupabase(updated);
       await load();
       addToast({ type: 'success', message: `Status updated to "${result}".` });
     } else {
