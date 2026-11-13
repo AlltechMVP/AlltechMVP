@@ -1,52 +1,25 @@
+import { Link } from "react-router-dom";
 
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { signup } from "../utils/auth";
-
+// Public self-registration is closed (ATS/CRM milestone, Slice 0, option B).
+// Accounts are created by an administrator. This page exists so old links
+// land on a clear message instead of a dead end — it creates no account
+// and writes nothing to localStorage.
 function Signup() {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const { error } = await signup(email, password);
-    if (error) {
-      setError(error.message);
-    } else {
-      navigate("/login");
-    }
-  };
-
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       <h1 className="text-2xl mb-4">Sign Up</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-80">
-        <input 
-          type="email" 
-          placeholder="Email" 
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
-        <input 
-          type="password" 
-          placeholder="Password" 
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        <button 
-          type="submit"
-          className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
+      <div className="flex flex-col gap-4 w-80 text-center">
+        <p className="text-gray-700">
+          Accounts are provided by your administrator. Sign in with the
+          account you were given.
+        </p>
+        <Link
+          to="/login"
+          className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition-colors"
         >
-          Sign Up
-        </button>
-      </form>
+          Go to sign in
+        </Link>
+      </div>
       <p className="mt-4 text-sm text-gray-600">
         Already have an account?{" "}
         <Link to="/login" className="text-blue-600 hover:text-blue-500">
