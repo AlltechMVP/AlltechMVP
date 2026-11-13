@@ -1,6 +1,9 @@
 
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { canUseRoleSwitcher } from "@/config/dev";
+import { INTERNAL_ROLES } from "@/utils/roleUtils";
+import QuickAdd from "@/components/QuickAdd.jsx";
 
 const linkCls = (active) =>
   `block px-3 py-1.5 rounded-md text-sm ${active ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700 hover:bg-gray-200'}`;
@@ -16,6 +19,8 @@ export default function Sidebar() {
   let role = user.role;
   try { if (canUseRoleSwitcher) role = localStorage.getItem('alltech_role_override') || role; } catch { /* ignore */ }
   const { pathname } = useLocation();
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const isInternal = INTERNAL_ROLES.includes(role);
 
   return (
     <aside className="w-64 bg-gray-100 p-4 h-full">
@@ -74,6 +79,15 @@ export default function Sidebar() {
         <li><Link to="/candidates" className={linkCls(pathname.startsWith('/candidates'))}>Candidate Pipeline</Link></li>
         <li><Link to="/jobs" className={linkCls(pathname === '/jobs')}>Jobs</Link></li>
 
+        {isInternal && (
+          <>
+            <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">CRM</li>
+            <li><Link to="/companies" className={linkCls(pathname.startsWith('/companies'))}>Companies</Link></li>
+            <li><button onClick={() => setQuickAddOpen(true)} className={linkCls(false) + ' w-full text-left'}>Quick Add Prospect</button></li>
+            <li><Link to="/jobs/new" className={linkCls(pathname === '/jobs/new')}>New Order</Link></li>
+          </>
+        )}
+
         <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Operations</li>
         <li><Link to="/assignments" className={linkCls(pathname.startsWith('/assignments'))}>Assignments</Link></li>
         <li><Link to="/assignments/tracker" className={linkCls(pathname === '/assignments/tracker')}>Assignment Tracker</Link></li>
@@ -100,6 +114,7 @@ export default function Sidebar() {
         <li><Link to="/admin/roles" className={linkCls(pathname === '/admin/roles')}>Role Manager</Link></li>
         <li><Link to="/tools/import-export" className={linkCls(pathname === '/tools/import-export')}>Import / Export</Link></li>
       </ul>
+      <QuickAdd open={quickAddOpen} onClose={() => setQuickAddOpen(false)} />
     </aside>
   );
 }

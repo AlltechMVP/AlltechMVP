@@ -1,6 +1,17 @@
 
 // src/utils/roleUtils.js
 
+export const INTERNAL_ROLES = [
+  'admin', 'ceo', 'cfo', 'director', 'branch-manager',
+  'sales-rep', 'sales-manager', 'recruiter', 'backoffice',
+];
+
+// Every internal agency staff member has the core ATS/CRM tools by
+// default (ATS/CRM milestone matrix); clients and candidates do not.
+export function isInternalRole(role) {
+  return INTERNAL_ROLES.includes(role);
+}
+
 export const ROLE_ROUTES = {
   admin: '/admin',
   ceo: '/ceo',

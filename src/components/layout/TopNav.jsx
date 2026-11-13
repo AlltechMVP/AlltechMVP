@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { isDemoMode, canUseRoleSwitcher } from '@/config/dev';
+import { INTERNAL_ROLES } from '@/utils/roleUtils';
+import QuickAdd from '@/components/QuickAdd.jsx';
 import AssistantPanel from '@/components/ai/AssistantPanel.jsx';
 
 const DEV_ROLES = [
@@ -20,6 +22,7 @@ const DEV_ROLES = [
 export default function TopNav() {
   const { profile, role, roleOverride, setRoleOverride, signOut } = useAuth();
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -45,6 +48,9 @@ export default function TopNav() {
           </span>
         )}
         <div className="flex items-center gap-2">
+          {INTERNAL_ROLES.includes(role) && (
+            <button className="px-2 py-1 text-xs border rounded bg-blue-600 text-white border-blue-600" onClick={() => setQuickAddOpen(true)}>Quick Add Prospect</button>
+          )}
           <button className="px-2 py-1 text-xs border rounded" onClick={() => setAssistantOpen(true)}>Help</button>
           {profile?.email && (
             <span className="text-sm text-gray-600" title={profile.email}>
@@ -84,6 +90,7 @@ export default function TopNav() {
           <button className="px-2 py-1 text-xs border rounded" onClick={signOut}>Sign out</button>
         </div>
       </div>
+      <QuickAdd open={quickAddOpen} onClose={() => setQuickAddOpen(false)} />
       <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
     </header>
   );
