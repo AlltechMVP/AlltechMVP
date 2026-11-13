@@ -10,6 +10,7 @@ import Logout from '@/pages/Logout.jsx';
 import ProtectedRoute from '@/components/protected/ProtectedRoute.jsx';
 import Loader from '@/components/ui/Loader.jsx';
 import { flagEnabled } from '@/config/flags.js';
+import { INTERNAL_ROLES } from '@/utils/roleUtils';
 
 const RecruiterBoard = lazy(() => import('@/pages/recruiter/Board.jsx'));
 const ClientJobs = lazy(() => import('@/pages/client/Jobs.jsx'));
@@ -21,6 +22,10 @@ const ClientDashboard = lazy(() => import('@/pages/ClientDashboard.jsx'));
 const CandidateDashboard = lazy(() => import('@/pages/CandidateDashboard.jsx'));
 const AdminDashboard = lazy(() => import('@/pages/AdminDashboard.jsx'));
 const JobsList = lazy(() => import('@/pages/jobs/List.jsx'));
+const JobForm = lazy(() => import('@/pages/jobs/Form.jsx'));
+const CompaniesList = lazy(() => import('@/pages/companies/List.jsx'));
+const CompanyDetail = lazy(() => import('@/pages/companies/Detail.jsx'));
+const CompaniesNew = lazy(() => import('@/pages/companies/New.jsx'));
 const CEODashboard = lazy(() => import('@/pages/exec/CEODashboard.jsx'));
 const CFODashboard = lazy(() => import('@/pages/exec/CFODashboard.jsx'));
 const BrowseKb = lazy(() => import('@/pages/kb/Browse.jsx'));
@@ -158,6 +163,48 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={[]}>
                 <JobsList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="jobs/new"
+            element={
+              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+                <JobForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="jobs/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+                <JobForm />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Companies / CRM (internal staff only) */}
+          <Route
+            path="companies"
+            element={
+              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+                <CompaniesList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="companies/new"
+            element={
+              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+                <CompaniesNew />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="companies/:id"
+            element={
+              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
+                <CompanyDetail />
               </ProtectedRoute>
             }
           />

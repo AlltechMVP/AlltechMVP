@@ -7,6 +7,7 @@ import {
 } from '@/lib/pipeline';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
+import { INTERNAL_ROLES } from '@/utils/roleUtils';
 import DataTable from '@/components/table/DataTable.jsx';
 import { Empty, AccessDenied } from '@/components/ui';
 
@@ -25,7 +26,7 @@ export default function JobsList() {
   // Slice 7: an RLS denial is not an outage — show the denied state and
   // never fall back to the unscoped demo store.
   const [denied, setDenied] = useState(false);
-  const { session } = useAuth();
+  const { session, role } = useAuth();
   const { addToast } = useToasts();
 
   const userEmail = session?.user?.email || '';
@@ -176,7 +177,14 @@ export default function JobsList() {
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <h1 className="text-xl font-semibold mb-4">Jobs</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-semibold">Jobs</h1>
+        {INTERNAL_ROLES.includes(role) && (
+          <Link to="/jobs/new" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+            New Order
+          </Link>
+        )}
+      </div>
 
       {usingFallback && (
         <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">

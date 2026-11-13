@@ -6,6 +6,9 @@ const KEYS = {
   payrollQueue: 'alltech_payroll_queue',
   payrollRuns: 'alltech_payroll_runs',
   clients: 'alltech_clients',
+  contacts: 'alltech_contacts',
+  activities: 'alltech_activities',
+  followUps: 'alltech_follow_ups',
   invoices: 'alltech_invoices',
   payments: 'alltech_payments',
 };
@@ -43,6 +46,12 @@ export function setAssignments(data) { safeSet(KEYS.assignments, data); }
 export function setTimesheets(data) { safeSet(KEYS.timesheets, data); }
 export function setJobs(data) { safeSet(KEYS.jobs, data); }
 export function setClients(data) { safeSet(KEYS.clients, data); }
+export function getContacts() { return safeGet(KEYS.contacts); }
+export function setContacts(data) { safeSet(KEYS.contacts, data); }
+export function getActivities() { return safeGet(KEYS.activities); }
+export function setActivities(data) { safeSet(KEYS.activities, data); }
+export function getFollowUps() { return safeGet(KEYS.followUps); }
+export function setFollowUps(data) { safeSet(KEYS.followUps, data); }
 
 export function getInvoices() { return safeGet(KEYS.invoices); }
 export function setInvoices(data) { safeSet(KEYS.invoices, data); }
@@ -226,6 +235,10 @@ export function reconcileInvoicePayments() {
 
 export function getDemoClientId() { return DEMO_CLIENT_ID; }
 export function getClientById(id) { return getClients().find(c => c.id === id); }
+export function getContactById(id) { return getContacts().find(c => c.id === id); }
+export function getContactsForClient(clientId) { return getContacts().filter(c => c.clientId === clientId); }
+export function getActivitiesForClient(clientId) { return getActivities().filter(a => a.clientId === clientId); }
+export function getFollowUpsForClient(clientId) { return getFollowUps().filter(f => f.clientId === clientId); }
 
 export function getJobsForClient(clientId) {
   return getJobs().filter(j => j.clientId === clientId);
@@ -269,6 +282,166 @@ function queueTimesheetSync(demoTimesheet) {
   import('@/lib/pipeline.js')
     .then((m) => m.syncTimesheetToSupabase(demoTimesheet))
     .catch(() => {});
+}
+
+// ATS/CRM milestone (slice 5): same fire-and-forget write-through pattern
+// for the CRM collections. Dynamic import avoids a dependency cycle.
+function queueClientSync(demoClient) {
+  if (!demoClient) return;
+  import('@/lib/pipeline.js')
+    .then((m) => m.syncClientToSupabase(demoClient))
+    .catch(() => {});
+}
+
+function queueContactSync(demoContact) {
+  if (!demoContact) return;
+  import('@/lib/pipeline.js')
+    .then((m) => m.syncContactToSupabase(demoContact))
+    .catch(() => {});
+}
+
+function queueActivitySync(demoActivity) {
+  if (!demoActivity) return;
+  import('@/lib/pipeline.js')
+    .then((m) => m.syncActivityToSupabase(demoActivity))
+    .catch(() => {});
+}
+
+function queueFollowUpSync(demoFollowUp) {
+  if (!demoFollowUp) return;
+  import('@/lib/pipeline.js')
+    .then((m) => m.syncFollowUpToSupabase(demoFollowUp))
+    .catch(() => {});
+}
+
+function queueJobSync(demoJob) {
+  if (!demoJob) return;
+  import('@/lib/pipeline.js')
+    .then((m) => m.syncJobToSupabase(demoJob))
+    .catch(() => {});
+}
+
+// --- CRM writes (ATS/CRM milestone, slice 5) ------------------------------
+// Demo store is the canonical write path; each write queues a Supabase
+// sync (fire-and-forget) so the record is shared with other sessions.
+
+export function createCompany({ name, industry, location, contactName, contactEmail, contactPhone, status } = {}) {
+  const timestamp = now();
+  const client = {
+    id: uid(),
+    name: (name || '').trim(),
+    industry: (industry || '').trim(),
+    location: (location || '').trim(),
+    contactPerson: (contactName || '').trim(),
+    contactEmail: (contactEmail || '').trim().toLowerCase(),
+    status: status || 'Prospect',
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  setClients([...getClients(), client]);
+  queueClientSync(client);
+  let contact = null;
+  if ((contactName || '').trim() || (contactEmail || '').trim()) {
+    contact = {
+      id: uid(),
+      clientId: client.id,
+      name: (contactName || '').trim() || (contactEmail || '').trim(),
+      email: (contactEmail || '').trim().toLowerCase(),
+      phone: (contactPhone || '').trim(),
+      title: '',
+      isPrimary: true,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    setContacts([...getContacts(), contact]);
+    queueContactSync(contact);
+  }
+  return { client, contact };
+}
+
+export function addCompanyContact({ clientId, name, email, phone, title, isPrimary } = {}) {
+  const timestamp = now();
+  const contact = {
+    id: uid(),
+    clientId,
+    name: (name || '').trim(),
+    email: (email || '').trim().toLowerCase(),
+    phone: (phone || '').trim(),
+    title: (title || '').trim(),
+    isPrimary: Boolean(isPrimary),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  setContacts([...getContacts(), contact]);
+  queueContactSync(contact);
+  return contact;
+}
+
+export function logCompanyActivity({ clientId, contactId, type, subject, body, by } = {}) {
+  const timestamp = now();
+  const activity = {
+    id: uid(),
+    clientId,
+    contactId: contactId || null,
+    type: type || 'note',
+    subject: (subject || '').trim(),
+    body: (body || '').trim(),
+    createdBy: by || '',
+    createdAt: timestamp,
+  };
+  setActivities([...getActivities(), activity]);
+  queueActivitySync(activity);
+  return activity;
+}
+
+export function scheduleFollowUp({ clientId, contactId, activityId, title, dueDate, ownerEmail } = {}) {
+  const timestamp = now();
+  const followUp = {
+    id: uid(),
+    clientId,
+    contactId: contactId || null,
+    activityId: activityId || null,
+    title: (title || '').trim(),
+    dueDate: dueDate || null,
+    ownerEmail: (ownerEmail || '').trim().toLowerCase(),
+    done: false,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  setFollowUps([...getFollowUps(), followUp]);
+  queueFollowUpSync(followUp);
+  return followUp;
+}
+
+export function setFollowUpDone(id, done) {
+  const rows = getFollowUps();
+  const idx = rows.findIndex((f) => f.id === id);
+  if (idx === -1) return null;
+  rows[idx] = { ...rows[idx], done: Boolean(done), updatedAt: now() };
+  setFollowUps(rows);
+  queueFollowUpSync(rows[idx]);
+  return rows[idx];
+}
+
+// Convert a prospect to a client: same company record, same contacts and
+// history — only the status flips, and the conversion is logged as an
+// activity on that same record.
+export function convertCompanyToClient(clientId, by) {
+  const clients = getClients();
+  const idx = clients.findIndex((c) => c.id === clientId);
+  if (idx === -1) return null;
+  const timestamp = now();
+  clients[idx] = { ...clients[idx], status: 'Active', updatedAt: timestamp };
+  setClients(clients);
+  queueClientSync(clients[idx]);
+  const activity = logCompanyActivity({
+    clientId,
+    type: 'note',
+    subject: 'Converted to client',
+    body: `Prospect converted to Active client${by ? ` by ${by}` : ''}.`,
+    by,
+  });
+  return { client: clients[idx], activity };
 }
 
 export function applyToJob(jobId, { name, email, phone } = {}, by) {

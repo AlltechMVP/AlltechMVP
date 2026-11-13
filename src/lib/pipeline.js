@@ -1,7 +1,9 @@
 import { supabase } from '@/lib/supabase';
 import {
   getCandidates, setCandidates, normalizeStatus,
-  getAssignments, setAssignments, getJobs, setJobs, getClients,
+  getAssignments, setAssignments, getJobs, setJobs, getClients, setClients,
+  getContacts, setContacts, getActivities, setActivities,
+  getFollowUps, setFollowUps,
   getTimesheets, setTimesheets, getInvoices, setInvoices,
   getPayments, setPayments,
 } from '@/utils/storage';
@@ -30,7 +32,7 @@ const APP_SELECT =
   'jobs(id,title,legacy_id,clients(name))';
 
 const JOB_SELECT =
-  'id,title,location,rate,openings,status,legacy_id,client_id,clients(name)';
+  'id,title,location,rate,pay_rate,requirements,openings,status,legacy_id,client_id,clients(name)';
 
 // Supabase reads from the browser are occasionally flaky (a response can
 // drop mid-read even though the server answered). One retry before giving
@@ -86,6 +88,8 @@ function mapJob(j) {
     clientId: j.client_id,
     location: j.location || '—',
     rate: j.rate,
+    payRate: j.pay_rate ?? null,
+    requirements: j.requirements || '',
     openings: j.openings,
     status: j.status,
     legacyId: j.legacy_id || null,
@@ -678,6 +682,691 @@ export async function clearSupabaseAssignments() {
   const { error } = await supabase.from('assignments').delete().neq('id', 0);
   throwChecked(error);
   return { assignmentsCleared: true };
+}
+
+// --- CRM: companies, contacts, activities, follow-ups, job orders --------
+// (ATS/CRM milestone, slice 5.) Same thin pattern as the pipeline and
+// assignments syncs: demo store is the canonical write path, Supabase is
+// the shared read store, write-through is best-effort fire-and-forget,
+// reconcile on load is timestamp last-write-wins. The demo store row id
+// (seed 'client-001' / 'job-001' ids, or a crypto uuid for new rows) is the
+// Supabase legacy_id, so rows match across sessions by legacy_id.
+
+const CLIENT_SELECT =
+  'id,name,industry,location,contact_person,contact_email,billing_email,phone,' +
+  'status,legacy_id,created_at,updated_at';
+
+const CONTACT_SELECT =
+  'id,client_id,name,email,phone,title,is_primary,legacy_id,created_at,updated_at';
+
+const ACTIVITY_SELECT =
+  'id,client_id,contact_id,type,subject,body,created_by,legacy_id,created_at';
+
+const FOLLOW_UP_SELECT =
+  'id,client_id,contact_id,activity_id,title,due_date,owner_email,done,' +
+  'legacy_id,created_at,updated_at';
+
+function mapClient(c) {
+  if (!c) return null;
+  return {
+    id: c.legacy_id || String(c.id),
+    supabaseClientId: c.id,
+    name: c.name || '—',
+    industry: c.industry || '',
+    location: c.location || '',
+    contactPerson: c.contact_person || '',
+    contactEmail: c.contact_email || '',
+    billingEmail: c.billing_email || '',
+    phone: c.phone || '',
+    status: c.status || 'Active',
+    createdAt: c.created_at || null,
+    updatedAt: c.updated_at || null,
+  };
+}
+
+function mapContact(c) {
+  if (!c) return null;
+  return {
+    id: c.legacy_id || String(c.id),
+    supabaseContactId: c.id,
+    clientId: c.client_id,
+    name: c.name || '—',
+    email: c.email || '',
+    phone: c.phone || '',
+    title: c.title || '',
+    isPrimary: Boolean(c.is_primary),
+    createdAt: c.created_at || null,
+    updatedAt: c.updated_at || null,
+  };
+}
+
+function mapActivity(a) {
+  if (!a) return null;
+  return {
+    id: a.legacy_id || String(a.id),
+    supabaseActivityId: a.id,
+    clientId: a.client_id,
+    contactId: a.contact_id,
+    type: a.type || 'note',
+    subject: a.subject || '',
+    body: a.body || '',
+    createdBy: a.created_by || '',
+    createdAt: a.created_at || null,
+  };
+}
+
+function mapFollowUp(f) {
+  if (!f) return null;
+  return {
+    id: f.legacy_id || String(f.id),
+    supabaseFollowUpId: f.id,
+    clientId: f.client_id,
+    contactId: f.contact_id,
+    activityId: f.activity_id,
+    title: f.title || '',
+    dueDate: f.due_date || null,
+    ownerEmail: f.owner_email || '',
+    done: Boolean(f.done),
+    createdAt: f.created_at || null,
+    updatedAt: f.updated_at || null,
+  };
+}
+
+export async function fetchClients() {
+  const { data, error } = await withRetry(() => supabase
+    .from('clients')
+    .select(CLIENT_SELECT)
+    .order('id'));
+  throwChecked(error);
+  return (data || []).map(mapClient);
+}
+
+export async function fetchContacts(clientId) {
+  let q = supabase.from('contacts').select(CONTACT_SELECT).order('id');
+  if (clientId !== undefined && clientId !== null) q = q.eq('client_id', clientId);
+  const { data, error } = await withRetry(() => q);
+  throwChecked(error);
+  return (data || []).map(mapContact);
+}
+
+export async function fetchActivities(clientId) {
+  let q = supabase.from('activities').select(ACTIVITY_SELECT).order('created_at', { ascending: false });
+  if (clientId !== undefined && clientId !== null) q = q.eq('client_id', clientId);
+  const { data, error } = await withRetry(() => q);
+  throwChecked(error);
+  return (data || []).map(mapActivity);
+}
+
+export async function fetchFollowUps(clientId) {
+  let q = supabase.from('follow_ups').select(FOLLOW_UP_SELECT).order('due_date', { ascending: true });
+  if (clientId !== undefined && clientId !== null) q = q.eq('client_id', clientId);
+  const { data, error } = await withRetry(() => q);
+  throwChecked(error);
+  return (data || []).map(mapFollowUp);
+}
+
+async function resolveContactId(demoContactId) {
+  if (!demoContactId) return null;
+  const demo = getContacts().find((c) => c.id === demoContactId);
+  if (demo && demo.supabaseContactId) return demo.supabaseContactId;
+  const { data } = await supabase
+    .from('contacts')
+    .select('id')
+    .eq('legacy_id', String(demoContactId))
+    .limit(1);
+  return data && data.length > 0 ? data[0].id : null;
+}
+
+async function resolveActivityId(demoActivityId) {
+  if (!demoActivityId) return null;
+  const demo = getActivities().find((a) => a.id === demoActivityId);
+  if (demo && demo.supabaseActivityId) return demo.supabaseActivityId;
+  const { data } = await supabase
+    .from('activities')
+    .select('id')
+    .eq('legacy_id', String(demoActivityId))
+    .limit(1);
+  return data && data.length > 0 ? data[0].id : null;
+}
+
+function clientPayload(demo) {
+  // billing_email / phone are not carried by demo rows: only send them
+  // when the demo row has them, so an update never nulls a value that was
+  // set elsewhere.
+  return {
+    name: demo.name,
+    industry: demo.industry || null,
+    location: demo.location || null,
+    contact_person: demo.contactPerson || null,
+    contact_email: demo.contactEmail || null,
+    ...(demo.billingEmail ? { billing_email: demo.billingEmail } : {}),
+    ...(demo.phone ? { phone: demo.phone } : {}),
+    status: demo.status || 'Active',
+    legacy_id: String(demo.id),
+    updated_at: demo.updatedAt || new Date().toISOString(),
+  };
+}
+
+function contactPayload(demo, clientSupabaseId) {
+  return {
+    client_id: clientSupabaseId,
+    name: demo.name,
+    email: demo.email || null,
+    phone: demo.phone || null,
+    title: demo.title || null,
+    is_primary: Boolean(demo.isPrimary),
+    legacy_id: String(demo.id),
+    updated_at: demo.updatedAt || new Date().toISOString(),
+  };
+}
+
+function activityPayload(demo, clientSupabaseId, contactSupabaseId) {
+  return {
+    client_id: clientSupabaseId,
+    contact_id: contactSupabaseId || null,
+    type: demo.type || 'note',
+    subject: demo.subject || null,
+    body: demo.body || null,
+    created_by: demo.createdBy || null,
+    legacy_id: String(demo.id),
+  };
+}
+
+function followUpPayload(demo, clientSupabaseId, contactSupabaseId, activitySupabaseId) {
+  return {
+    client_id: clientSupabaseId,
+    contact_id: contactSupabaseId || null,
+    activity_id: activitySupabaseId || null,
+    title: demo.title,
+    due_date: demo.dueDate || null,
+    owner_email: demo.ownerEmail || null,
+    done: Boolean(demo.done),
+    legacy_id: String(demo.id),
+    updated_at: demo.updatedAt || new Date().toISOString(),
+  };
+}
+
+function jobPayload(demo, clientSupabaseId) {
+  return {
+    client_id: clientSupabaseId,
+    title: demo.title,
+    location: demo.location || null,
+    rate: demo.rate ?? null,
+    pay_rate: demo.payRate ?? null,
+    requirements: demo.requirements || null,
+    openings: demo.openings ?? 1,
+    status: demo.status || 'Open',
+    legacy_id: String(demo.id),
+    updated_at: demo.updatedAt || new Date().toISOString(),
+  };
+}
+
+function stampDemoClient(demo, supabaseId) {
+  const rows = getClients();
+  const idx = rows.findIndex((c) => c.id === demo.id);
+  if (idx === -1) return;
+  rows[idx] = { ...rows[idx], supabaseClientId: supabaseId || rows[idx].supabaseClientId || null };
+  setClients(rows);
+}
+
+function stampDemoContact(demo, supabaseId) {
+  const rows = getContacts();
+  const idx = rows.findIndex((c) => c.id === demo.id);
+  if (idx === -1) return;
+  rows[idx] = { ...rows[idx], supabaseContactId: supabaseId || rows[idx].supabaseContactId || null };
+  setContacts(rows);
+}
+
+function stampDemoActivity(demo, supabaseId) {
+  const rows = getActivities();
+  const idx = rows.findIndex((a) => a.id === demo.id);
+  if (idx === -1) return;
+  rows[idx] = { ...rows[idx], supabaseActivityId: supabaseId || rows[idx].supabaseActivityId || null };
+  setActivities(rows);
+}
+
+function stampDemoFollowUp(demo, supabaseId) {
+  const rows = getFollowUps();
+  const idx = rows.findIndex((f) => f.id === demo.id);
+  if (idx === -1) return;
+  rows[idx] = { ...rows[idx], supabaseFollowUpId: supabaseId || rows[idx].supabaseFollowUpId || null };
+  setFollowUps(rows);
+}
+
+function stampDemoJob(demo, supabaseId) {
+  const jobs = getJobs();
+  const idx = jobs.findIndex((j) => j.id === demo.id);
+  if (idx === -1) return;
+  jobs[idx] = { ...jobs[idx], supabaseJobId: supabaseId || jobs[idx].supabaseJobId || null };
+  setJobs(jobs);
+}
+
+// Sync one demo client row to Supabase. Never throws. Returns
+// 'demo' | 'supabase' | 'created' | 'skipped' | 'failed'.
+export async function syncClientToSupabase(demo) {
+  try {
+    if (!demo || !demo.name) return 'skipped';
+    const { data: existing } = await supabase
+      .from('clients')
+      .select(CLIENT_SELECT)
+      .eq('legacy_id', String(demo.id))
+      .limit(1);
+    const row = existing && existing.length > 0 ? existing[0] : null;
+    if (!row) {
+      const { data: created, error } = await supabase
+        .from('clients')
+        .insert([clientPayload(demo)])
+        .select('id')
+        .single();
+      if (error || !created) return 'failed';
+      stampDemoClient(demo, created.id);
+      return 'created';
+    }
+    stampDemoClient(demo, row.id);
+    const demoTime = Date.parse(demo.updatedAt || 0) || 0;
+    const rowTime = Date.parse(row.updated_at || 0) || 0;
+    if (demoTime >= rowTime) {
+      const { error } = await supabase
+        .from('clients')
+        .update(clientPayload(demo))
+        .eq('id', row.id);
+      if (error) return 'failed';
+      return 'demo';
+    }
+    const rows = getClients();
+    const idx = rows.findIndex((c) => c.id === demo.id);
+    if (idx !== -1) {
+      const m = mapClient(row);
+      rows[idx] = { ...rows[idx], ...m, id: rows[idx].id, supabaseClientId: row.id };
+      setClients(rows);
+    }
+    return 'supabase';
+  } catch (err) {
+    if (import.meta.env.MODE !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[client sync] failed', err);
+    }
+    return 'failed';
+  }
+}
+
+export async function syncContactToSupabase(demo) {
+  try {
+    if (!demo || !demo.clientId || !demo.name) return 'skipped';
+    const clientSupabaseId = await resolveClientSupabaseId(demo.clientId);
+    if (!clientSupabaseId) return 'skipped';
+    const { data: existing } = await supabase
+      .from('contacts')
+      .select(CONTACT_SELECT)
+      .eq('legacy_id', String(demo.id))
+      .limit(1);
+    const row = existing && existing.length > 0 ? existing[0] : null;
+    if (!row) {
+      const { data: created, error } = await supabase
+        .from('contacts')
+        .insert([contactPayload(demo, clientSupabaseId)])
+        .select('id')
+        .single();
+      if (error || !created) return 'failed';
+      stampDemoContact(demo, created.id);
+      return 'created';
+    }
+    stampDemoContact(demo, row.id);
+    const demoTime = Date.parse(demo.updatedAt || 0) || 0;
+    const rowTime = Date.parse(row.updated_at || 0) || 0;
+    if (demoTime >= rowTime) {
+      const { error } = await supabase
+        .from('contacts')
+        .update(contactPayload(demo, clientSupabaseId))
+        .eq('id', row.id);
+      if (error) return 'failed';
+      return 'demo';
+    }
+    const rows = getContacts();
+    const idx = rows.findIndex((c) => c.id === demo.id);
+    if (idx !== -1) {
+      const m = mapContact(row);
+      rows[idx] = { ...rows[idx], ...m, id: rows[idx].id, supabaseContactId: row.id, clientId: rows[idx].clientId };
+      setContacts(rows);
+    }
+    return 'supabase';
+  } catch (err) {
+    if (import.meta.env.MODE !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[contact sync] failed', err);
+    }
+    return 'failed';
+  }
+}
+
+// Activities are append-only log entries: sync inserts once and never
+// updates (the table has no updated_at column).
+export async function syncActivityToSupabase(demo) {
+  try {
+    if (!demo || !demo.clientId) return 'skipped';
+    const clientSupabaseId = await resolveClientSupabaseId(demo.clientId);
+    if (!clientSupabaseId) return 'skipped';
+    const contactSupabaseId = await resolveContactId(demo.contactId);
+    const { data: existing } = await supabase
+      .from('activities')
+      .select('id')
+      .eq('legacy_id', String(demo.id))
+      .limit(1);
+    if (existing && existing.length > 0) {
+      stampDemoActivity(demo, existing[0].id);
+      return 'skipped';
+    }
+    const { data: created, error } = await supabase
+      .from('activities')
+      .insert([activityPayload(demo, clientSupabaseId, contactSupabaseId)])
+      .select('id')
+      .single();
+    if (error || !created) return 'failed';
+    stampDemoActivity(demo, created.id);
+    return 'created';
+  } catch (err) {
+    if (import.meta.env.MODE !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[activity sync] failed', err);
+    }
+    return 'failed';
+  }
+}
+
+export async function syncFollowUpToSupabase(demo) {
+  try {
+    if (!demo || !demo.clientId || !demo.title) return 'skipped';
+    const clientSupabaseId = await resolveClientSupabaseId(demo.clientId);
+    if (!clientSupabaseId) return 'skipped';
+    const contactSupabaseId = await resolveContactId(demo.contactId);
+    const activitySupabaseId = await resolveActivityId(demo.activityId);
+    const { data: existing } = await supabase
+      .from('follow_ups')
+      .select(FOLLOW_UP_SELECT)
+      .eq('legacy_id', String(demo.id))
+      .limit(1);
+    const row = existing && existing.length > 0 ? existing[0] : null;
+    if (!row) {
+      const { data: created, error } = await supabase
+        .from('follow_ups')
+        .insert([followUpPayload(demo, clientSupabaseId, contactSupabaseId, activitySupabaseId)])
+        .select('id')
+        .single();
+      if (error || !created) return 'failed';
+      stampDemoFollowUp(demo, created.id);
+      return 'created';
+    }
+    stampDemoFollowUp(demo, row.id);
+    const demoTime = Date.parse(demo.updatedAt || 0) || 0;
+    const rowTime = Date.parse(row.updated_at || 0) || 0;
+    if (demoTime >= rowTime) {
+      const { error } = await supabase
+        .from('follow_ups')
+        .update(followUpPayload(demo, clientSupabaseId, contactSupabaseId, activitySupabaseId))
+        .eq('id', row.id);
+      if (error) return 'failed';
+      return 'demo';
+    }
+    const rows = getFollowUps();
+    const idx = rows.findIndex((f) => f.id === demo.id);
+    if (idx !== -1) {
+      const m = mapFollowUp(row);
+      rows[idx] = { ...rows[idx], ...m, id: rows[idx].id, supabaseFollowUpId: row.id, clientId: rows[idx].clientId };
+      setFollowUps(rows);
+    }
+    return 'supabase';
+  } catch (err) {
+    if (import.meta.env.MODE !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[follow-up sync] failed', err);
+    }
+    return 'failed';
+  }
+}
+
+export async function syncJobToSupabase(demo) {
+  try {
+    if (!demo || !demo.clientId || !demo.title) return 'skipped';
+    const clientSupabaseId = await resolveClientSupabaseId(demo.clientId);
+    if (!clientSupabaseId) return 'skipped';
+    const { data: existing } = await supabase
+      .from('jobs')
+      .select(JOB_SELECT)
+      .eq('legacy_id', String(demo.id))
+      .limit(1);
+    const row = existing && existing.length > 0 ? existing[0] : null;
+    if (!row) {
+      const { data: created, error } = await supabase
+        .from('jobs')
+        .insert([jobPayload(demo, clientSupabaseId)])
+        .select('id')
+        .single();
+      if (error || !created) return 'failed';
+      stampDemoJob(demo, created.id);
+      return 'created';
+    }
+    stampDemoJob(demo, row.id);
+    const demoTime = Date.parse(demo.updatedAt || 0) || 0;
+    const rowTime = Date.parse(row.updated_at || 0) || 0;
+    if (demoTime >= rowTime) {
+      const { error } = await supabase
+        .from('jobs')
+        .update(jobPayload(demo, clientSupabaseId))
+        .eq('id', row.id);
+      if (error) return 'failed';
+      return 'demo';
+    }
+    const jobs = getJobs();
+    const idx = jobs.findIndex((j) => j.id === demo.id);
+    if (idx !== -1) {
+      const m = mapJob(row);
+      jobs[idx] = {
+        ...jobs[idx],
+        title: m.title,
+        location: m.location,
+        rate: m.rate,
+        payRate: m.payRate,
+        requirements: m.requirements,
+        openings: m.openings,
+        status: m.status,
+        client_name: m.client_name,
+        supabaseJobId: row.id,
+      };
+      setJobs(jobs);
+    }
+    return 'supabase';
+  } catch (err) {
+    if (import.meta.env.MODE !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[job sync] failed', err);
+    }
+    return 'failed';
+  }
+}
+
+// Load-time reconcile for companies: push this browser's demo companies
+// up to Supabase, and create demo twins for Supabase companies this
+// browser has never seen. Returns the fresh Supabase company list (mapped).
+export async function reconcileClients() {
+  const demoRows = getClients();
+  await Promise.all(demoRows.map((d) => syncClientToSupabase(d)));
+  const rows = await fetchClients();
+  const demoByKey = new Map();
+  for (const d of getClients()) {
+    demoByKey.set(String(d.id), d);
+    if (d.supabaseClientId) demoByKey.set(String(d.supabaseClientId), d);
+  }
+  const missing = rows.filter(
+    (c) => !demoByKey.has(String(c.id)) && !demoByKey.has(String(c.supabaseClientId))
+  );
+  if (missing.length > 0) {
+    const clients = getClients();
+    for (const c of missing) {
+      clients.push({
+        id: c.id,
+        name: c.name,
+        industry: c.industry,
+        location: c.location,
+        contactPerson: c.contactPerson,
+        contactEmail: c.contactEmail,
+        billingEmail: c.billingEmail,
+        phone: c.phone,
+        status: c.status,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        supabaseClientId: c.supabaseClientId,
+      });
+    }
+    setClients(clients);
+  }
+  return rows;
+}
+
+export async function reconcileContacts() {
+  const demoRows = getContacts();
+  await Promise.all(demoRows.map((d) => syncContactToSupabase(d)));
+  const rows = await fetchContacts();
+  const demoByKey = new Map();
+  for (const d of getContacts()) {
+    demoByKey.set(String(d.id), d);
+    if (d.supabaseContactId) demoByKey.set(String(d.supabaseContactId), d);
+  }
+  const missing = rows.filter(
+    (c) => !demoByKey.has(String(c.id)) && !demoByKey.has(String(c.supabaseContactId))
+  );
+  if (missing.length > 0) {
+    const contacts = getContacts();
+    for (const c of missing) {
+      // The Supabase contact's client_id is numeric; map it back to the
+      // demo client id (legacy key) so the detail page can join on it.
+      const demoClient = getClients().find((cl) => String(cl.supabaseClientId) === String(c.clientId));
+      contacts.push({
+        id: c.id,
+        clientId: demoClient ? demoClient.id : String(c.clientId),
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        title: c.title,
+        isPrimary: c.isPrimary,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        supabaseContactId: c.supabaseContactId,
+      });
+    }
+    setContacts(contacts);
+  }
+  return rows;
+}
+
+export async function reconcileActivities() {
+  const demoRows = getActivities();
+  await Promise.all(demoRows.map((d) => syncActivityToSupabase(d)));
+  const rows = await fetchActivities();
+  const demoByKey = new Map();
+  for (const d of getActivities()) {
+    demoByKey.set(String(d.id), d);
+    if (d.supabaseActivityId) demoByKey.set(String(d.supabaseActivityId), d);
+  }
+  const missing = rows.filter(
+    (a) => !demoByKey.has(String(a.id)) && !demoByKey.has(String(a.supabaseActivityId))
+  );
+  if (missing.length > 0) {
+    const activities = getActivities();
+    for (const a of missing) {
+      const demoClient = getClients().find((cl) => String(cl.supabaseClientId) === String(a.clientId));
+      const demoContact = getContacts().find((ct) => String(ct.supabaseContactId) === String(a.contactId));
+      activities.push({
+        id: a.id,
+        clientId: demoClient ? demoClient.id : String(a.clientId),
+        contactId: demoContact ? demoContact.id : null,
+        type: a.type,
+        subject: a.subject,
+        body: a.body,
+        createdBy: a.createdBy,
+        createdAt: a.createdAt,
+        supabaseActivityId: a.supabaseActivityId,
+      });
+    }
+    setActivities(activities);
+  }
+  return rows;
+}
+
+export async function reconcileFollowUps() {
+  const demoRows = getFollowUps();
+  await Promise.all(demoRows.map((d) => syncFollowUpToSupabase(d)));
+  const rows = await fetchFollowUps();
+  const demoByKey = new Map();
+  for (const d of getFollowUps()) {
+    demoByKey.set(String(d.id), d);
+    if (d.supabaseFollowUpId) demoByKey.set(String(d.supabaseFollowUpId), d);
+  }
+  const missing = rows.filter(
+    (f) => !demoByKey.has(String(f.id)) && !demoByKey.has(String(f.supabaseFollowUpId))
+  );
+  if (missing.length > 0) {
+    const followUps = getFollowUps();
+    for (const f of missing) {
+      const demoClient = getClients().find((cl) => String(cl.supabaseClientId) === String(f.clientId));
+      const demoContact = getContacts().find((ct) => String(ct.supabaseContactId) === String(f.contactId));
+      const demoActivity = getActivities().find((ac) => String(ac.supabaseActivityId) === String(f.activityId));
+      followUps.push({
+        id: f.id,
+        clientId: demoClient ? demoClient.id : String(f.clientId),
+        contactId: demoContact ? demoContact.id : null,
+        activityId: demoActivity ? demoActivity.id : null,
+        title: f.title,
+        dueDate: f.dueDate,
+        ownerEmail: f.ownerEmail,
+        done: f.done,
+        createdAt: f.createdAt,
+        updatedAt: f.updatedAt,
+        supabaseFollowUpId: f.supabaseFollowUpId,
+      });
+    }
+    setFollowUps(followUps);
+  }
+  return rows;
+}
+
+// Load-time reconcile for job orders: push this browser's demo jobs up to
+// Supabase, and create demo twins for Supabase jobs this browser has never
+// seen. Returns the fresh Supabase job list (mapped).
+export async function reconcileJobs() {
+  const demoRows = getJobs();
+  await Promise.all(demoRows.map((d) => syncJobToSupabase(d)));
+  const rows = await fetchJobs();
+  const demoByKey = new Map();
+  for (const d of getJobs()) {
+    demoByKey.set(String(d.id), d);
+    if (d.supabaseJobId) demoByKey.set(String(d.supabaseJobId), d);
+  }
+  const missing = rows.filter(
+    (j) => !demoByKey.has(String(j.id)) && !demoByKey.has(String(j.supabaseJobId))
+  );
+  if (missing.length > 0) {
+    const jobs = getJobs();
+    for (const j of missing) {
+      const demoClient = getClients().find((cl) => String(cl.supabaseClientId) === String(j.clientId));
+      jobs.push({
+        id: j.legacyId || String(j.id),
+        title: j.title,
+        client_name: j.client_name,
+        clientId: demoClient ? demoClient.id : 'client-001',
+        location: j.location === '—' ? '' : j.location,
+        rate: j.rate,
+        payRate: j.payRate,
+        requirements: j.requirements,
+        openings: j.openings,
+        status: j.status,
+        createdAt: j.createdAt,
+        updatedAt: j.updatedAt,
+        supabaseJobId: j.id,
+      });
+    }
+    setJobs(jobs);
+  }
+  return rows;
 }
 
 // --- Timesheets (migration slice 3) ----------------------------------------
