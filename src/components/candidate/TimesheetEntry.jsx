@@ -117,7 +117,19 @@ const TimesheetEntry = () => {
       }
       if (!mounted) return;
       setAssignments(mine);
-      if (mine.length > 0) setAssignmentId(String(mine[0].demoAssignmentId));
+      if (mine.length > 0) {
+        // Onboarding Slice 5: open on the assignment whose current-week
+        // Draft is waiting (auto-created by ensureCurrentWeekTimesheets)
+        // — the employee lands straight on the timecard to fill in.
+        // The prefill effect below then loads that Draft's hours.
+        const friday = fridayOfCurrentWeek();
+        const sheets = getTimesheets();
+        const withDraft = mine.find((a) => sheets.some(
+          (t) => String(t.assignmentId) === String(a.demoAssignmentId)
+            && t.weekEnding === friday && t.status === 'Draft'
+        ));
+        setAssignmentId(String((withDraft || mine[0]).demoAssignmentId));
+      }
       setLoading(false);
     })();
     return () => { mounted = false; };
