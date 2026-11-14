@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getInvoiceById, getPaymentsForInvoice, postPayment, getInvoices, setInvoices, getPayments, uid, now, getClientById } from '@/utils/storage';
-import { fetchInvoice, fetchPaymentsForInvoice, reconcileInvoices, syncInvoiceToSupabase, syncPaymentToSupabase, isRlsDenied } from '@/lib/pipeline';
+import { getInvoiceById, getPaymentsForInvoice, postPayment, getInvoices, setInvoices, getPayments, uid, now, getClientById, getTimesheets, getTimesheetById, getAssignmentById, getCandidateById, getJobById } from '@/utils/storage';
+import { fetchInvoice, fetchPaymentsForInvoice, fetchTimesheets, reconcileInvoices, syncInvoiceToSupabase, syncPaymentToSupabase, isRlsDenied } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { useCapabilities } from '@/lib/capabilities';
 import { useDemoClientId } from '@/lib/useDemoClientId';
@@ -32,6 +32,9 @@ export default function InvoiceView() {
   // route also admits ceo/cfo/admin/client as read-only viewers.
   const canSend = hasCapability('invoices.send');
   const canPost = hasCapability('payments.post');
+  // The timesheet detail route needs timesheets.approve_internal; viewers
+  // without it (clients, recruiters) see the source timesheets as text.
+  const canViewTimesheet = hasCapability('timesheets.approve_internal');
   const [invoice, setInvoice] = useState(null);
   const [payments, setPayments] = useState([]);
   const [usingFallback, setUsingFallback] = useState(false);
@@ -95,6 +98,62 @@ export default function InvoiceView() {
   };
 
   useEffect(() => { reload(); }, [id]);
+
+  // Source timesheets: the timesheets this invoice bills, resolved from
+  // the stored links — line-item timesheetId (flow-created invoices) and
+  // the invoiceId stamp on timesheets (older invoices). Seed invoices
+  // carry neither link, so they show none. Demo store first; Supabase for
+  // rows created in another session and not yet reconciled down.
+  const [sourceTimesheets, setSourceTimesheets] = useState([]);
+  useEffect(() => {
+    if (!invoice) { setSourceTimesheets([]); return; }
+    const demoInvoiceId = invoice.demoInvoiceId || invoice.legacyId || invoice.id;
+    const lineIds = [...new Set((invoice.lineItems || []).map((li) => li.timesheetId).filter(Boolean))];
+    const rows = [];
+    const seen = new Set();
+    const pushDemo = (t) => {
+      if (!t || seen.has(t.id)) return;
+      seen.add(t.id);
+      const asg = getAssignmentById(t.assignmentId);
+      const candidate = asg ? getCandidateById(asg.candidateId) : null;
+      const job = asg ? getJobById(asg.jobId) : null;
+      rows.push({
+        demoTimesheetId: t.id,
+        candidateName: candidate?.name || 'Unknown',
+        jobTitle: job?.title || 'Unknown',
+        weekEnding: t.weekEnding || '-',
+        totalHours: t.totalHours ?? 0,
+        status: t.status || '-',
+      });
+    };
+    lineIds.forEach((tid) => pushDemo(getTimesheetById(tid)));
+    getTimesheets()
+      .filter((t) => t.invoiceId && String(t.invoiceId) === String(demoInvoiceId))
+      .forEach(pushDemo);
+    const unresolved = lineIds.filter((tid) => !seen.has(tid));
+    if (unresolved.length === 0) { setSourceTimesheets(rows); return; }
+    let mounted = true;
+    fetchTimesheets()
+      .then((all) => {
+        if (!mounted) return;
+        unresolved.forEach((tid) => {
+          const t = all.find((x) => x.legacyId === tid || String(x.id) === tid);
+          if (!t || seen.has(t.legacyId || t.id)) return;
+          seen.add(t.legacyId || t.id);
+          rows.push({
+            demoTimesheetId: t.legacyId || t.id,
+            candidateName: t.candidateName || 'Unknown',
+            jobTitle: t.jobTitle || 'Unknown',
+            weekEnding: t.weekEnding || '-',
+            totalHours: t.totalHours ?? 0,
+            status: t.status || '-',
+          });
+        });
+        setSourceTimesheets(rows);
+      })
+      .catch(() => { if (mounted) setSourceTimesheets(rows); });
+    return () => { mounted = false; };
+  }, [invoice]);
 
   if (denied) return <AccessDenied />;
   if (role === 'client' && invoice && invoice.clientId !== demoClientId) return <AccessDenied />;
@@ -225,6 +284,40 @@ export default function InvoiceView() {
             </tr>
           </tbody>
         </table>
+
+        <h3 className="font-semibold mb-2 text-sm text-gray-500 uppercase">Source Timesheets</h3>
+        {sourceTimesheets.length === 0 ? (
+          <p className="text-gray-500 text-sm">Source timesheets aren't linked on this invoice.</p>
+        ) : (
+          <table className="min-w-full text-sm border rounded">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-3 py-2">Employee</th>
+                <th className="text-left px-3 py-2">Job</th>
+                <th className="text-left px-3 py-2">Week Ending</th>
+                <th className="text-right px-3 py-2">Hours</th>
+                <th className="text-left px-3 py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sourceTimesheets.map((t, i) => (
+                <tr key={t.demoTimesheetId || i} className={i % 2 ? 'bg-white' : 'bg-gray-50/40'}>
+                  <td className="px-3 py-2">
+                    {canViewTimesheet && t.demoTimesheetId ? (
+                      <Link to={`/timekeeping/${t.demoTimesheetId}`} className="text-blue-600 hover:underline">{t.candidateName}</Link>
+                    ) : (
+                      t.candidateName
+                    )}
+                  </td>
+                  <td className="px-3 py-2">{t.jobTitle}</td>
+                  <td className="px-3 py-2">{t.weekEnding}</td>
+                  <td className="px-3 py-2 text-right">{t.totalHours}</td>
+                  <td className="px-3 py-2">{t.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="bg-white border rounded-lg p-6 mb-6">
