@@ -7,18 +7,18 @@ export default function CandidateDashboard() {
       <h1 className="text-2xl font-bold mb-6">Candidate Dashboard</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <Link to="/jobs" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+        <Link to="/candidate/jobs" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
           <h3 className="text-lg font-semibold mb-2">Browse Jobs</h3>
           <p className="text-gray-600">Find your next opportunity</p>
         </Link>
-        
-        <Link to="/candidates" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-          <h3 className="text-lg font-semibold mb-2">Pipeline Status</h3>
-          <p className="text-gray-600">Track your application progress</p>
+
+        <Link to="/candidate/jobs" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+          <h3 className="text-lg font-semibold mb-2">My Applications</h3>
+          <p className="text-gray-600">See the jobs you have applied to</p>
         </Link>
-        
-        <Link to="/timekeeping" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-          <h3 className="text-lg font-semibold mb-2">Timesheets</h3>
+
+        <Link to="/timekeeping/entry" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+          <h3 className="text-lg font-semibold mb-2">Enter Time</h3>
           <p className="text-gray-600">Submit your hours</p>
         </Link>
       </div>
