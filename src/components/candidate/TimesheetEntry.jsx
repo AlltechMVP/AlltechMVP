@@ -33,17 +33,30 @@ function fridayOfCurrentWeek() {
   return d.toISOString().slice(0, 10);
 }
 
-// The 7 dates of the Mon-Sun week ending on `weekEnding`, same convention
-// as the timekeeping Form (entries[0] is Monday, entries[6] is the
-// week-ending date).
+// Local-date formatter (YYYY-MM-DD). Using toISOString() here would mix a
+// local-midnight date with a UTC output and shift the day for timezones
+// ahead of UTC — the same class of bug the seeded-dates fix removed.
+function toISODate(d) {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+// The 7 dates of the Mon-Sun week containing `weekEnding`, same convention
+// as the timekeeping Form: entries[0] is Monday, entries[6] is Sunday, and
+// weekEnding is the Friday of that week. NOT the 7 days ending on
+// weekEnding (which would be Sat–Fri and store Monday's hours on a
+// Saturday date).
 function generateWeekDates(weekEnding) {
   if (!weekEnding) return [];
   const end = new Date(weekEnding + "T00:00:00");
+  const monday = new Date(end);
+  monday.setDate(end.getDate() - ((end.getDay() + 6) % 7));
   const dates = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(end);
-    d.setDate(end.getDate() - i);
-    dates.push(d.toISOString().split("T")[0]);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    dates.push(toISODate(d));
   }
   return dates;
 }

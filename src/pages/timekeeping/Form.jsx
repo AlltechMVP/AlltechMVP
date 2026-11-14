@@ -10,14 +10,32 @@ import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+// Local-date formatter (YYYY-MM-DD). Using toISOString() here would mix a
+// local-midnight date with a UTC output and shift the day for timezones
+// ahead of UTC — the same class of bug the seeded-dates fix removed.
+function toISODate(d) {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+// The 7 dates of the Mon–Sun week containing `weekEnding`.
+// Entries are Mon-first (entries[0] is Monday, entries[6] is Sunday) and
+// weekEnding is the Friday of that week by convention — so the dates are
+// Monday = weekEnding − 4 through Sunday = weekEnding + 2, NOT the 7 days
+// ending on weekEnding (which would be Sat–Fri and put Monday's hours on
+// a Saturday date). Resolving the Monday from weekEnding's actual weekday
+// keeps the dates right even if a non-Friday ending is picked.
 function generateWeekDates(weekEnding) {
   if (!weekEnding) return [];
   const end = new Date(weekEnding + 'T00:00:00');
+  const monday = new Date(end);
+  monday.setDate(end.getDate() - ((end.getDay() + 6) % 7));
   const dates = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(end);
-    d.setDate(end.getDate() - i);
-    dates.push(d.toISOString().split('T')[0]);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    dates.push(toISODate(d));
   }
   return dates;
 }
@@ -95,6 +113,12 @@ export default function TimesheetForm() {
   }, [entries, weekEnding, assignmentId]);
 
   const totalHours = useMemo(() => entries.reduce((s, e) => s + (Number(e.hours) || 0), 0), [entries]);
+
+  // Dates derived from weekEnding, not from stored entry dates: seed rows
+  // carry no date at all, and rows saved before this fix carry Sat–Fri
+  // dates from the old generateWeekDates. Deriving here makes the table
+  // right for every stored row without rewriting any data.
+  const weekDates = useMemo(() => generateWeekDates(weekEnding), [weekEnding]);
 
   const [clientApproval, setClientApproval] = useState('Not Submitted');
 
@@ -227,7 +251,7 @@ export default function TimesheetForm() {
             </select>
           </div>
           <div>
-            <label className={labelCls}>Week Ending (Sunday) *</label>
+            <label className={labelCls}>Week Ending (Friday) *</label>
             <input
               type="date"
               value={weekEnding}
@@ -309,9 +333,9 @@ export default function TimesheetForm() {
                 </thead>
                 <tbody>
                   {entries.map((entry, idx) => (
-                    <tr key={entry.date} className={idx % 2 ? 'bg-white' : 'bg-gray-50/40'}>
+                    <tr key={weekDates[idx] || entry.date || idx} className={idx % 2 ? 'bg-white' : 'bg-gray-50/40'}>
                       <td className="px-3 py-2">{DAY_LABELS[idx] || ''}</td>
-                      <td className="px-3 py-2">{entry.date}</td>
+                      <td className="px-3 py-2">{weekDates[idx] || entry.date || ''}</td>
                       <td className="px-3 py-2">
                         {isLocked ? (
                           <span>{entry.hours}</span>
