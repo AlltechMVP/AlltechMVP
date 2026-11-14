@@ -37,9 +37,18 @@ export default function Scheduler() {
     if (!stored) {
       localStorage.setItem('mockScheduleEvents', JSON.stringify(MOCK_EVENTS));
       setEvents(MOCK_EVENTS);
-    } else {
-      setEvents(JSON.parse(stored));
+      return;
     }
+    let parsed = [];
+    try { parsed = JSON.parse(stored); } catch { parsed = []; }
+    // Rows saved by the old buggy handleSave were nested ({ formData, id })
+    // or nested arrays ([events, {...}]) — drop anything that isn't a flat
+    // event with a string title and date instead of rendering garbage.
+    const valid = (Array.isArray(parsed) ? parsed : []).filter(
+      (e) => e && typeof e === 'object' && !Array.isArray(e)
+        && typeof e.title === 'string' && typeof e.date === 'string'
+    );
+    setEvents(valid);
   }, []);
 
   const startDate = startOfWeek(new Date());
@@ -50,9 +59,13 @@ export default function Scheduler() {
   };
 
   const handleSave = () => {
-    const newEvents = selectedEvent 
-      ? events.map(e => e.id === selectedEvent.id ? { formData, id: selectedEvent.id } : e)
-      : [events, { formData, id: `evt${Date.now()}` }];
+    // Flat event shape: { ...formData, id }. The old code saved
+    // { formData, id } on edit (title/date lived one level too deep, so the
+    // card rendered blank) and [events, {...}] on add (a nested array, so
+    // the new job never rendered and the stored list corrupted).
+    const newEvents = selectedEvent
+      ? events.map(e => e.id === selectedEvent.id ? { ...formData, id: selectedEvent.id } : e)
+      : [...events, { ...formData, id: `evt${Date.now()}` }];
     
     setEvents(newEvents);
     localStorage.setItem('mockScheduleEvents', JSON.stringify(newEvents));
@@ -173,7 +186,7 @@ export default function Scheduler() {
                 <input
                   type="text"
                   value={formData.title}
-                  onChange={e => setFormData({ formData, title: e.target.value })}
+                  onChange={e => setFormData({ ...formData, title: e.target.value })}
                   className="w-full border rounded p-2"
                 />
               </div>
@@ -182,7 +195,7 @@ export default function Scheduler() {
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={e => setFormData({ formData, date: e.target.value })}
+                  onChange={e => setFormData({ ...formData, date: e.target.value })}
                   className="w-full border rounded p-2"
                 />
               </div>
@@ -190,7 +203,7 @@ export default function Scheduler() {
                 <label className="block text-sm font-medium mb-1">Shift</label>
                 <select
                   value={formData.shift}
-                  onChange={e => setFormData({ formData, shift: e.target.value })}
+                  onChange={e => setFormData({ ...formData, shift: e.target.value })}
                   className="w-full border rounded p-2"
                 >
                   {SHIFTS.map(shift => (
@@ -203,7 +216,7 @@ export default function Scheduler() {
                 <input
                   type="text"
                   value={formData.location}
-                  onChange={e => setFormData({ formData, location: e.target.value })}
+                  onChange={e => setFormData({ ...formData, location: e.target.value })}
                   className="w-full border rounded p-2"
                 />
               </div>
