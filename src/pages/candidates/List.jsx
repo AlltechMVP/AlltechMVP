@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   getCandidates, getJobById, normalizeStatus,
-  getAllowedTransitions, changeCandidateStatus,
+  getAllowedTransitions, getRecruitingStage, changeCandidateStatus,
   setAssignmentPrefill, getCandidateById,
 } from '@/utils/storage';
 import {
@@ -64,6 +64,7 @@ function mapDemoRow(c) {
     lastAction: c.lastActionAt ? new Date(c.lastActionAt).toLocaleDateString() : '-',
     _sortDate: c.lastActionAt || c.createdAt || '',
     legacyJobId: c.submittedJobId || null,
+    history: c.statusHistory || [],
     clientDecision: c.clientDecision || null,
     clientDecisionNote: c.clientDecisionNote || '',
     clientDecidedAt: c.clientDecidedAt || null,
@@ -202,7 +203,9 @@ export default function CandidatesList() {
   const rows = useMemo(() => {
     let items = data;
     if (statusFilter !== 'All') {
-      items = items.filter(c => normalizeStatus(c.status) === statusFilter);
+      // Match the displayed stage too: a placed candidate shows Hired
+      // alongside Active Assignment, so the Hired filter must find them.
+      items = items.filter(c => normalizeStatus(c.status) === statusFilter || getRecruitingStage(c) === statusFilter);
     }
     // ATS/CRM milestone (slice 6): search the pipeline by name/email.
     const q = searchQuery.trim().toLowerCase();
@@ -220,6 +223,7 @@ export default function CandidatesList() {
         email: c.email || '-',
         job: c.job || '-',
         status,
+        recruitingStage: getRecruitingStage(c),
         lastAction: c.lastAction || '-',
         _sortDate: c._sortDate || '',
         allowed: getAllowedTransitions(status),
@@ -234,9 +238,17 @@ export default function CandidatesList() {
     )},
     { key: 'email', header: 'Email' },
     { key: 'job', header: 'Job' },
-    { key: 'status', header: 'Status', render: (v) => (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[v] || 'bg-gray-100 text-gray-800'}`}>{v}</span>
-    )},
+    { key: 'status', header: 'Status', render: (v, row) => {
+      const rs = row.recruitingStage;
+      return (
+        <span className="inline-flex gap-1 flex-wrap">
+          {rs && rs !== v && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[rs] || 'bg-gray-100 text-gray-800'}`}>{rs}</span>
+          )}
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[v] || 'bg-gray-100 text-gray-800'}`}>{v}</span>
+        </span>
+      );
+    }},
     { key: 'lastAction', header: 'Last Action' },
     { key: 'id', header: 'Actions', render: (_, row) => {
       if (row.allowed.length === 0) {

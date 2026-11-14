@@ -735,6 +735,31 @@ export function getAllowedTransitions(status) {
   return PIPELINE_TRANSITIONS[norm] || [];
 }
 
+// The recruiting stage a candidate reached on an order before an assignment
+// took over the displayed status. The stage field does double duty: it is
+// the pipeline stage until placement, then the assignment state — and the
+// placement flip writes no history entry, so the last history entry is
+// still the recruiting stage the candidate reached (usually Hired).
+// Returns the row's own stage when it is already a recruiting stage, the
+// last recorded recruiting stage when the row shows an assignment state,
+// or null when no recruiting stage is on record. Accepts both the demo
+// store's `statusHistory` and the shared store's `history`.
+const RECRUITING_STAGES = ['Applied', 'Reviewed', 'Submitted', 'Interview', 'Hired', 'Rejected'];
+const ASSIGNMENT_STATUSES = ['Assigned', 'Active Assignment', 'Assignment Ended'];
+
+export function getRecruitingStage(row) {
+  if (!row) return null;
+  const status = normalizeStatus(row.status);
+  if (RECRUITING_STAGES.includes(status)) return status;
+  if (!ASSIGNMENT_STATUSES.includes(status)) return null;
+  const history = row.statusHistory || row.history || [];
+  for (let i = history.length - 1; i >= 0; i--) {
+    const to = normalizeStatus(history[i] && history[i].to);
+    if (RECRUITING_STAGES.includes(to)) return to;
+  }
+  return null;
+}
+
 export function changeCandidateStatus(candidateId, newStatus, { note, by } = {}) {
   const candidates = getCandidates();
   const idx = candidates.findIndex(c => c.id === candidateId);

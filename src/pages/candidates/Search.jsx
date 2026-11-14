@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   getCandidates, findCandidateByEmail, createCandidate, submitCandidateToJob,
-  normalizeStatus, getJobs,
+  normalizeStatus, getRecruitingStage, getJobs,
 } from '@/utils/storage';
 import {
   fetchPersons, fetchApplications, fetchJobs, syncCandidateToSupabase,
@@ -63,6 +63,7 @@ function demoApplications() {
       jobId: c.submittedJobId,
       jobTitle: (getJobs().find((j) => String(j.id) === String(c.submittedJobId)) || {}).title || String(c.submittedJobId),
       status: normalizeStatus(c.status),
+      history: c.statusHistory || [],
     }));
 }
 
@@ -99,6 +100,7 @@ export default function TalentSearch() {
         jobTitle: a.jobTitle,
         status: normalizeStatus(a.status),
         legacyJobId: a.legacyJobId,
+        history: a.history || [],
       })));
       setUsingFallback(false);
     } catch (err) {
@@ -114,6 +116,7 @@ export default function TalentSearch() {
         setApplications(apps.map((a) => ({
           id: a.id, email: a.email || '', jobId: a.jobId, jobTitle: a.jobTitle,
           status: normalizeStatus(a.status), legacyJobId: a.legacyJobId,
+          history: a.history || [],
         })));
         setUsingFallback(false);
       } catch (err2) {
@@ -179,7 +182,14 @@ export default function TalentSearch() {
       );
     }
     if (statusFilter !== 'All') {
-      items = items.filter((p) => normalizeStatus(p.status) === statusFilter);
+      // Match the displayed stage too: a placed candidate shows Hired on
+      // their order row alongside Active Assignment, so the Hired filter
+      // must find them.
+      items = items.filter((p) => {
+        if (normalizeStatus(p.status) === statusFilter) return true;
+        const email = (p.email || '').trim().toLowerCase();
+        return applications.some((a) => (a.email || '').trim().toLowerCase() === email && getRecruitingStage(a) === statusFilter);
+      });
     }
     return items.map((p) => {
       const email = (p.email || '').trim().toLowerCase();
@@ -207,11 +217,19 @@ export default function TalentSearch() {
         ? <span className="text-xs text-gray-400 italic">No orders yet</span>
         : (
           <div className="flex flex-col gap-1">
-            {orders.map((o) => (
-              <span key={o.id} className="text-xs">
-                {o.jobTitle} — <span className="font-medium">{normalizeStatus(o.status)}</span>
-              </span>
-            ))}
+            {orders.map((o) => {
+              const st = normalizeStatus(o.status);
+              const rs = getRecruitingStage(o);
+              return (
+                <span key={o.id} className="text-xs">
+                  {o.jobTitle} — {rs && rs !== st ? (
+                    <><span className="font-medium">{rs}</span>{' · '}<span className="font-medium">{st}</span></>
+                  ) : (
+                    <span className="font-medium">{st}</span>
+                  )}
+                </span>
+              );
+            })}
           </div>
         )
     )},
