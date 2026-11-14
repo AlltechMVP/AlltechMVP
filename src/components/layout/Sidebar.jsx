@@ -57,7 +57,6 @@ export default function Sidebar() {
               <>
                 <li><Link to="/client/jobs" className={linkCls(pathname.startsWith('/client/jobs'))}>Jobs</Link></li>
                 <li><Link to="/client/metrics" className={linkCls(pathname === '/client/metrics')}>Metrics</Link></li>
-                <li><Link to="/client/portal" className={linkCls(pathname === '/client/portal')}>Portal</Link></li>
               </>
             )}
             {can('timesheets.approve_client') && (
