@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout.jsx';
 import NotFound from '@/pages/misc/NotFound.jsx';
 import Login from '@/pages/Login.jsx';
@@ -53,7 +53,6 @@ const AssignmentTracker = lazy(() => import('@/pages/AssignmentTracker.jsx'));
 const BillingSettings = lazy(() => import('@/pages/BillingSettings.jsx'));
 const CandidateJobBoard = lazy(() => import('@/pages/CandidateJobBoard.jsx'));
 const ClientMetrics = lazy(() => import('@/pages/ClientMetrics.jsx'));
-const ClientPortal = lazy(() => import('@/pages/ClientPortal.jsx'));
 const ComplianceSettings = lazy(() => import('@/pages/ComplianceSettings.jsx'));
 const PayrollView = lazy(() => import('@/pages/PayrollView.jsx'));
 const TimecardEntry = lazy(() => import('@/pages/TimecardEntry.jsx'));
@@ -343,13 +342,12 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
+          {/* /client/portal retired 2026-11-13: the page showed a static
+              multi-client directory with fake companies. Old bookmarks and
+              links land on the real client dashboard instead. */}
           <Route
             path="client/portal"
-            element={
-              <ProtectedRoute allowedCapabilities={["client.portal.view"]}>
-                <ClientPortal />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/client" replace />}
           />
           <Route
             path="settings/compliance"
