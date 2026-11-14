@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { getCandidates, getPortalPhase } from '@/utils/storage';
+import { getCandidates, getPortalPhase, getAssignments, getJobById, getClientById } from '@/utils/storage';
 
 // Onboarding milestone Slice 1: the portal header shows the person's
 // phase (Applicant / Onboarding / Active Employee, from the #6 derived
@@ -19,11 +19,12 @@ const PHASE_BADGE = {
 
 export default function CandidateDashboard() {
   const [phase, setPhase] = useState(null);
+  const [demoId, setDemoId] = useState(null);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      let demoId = null;
+      let resolvedId = null;
       try {
         const { data: { user } } = await supabase.auth.getUser();
         const email = (user?.email || '').trim().toLowerCase();
@@ -34,12 +35,12 @@ export default function CandidateDashboard() {
               .select('legacy_id')
               .eq('email', email)
               .single();
-            demoId = person?.legacy_id || null;
+            resolvedId = person?.legacy_id || null;
           } catch {
             // Fall through to the demo store.
           }
-          if (!demoId) {
-            demoId = getCandidates().find(
+          if (!resolvedId) {
+            resolvedId = getCandidates().find(
               (c) => (c.email || '').trim().toLowerCase() === email
             )?.id || null;
           }
@@ -47,10 +48,23 @@ export default function CandidateDashboard() {
       } catch {
         // Unresolved identity reads as Applicant.
       }
-      if (mounted) setPhase(getPortalPhase(demoId));
+      if (mounted) {
+        setDemoId(resolvedId);
+        setPhase(getPortalPhase(resolvedId));
+      }
     })();
     return () => { mounted = false; };
   }, []);
+
+  // Slice 4: the employee's Active assignments, read from the demo store
+  // (the canonical write path). Renders only for the Active Employee
+  // phase — the same gate as the Enter Time card.
+  const myAssignments = useMemo(() => {
+    if (!demoId) return [];
+    return getAssignments().filter(
+      (a) => String(a.candidateId) === String(demoId) && a.status === 'Active'
+    );
+  }, [demoId]);
 
   return (
     <div className="p-6">
@@ -80,6 +94,29 @@ export default function CandidateDashboard() {
           </Link>
         )}
       </div>
+
+      {phase === 'Active Employee' && myAssignments.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">My Assignments</h2>
+          <div className="space-y-3">
+            {myAssignments.map((a) => {
+              const job = a.jobId ? getJobById(a.jobId) : null;
+              // Demo jobs carry client_name directly; Supabase-mapped jobs
+              // carry clientId instead — prefer the name when present.
+              const clientName = job?.client_name
+                || (job?.clientId ? getClientById(job.clientId)?.name : null);
+              return (
+                <div key={a.id} className="border rounded p-3">
+                  <p className="font-medium">{job?.title || '—'}{clientName ? ` — ${clientName}` : ''}</p>
+                  <p className="text-sm text-gray-600">
+                    Pay ${a.payRate ?? '—'}/hr · Started {a.startDate || '—'}{a.endDate ? ` · Ends ${a.endDate}` : ''}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
         <p className="text-blue-700">
