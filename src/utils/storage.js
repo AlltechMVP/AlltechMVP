@@ -1022,14 +1022,21 @@ export function clearAlltechKeys() {
 }
 
 function daysAgo(n) {
+  // UTC throughout: the old version mixed local getDate() with a UTC
+  // output (toISOString), so a seed run in the evening landed a day later
+  // than a daytime run, and the two stores could disagree by a day.
   const d = new Date();
-  d.setDate(d.getDate() - n);
+  d.setUTCDate(d.getUTCDate() - n);
   return d.toISOString().slice(0, 10);
 }
 
 function weeksAgoFriday(n) {
+  // Friday of the week n weeks ago, computed in UTC so the result is the
+  // same no matter the browser's timezone or the time of day. (The old
+  // version mixed local getDay()/getDate() with a UTC output, so an evening
+  // seed could land the "Friday" week ending on a Saturday.)
   const d = new Date();
-  d.setDate(d.getDate() - (n * 7) - ((d.getDay() + 2) % 7));
+  d.setUTCDate(d.getUTCDate() - (n * 7) - ((d.getUTCDay() + 2) % 7));
   return d.toISOString().slice(0, 10);
 }
 
