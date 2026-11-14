@@ -5,7 +5,7 @@ import {
   normalizeStatus, getAllowedTransitions, getRecruitingStage, changeCandidateStatus,
   isEmployee,
 } from '@/utils/storage';
-import { fetchApplication, syncCandidateToSupabase, isRlsDenied } from '@/lib/pipeline';
+import { fetchApplication, fetchOnboardingTasks, syncCandidateToSupabase, isRlsDenied } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { AccessDenied } from '@/components/ui';
 
@@ -61,6 +61,8 @@ export default function CandidateDetail() {
   const { addToast } = useToasts();
   const [candidate, setCandidate] = useState(null);
   const [usingFallback, setUsingFallback] = useState(false);
+  // Slice 3: the person's onboarding progress (null until rows exist).
+  const [onboardingProgress, setOnboardingProgress] = useState(null);
   // Slice 7: an RLS denial is not an outage — show the denied state and
   // never fall back to the unscoped demo store.
   const [denied, setDenied] = useState(false);
@@ -70,11 +72,22 @@ export default function CandidateDetail() {
       const app = await fetchApplication(id);
       setCandidate(attachDemoTwin(app));
       setUsingFallback(false);
+      // Slice 3: staff see the person's onboarding completion here.
+      // Rows exist only once the person has entered onboarding.
+      try {
+        const rows = await fetchOnboardingTasks(app.candidateId);
+        setOnboardingProgress(rows.length > 0
+          ? { done: rows.filter((r) => r.done).length, total: rows.length }
+          : null);
+      } catch {
+        setOnboardingProgress(null);
+      }
     } catch (err) {
       if (isRlsDenied(err)) { setCandidate(null); setDenied(true); setUsingFallback(false); return; }
       const demo = getCandidateById(id);
       setCandidate(demo ? mapDemoCandidate(demo) : null);
       setUsingFallback(true);
+      setOnboardingProgress(null);
     }
   };
 
@@ -158,6 +171,12 @@ export default function CandidateDetail() {
         {candidate.jobTitle && (
           <div className="text-sm text-gray-600">
             <span className="font-medium">Job:</span> {candidate.jobTitle} ({candidate.clientName || 'N/A'})
+          </div>
+        )}
+
+        {onboardingProgress && (
+          <div className="text-sm text-gray-600">
+            <span className="font-medium">Onboarding:</span> {onboardingProgress.done} of {onboardingProgress.total} complete
           </div>
         )}
 
