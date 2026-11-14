@@ -1040,6 +1040,27 @@ function weeksAgoFriday(n) {
   return d.toISOString().slice(0, 10);
 }
 
+// Friday ending the Mon–Sun week containing today — the week-ending
+// date the auto-created timecards and the candidate time-entry form both
+// default to. (The candidate form used to compute this from local getters
+// + a UTC output, which returned tomorrow's date after 18:00 CST — the
+// same class of bug the seed helpers above had.)
+export function fridayOfCurrentWeek(date = new Date()) {
+  // Local getters + local formatting (never toISOString): the candidate
+  // form used to mix local getters with a UTC output, which returned
+  // tomorrow's date after 18:00 CST. Offset is Friday's position (4) in
+  // the Mon-first week minus today's position — so Mon–Thu move forward
+  // to this Friday and Sat/Sun move back to the Friday just passed.
+  // (The seed helpers stay UTC: a seed must reproduce identically in any
+  // timezone. A live default is about the user's own week, so local is
+  // correct here.)
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  d.setDate(d.getDate() + (4 - ((d.getDay() + 6) % 7)));
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 export function seedDemoData() {
   const ts = now();
 
@@ -1389,9 +1410,53 @@ export function reconcileAll() {
     reconcileApprovalsState();
     reconcileTimesheetsPayrollState();
     reconcileInvoicePayments();
+    ensureCurrentWeekTimesheets();
   } catch (e) {
     console.warn('[reconcileAll] error during reconciliation:', e);
   }
+}
+
+// Weekly timecard auto-creation (top-10 #5, approved 2026-11-13: current
+// week only, started Active assignments, Draft with 0 hours). Runs on
+// every app load via reconcileAll; idempotent by assignment + weekEnding,
+// so a second load creates nothing. Past weeks are NOT backfilled —
+// backfilling stale Drafts is the backoffice's deliberate call.
+//
+// The Draft is local-only until the candidate submits it: the submit path
+// (timekeeping Form / candidate TimesheetEntry) syncs it up. Syncing at
+// creation would let two browsers create two shared rows for the same
+// assignment + week, since the guard can only see this browser's store.
+// A 0-hour Draft needs no staff action before submit, so nothing is lost.
+export function ensureCurrentWeekTimesheets() {
+  const friday = fridayOfCurrentWeek();
+  const today = new Date().toISOString().slice(0, 10);
+  const sheets = getTimesheets();
+  let created = 0;
+  for (const a of getAssignments()) {
+    if (a.status !== 'Active') continue;
+    if (!a.startDate || a.startDate > today) continue; // not started yet
+    if (sheets.some((t) => String(t.assignmentId) === String(a.id) && t.weekEnding === friday)) continue;
+    const timestamp = now();
+    const row = {
+      id: uid(),
+      assignmentId: a.id,
+      weekEnding: friday,
+      entries: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => ({ day: d, hours: 0 })),
+      totalHours: 0,
+      status: 'Draft',
+      clientApprovalStatus: 'Not Submitted',
+      payrollStatus: 'Not Ready',
+      exceptions: [],
+      compliance: {},
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    applyTimesheetCompliance(row);
+    sheets.push(row);
+    created += 1;
+  }
+  if (created > 0) setTimesheets(sheets);
+  return created;
 }
 
 export { KEYS };
