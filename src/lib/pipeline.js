@@ -233,6 +233,19 @@ export async function setOnboardingTaskDone(candidateId, taskKey, done) {
   return data;
 }
 
+// Slice 6: admin toggle for a task (onboarding_task_defs.enabled).
+// The row exists (seeded in Slice 2); this flips it in place.
+export async function setOnboardingTaskDefEnabled(taskKey, enabled) {
+  const { data, error } = await supabase
+    .from('onboarding_task_defs')
+    .update({ enabled, updated_at: new Date().toISOString() })
+    .eq('task_key', taskKey)
+    .select('task_key,label,sort_order,enabled')
+    .single();
+  throwChecked(error);
+  return data;
+}
+
 export async function fetchRecentClientDecisions(days = 30) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
