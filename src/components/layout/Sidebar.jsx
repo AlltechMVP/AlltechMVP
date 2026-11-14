@@ -42,6 +42,9 @@ export default function Sidebar() {
             {can('candidate.apply', 'dashboard.candidate.view') && (
               <li><Link to="/candidate/jobs" className={linkCls(pathname === '/candidate/jobs')}>Job Board</Link></li>
             )}
+            {can('candidate.apply', 'dashboard.candidate.view') && (
+              <li><Link to="/timekeeping/entry" className={linkCls(pathname === '/timekeeping/entry')}>Enter Time</Link></li>
+            )}
           </>
         )}
         {showClientSection && (
