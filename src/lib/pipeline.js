@@ -183,6 +183,56 @@ export async function fetchAppliedJobIds(email) {
   return (apps || []).map((a) => a.job_id);
 }
 
+// --- Onboarding (milestone Slice 3) ---------------------------------------
+// The checklist lives in Supabase (shared, auditable — spec D3): the
+// portal reads/writes it directly; there is no demo-store mirror. The
+// demo reset clears onboarding_tasks rows (clearSupabasePipeline); the
+// defs table is config and survives resets.
+export async function fetchOnboardingDefs() {
+  const { data, error } = await supabase
+    .from('onboarding_task_defs')
+    .select('task_key,label,sort_order,enabled')
+    .order('sort_order');
+  throwChecked(error);
+  return data || [];
+}
+
+export async function fetchOnboardingTasks(candidateId) {
+  if (!candidateId) return [];
+  const { data, error } = await supabase
+    .from('onboarding_tasks')
+    .select('task_key,done,done_at')
+    .eq('candidate_id', candidateId);
+  throwChecked(error);
+  return data || [];
+}
+
+// Create the person's rows for any enabled defs that lack one yet.
+// ignoreDuplicates keeps already-completed rows untouched.
+export async function ensureOnboardingTasks(candidateId, taskKeys) {
+  if (!candidateId || !taskKeys || taskKeys.length === 0) return [];
+  const rows = taskKeys.map((task_key) => ({ candidate_id: candidateId, task_key, done: false }));
+  const { data, error } = await supabase
+    .from('onboarding_tasks')
+    .upsert(rows, { onConflict: 'candidate_id,task_key', ignoreDuplicates: true })
+    .select('task_key,done,done_at');
+  throwChecked(error);
+  return data || [];
+}
+
+export async function setOnboardingTaskDone(candidateId, taskKey, done) {
+  const { data, error } = await supabase
+    .from('onboarding_tasks')
+    .upsert(
+      { candidate_id: candidateId, task_key: taskKey, done, done_at: done ? new Date().toISOString() : null },
+      { onConflict: 'candidate_id,task_key' }
+    )
+    .select('task_key,done,done_at')
+    .single();
+  throwChecked(error);
+  return data;
+}
+
 export async function fetchRecentClientDecisions(days = 30) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
@@ -448,6 +498,10 @@ export async function reconcilePipeline() {
 
 /** Demo reset support: clear Supabase pipeline rows (seeded rows are re-synced after). */
 export async function clearSupabasePipeline() {
+  // Onboarding rows are per-person state with no seed rows: clear them
+  // all. The defs table is config and survives resets.
+  const { error: obError } = await supabase.from('onboarding_tasks').delete().neq('id', 0);
+  throwChecked(obError);
   const { error: appError } = await supabase.from('applications').delete().neq('id', 0);
   throwChecked(appError);
   // Remove sync-created persons (legacy_id is a crypto uuid, not a seed cand-xxx id).

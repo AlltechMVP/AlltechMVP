@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { fetchOnboardingDefs, fetchOnboardingTasks, ensureOnboardingTasks, setOnboardingTaskDone } from '@/lib/pipeline';
 import { getCandidates, getPortalPhase, getAssignments, getJobById, getClientById } from '@/utils/storage';
 
 // Onboarding milestone Slice 1: the portal header shows the person's
@@ -20,11 +21,18 @@ const PHASE_BADGE = {
 export default function CandidateDashboard() {
   const [phase, setPhase] = useState(null);
   const [demoId, setDemoId] = useState(null);
+  // Slice 3: the Supabase candidate uuid (for the onboarding checklist).
+  // The demo-store fallback gives a demo id but no uuid — then the
+  // checklist stays hidden (it lives in Supabase, not the demo store).
+  const [personUuid, setPersonUuid] = useState(null);
+  const [onboardingDefs, setOnboardingDefs] = useState([]);
+  const [onboardingTasks, setOnboardingTasks] = useState({});
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       let resolvedId = null;
+      let resolvedUuid = null;
       try {
         const { data: { user } } = await supabase.auth.getUser();
         const email = (user?.email || '').trim().toLowerCase();
@@ -32,10 +40,11 @@ export default function CandidateDashboard() {
           try {
             const { data: person } = await supabase
               .from('candidates')
-              .select('legacy_id')
+              .select('id,legacy_id')
               .eq('email', email)
               .single();
             resolvedId = person?.legacy_id || null;
+            resolvedUuid = person?.id || null;
           } catch {
             // Fall through to the demo store.
           }
@@ -50,11 +59,49 @@ export default function CandidateDashboard() {
       }
       if (mounted) {
         setDemoId(resolvedId);
+        setPersonUuid(resolvedUuid);
         setPhase(getPortalPhase(resolvedId));
       }
     })();
     return () => { mounted = false; };
   }, []);
+
+  // Slice 3: the onboarding checklist. Shown once the person holds an
+  // Active assignment (Onboarding or Active Employee phase — the
+  // assignment initiates onboarding). Rows are created on first view
+  // for any enabled task that lacks one; checking a box records
+  // completion (V1 records completion only — nothing is filed).
+  useEffect(() => {
+    if (!personUuid || (phase !== 'Onboarding' && phase !== 'Active Employee')) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const defs = (await fetchOnboardingDefs()).filter((d) => d.enabled);
+        if (!mounted) return;
+        setOnboardingDefs(defs);
+        const keys = defs.map((d) => d.task_key);
+        await ensureOnboardingTasks(personUuid, keys);
+        if (!mounted) return;
+        const rows = await fetchOnboardingTasks(personUuid);
+        if (!mounted) return;
+        const map = {};
+        for (const r of rows) map[r.task_key] = r;
+        setOnboardingTasks(map);
+      } catch {
+        // Checklist stays empty on outage; the rest of the portal works.
+      }
+    })();
+    return () => { mounted = false; };
+  }, [personUuid, phase]);
+
+  const toggleOnboardingTask = async (taskKey, done) => {
+    try {
+      const row = await setOnboardingTaskDone(personUuid, taskKey, done);
+      setOnboardingTasks((prev) => ({ ...prev, [taskKey]: row }));
+    } catch {
+      // Leave the checkbox as it was; the write did not land.
+    }
+  };
 
   // Slice 4: the employee's Active assignments, read from the demo store
   // (the canonical write path). Renders only for the Active Employee
@@ -112,6 +159,36 @@ export default function CandidateDashboard() {
                     Pay ${a.payRate ?? '—'}/hr · Started {a.startDate || '—'}{a.endDate ? ` · Ends ${a.endDate}` : ''}
                   </p>
                 </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {(phase === 'Onboarding' || phase === 'Active Employee') && onboardingDefs.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-1">Onboarding Checklist</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            {onboardingDefs.filter((d) => onboardingTasks[d.task_key]?.done).length} of {onboardingDefs.length} complete
+          </p>
+          <div className="space-y-2">
+            {onboardingDefs.map((d) => {
+              const row = onboardingTasks[d.task_key];
+              return (
+                <label key={d.task_key} className="flex items-center gap-3 border rounded p-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!row?.done}
+                    onChange={(e) => toggleOnboardingTask(d.task_key, e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  <span className={row?.done ? 'line-through text-gray-500' : ''}>{d.label}</span>
+                  {row?.done && row.done_at && (
+                    <span className="ml-auto text-xs text-gray-500">
+                      Done {new Date(row.done_at).toLocaleDateString()}
+                    </span>
+                  )}
+                </label>
               );
             })}
           </div>
