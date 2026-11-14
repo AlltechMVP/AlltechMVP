@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getCandidates, getJobById, normalizeStatus,
-  getAllowedTransitions, changeCandidateStatus, getCandidateById,
+  getAllowedTransitions, getRecruitingStage, changeCandidateStatus, getCandidateById,
   findCandidateByEmail, createCandidate, submitCandidateToJob,
 } from '@/utils/storage';
 import {
@@ -108,6 +108,7 @@ export default function JobCandidates() {
             email: c.email || '-',
             status: normalizeStatus(c.status),
             lastActionAt: c.lastActionAt || null,
+            history: c.statusHistory || [],
           })));
       }
     }
@@ -171,7 +172,9 @@ export default function JobCandidates() {
   const rows = useMemo(() => {
     let items = data;
     if (statusFilter !== 'All') {
-      items = items.filter(c => normalizeStatus(c.status) === statusFilter);
+      // Match the displayed stage too: a placed candidate shows Hired
+      // alongside Active Assignment, so the Hired filter must find them.
+      items = items.filter(c => normalizeStatus(c.status) === statusFilter || getRecruitingStage(c) === statusFilter);
     }
     return items.map(c => {
       const status = normalizeStatus(c.status);
@@ -180,6 +183,7 @@ export default function JobCandidates() {
         name: c.name,
         email: c.email || '-',
         status,
+        recruitingStage: getRecruitingStage(c),
         lastAction: c.lastActionAt ? new Date(c.lastActionAt).toLocaleDateString() : '-',
         allowed: getAllowedTransitions(status),
       };
@@ -191,9 +195,17 @@ export default function JobCandidates() {
       <Link to={`/candidates/${row.id}`} className="text-blue-600 hover:underline font-medium">{v}</Link>
     )},
     { key: 'email', header: 'Email' },
-    { key: 'status', header: 'Status', render: (v) => (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[v] || 'bg-gray-100'}`}>{v}</span>
-    )},
+    { key: 'status', header: 'Status', render: (v, row) => {
+      const rs = row.recruitingStage;
+      return (
+        <span className="inline-flex gap-1 flex-wrap">
+          {rs && rs !== v && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[rs] || 'bg-gray-100'}`}>{rs}</span>
+          )}
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[v] || 'bg-gray-100'}`}>{v}</span>
+        </span>
+      );
+    }},
     { key: 'lastAction', header: 'Last Action' },
     { key: 'id', header: 'Actions', render: (_, row) => {
       const quickActions = row.allowed.filter(s => ['Reviewed', 'Submitted', 'Interview', 'Hired', 'Rejected'].includes(s));

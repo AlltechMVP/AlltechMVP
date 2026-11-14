@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   getCandidates, getCandidateById, getJobById,
-  normalizeStatus, getAllowedTransitions, changeCandidateStatus,
+  normalizeStatus, getAllowedTransitions, getRecruitingStage, changeCandidateStatus,
 } from '@/utils/storage';
 import { fetchApplication, syncCandidateToSupabase, isRlsDenied } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
@@ -100,6 +100,9 @@ export default function CandidateDetail() {
   const status = normalizeStatus(candidate.status);
   const allowed = getAllowedTransitions(status);
   const hasActiveAssignment = status === 'Active Assignment';
+  // Placement takes over the displayed status, so show the recruiting stage
+  // the candidate reached on this order alongside it.
+  const recruitingStage = getRecruitingStage(candidate);
   const history = (candidate.history || []).slice().reverse();
 
   const handleAction = async (newStatus) => {
@@ -140,7 +143,12 @@ export default function CandidateDetail() {
             <h1 className="text-xl font-semibold">{candidate.name}</h1>
             <p className="text-sm text-gray-600">{candidate.email} {candidate.phone ? `| ${candidate.phone}` : ''}</p>
           </div>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[status] || 'bg-gray-100'}`}>{status}</span>
+          <span className="inline-flex gap-2">
+            {recruitingStage && recruitingStage !== status && (
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[recruitingStage] || 'bg-gray-100'}`}>{recruitingStage}</span>
+            )}
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[status] || 'bg-gray-100'}`}>{status}</span>
+          </span>
         </div>
 
         {candidate.jobTitle && (

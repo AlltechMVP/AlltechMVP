@@ -5,12 +5,24 @@ import AccessDenied from '@/components/ui/AccessDenied.jsx';
 import { useWithToast } from '@/utils/withToast.js';
 import {
   getCandidates, normalizeStatus, getAllowedTransitions,
-  changeCandidateStatus, getCandidateById,
+  getRecruitingStage, changeCandidateStatus, getCandidateById,
 } from '@/utils/storage';
 import { fetchApplications, syncCandidateToSupabase, isRlsDenied } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 const PIPELINE_STATUSES = ['Applied', 'Reviewed', 'Submitted', 'Interview', 'Hired', 'Rejected'];
+
+const STATUS_COLORS = {
+  'Applied': 'bg-gray-100 text-gray-800',
+  'Reviewed': 'bg-blue-100 text-blue-800',
+  'Submitted': 'bg-indigo-100 text-indigo-800',
+  'Interview': 'bg-purple-100 text-purple-800',
+  'Hired': 'bg-emerald-100 text-emerald-800',
+  'Rejected': 'bg-red-100 text-red-800',
+  'Assigned': 'bg-cyan-100 text-cyan-800',
+  'Active Assignment': 'bg-green-100 text-green-800',
+  'Assignment Ended': 'bg-orange-100 text-orange-800',
+};
 
 // Slice 1 (thin): the board reads Supabase applications (shared pipeline)
 // with a demo-store fallback. Status changes still go through the demo row
@@ -34,6 +46,7 @@ function mapDemoRow(c) {
     email: c.email || '',
     jobTitle: null,
     status: normalizeStatus(c.status),
+    history: c.statusHistory || [],
   };
 }
 
@@ -108,6 +121,9 @@ export default function RecruiterBoard() {
       {rows.map((r) => {
         const status = normalizeStatus(r.status);
         const allowed = getAllowedTransitions(status);
+        // Placement takes over the displayed status, so show the recruiting
+        // stage the candidate reached on that order alongside it.
+        const recruitingStage = getRecruitingStage(r);
         const options = [...PIPELINE_STATUSES];
         if (!options.includes(status)) options.push(status);
         return (
@@ -119,6 +135,9 @@ export default function RecruiterBoard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {recruitingStage && recruitingStage !== status && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[recruitingStage] || 'bg-gray-100 text-gray-800'}`}>{recruitingStage}</span>
+              )}
               <select
                 className="border rounded px-2 py-1 text-sm"
                 value={status}
