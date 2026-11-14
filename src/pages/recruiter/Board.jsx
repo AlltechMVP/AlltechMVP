@@ -5,7 +5,7 @@ import AccessDenied from '@/components/ui/AccessDenied.jsx';
 import { useWithToast } from '@/utils/withToast.js';
 import {
   getCandidates, normalizeStatus, getAllowedTransitions,
-  getRecruitingStage, changeCandidateStatus, getCandidateById,
+  getRecruitingStage, changeCandidateStatus, getCandidateById, isEmployee,
 } from '@/utils/storage';
 import { fetchApplications, syncCandidateToSupabase, isRlsDenied } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
@@ -137,6 +137,9 @@ export default function RecruiterBoard() {
             <div className="flex items-center gap-2">
               {recruitingStage && recruitingStage !== status && (
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[recruitingStage] || 'bg-gray-100 text-gray-800'}`}>{recruitingStage}</span>
+              )}
+              {isEmployee(r.demoCandidateId) && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Employee</span>
               )}
               <select
                 className="border rounded px-2 py-1 text-sm"

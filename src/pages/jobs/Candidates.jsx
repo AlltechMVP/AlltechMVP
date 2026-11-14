@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getCandidates, getJobById, normalizeStatus,
   getAllowedTransitions, getRecruitingStage, changeCandidateStatus, getCandidateById,
-  findCandidateByEmail, createCandidate, submitCandidateToJob,
+  findCandidateByEmail, createCandidate, submitCandidateToJob, isEmployee,
 } from '@/utils/storage';
 import {
   fetchJobs, fetchApplications, fetchPersons, syncCandidateToSupabase, reconcilePipeline, isRlsDenied,
@@ -186,6 +186,7 @@ export default function JobCandidates() {
         recruitingStage: getRecruitingStage(c),
         lastAction: c.lastActionAt ? new Date(c.lastActionAt).toLocaleDateString() : '-',
         allowed: getAllowedTransitions(status),
+        demoCandidateId: c.demoCandidateId,
       };
     });
   }, [data, statusFilter]);
@@ -203,6 +204,9 @@ export default function JobCandidates() {
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[rs] || 'bg-gray-100'}`}>{rs}</span>
           )}
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[v] || 'bg-gray-100'}`}>{v}</span>
+          {isEmployee(row.demoCandidateId) && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Employee</span>
+          )}
         </span>
       );
     }},
