@@ -777,6 +777,18 @@ export function isEmployee(candidateId, assignments = getAssignments()) {
   );
 }
 
+// Portal phase (onboarding milestone Slice 1): Applicant → Onboarding
+// (holds an Active assignment that hasn't started yet) → Active Employee
+// (the #6 derived flag). No person record resolves to Applicant.
+export function getPortalPhase(candidateId, assignments = getAssignments()) {
+  if (!candidateId) return 'Applicant';
+  if (isEmployee(candidateId, assignments)) return 'Active Employee';
+  const mine = (assignments || []).some(
+    (a) => String(a.candidateId) === String(candidateId) && a.status === 'Active'
+  );
+  return mine ? 'Onboarding' : 'Applicant';
+}
+
 export function changeCandidateStatus(candidateId, newStatus, { note, by } = {}) {
   const candidates = getCandidates();
   const idx = candidates.findIndex(c => c.id === candidateId);
