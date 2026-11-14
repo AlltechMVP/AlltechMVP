@@ -760,6 +760,23 @@ export function getRecruitingStage(row) {
   return null;
 }
 
+// Employee flag (top-10 #6, approved 2026-11-14): a DERIVED flag, not a
+// new stage value. A person counts as an employee when they hold an Active
+// assignment whose start date has been reached — the same "started"
+// predicate the weekly timecard auto-creation uses. Computed from the
+// demo store (the canonical write path); no migration, no sync change,
+// nothing in the stage machine changes. `candidateId` is the demo person
+// id (what the list pages carry as demoCandidateId).
+export function isEmployee(candidateId, assignments = getAssignments()) {
+  if (!candidateId) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return (assignments || []).some(
+    (a) => String(a.candidateId) === String(candidateId)
+      && a.status === 'Active'
+      && a.startDate && a.startDate <= today
+  );
+}
+
 export function changeCandidateStatus(candidateId, newStatus, { note, by } = {}) {
   const candidates = getCandidates();
   const idx = candidates.findIndex(c => c.id === candidateId);

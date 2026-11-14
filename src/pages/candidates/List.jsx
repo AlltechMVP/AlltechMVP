@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   getCandidates, getJobById, normalizeStatus,
   getAllowedTransitions, getRecruitingStage, changeCandidateStatus,
-  setAssignmentPrefill, getCandidateById,
+  setAssignmentPrefill, getCandidateById, isEmployee,
 } from '@/utils/storage';
 import {
   fetchApplications, reconcilePipeline, syncCandidateToSupabase, isRlsDenied,
@@ -246,6 +246,9 @@ export default function CandidatesList() {
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[rs] || 'bg-gray-100 text-gray-800'}`}>{rs}</span>
           )}
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[v] || 'bg-gray-100 text-gray-800'}`}>{v}</span>
+          {isEmployee(row.demoCandidateId) && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Employee</span>
+          )}
         </span>
       );
     }},
