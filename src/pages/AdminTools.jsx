@@ -7,7 +7,7 @@ import {
 } from '@/utils/storage';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { useCapabilities } from '@/lib/capabilities';
-import { clearSupabasePipeline, reconcilePipeline, clearSupabaseAssignments, reconcileAssignments, clearSupabaseTimesheets, reconcileTimesheets, clearSupabaseInvoices, reconcileInvoices, clearSupabaseClientsJobsCrm, reconcileClients, reconcileJobs, reconcileContacts, reconcileActivities, reconcileFollowUps } from '@/lib/pipeline';
+import { clearSupabasePipeline, reconcilePipeline, clearSupabaseAssignments, reconcileAssignments, clearSupabaseTimesheets, reconcileTimesheets, clearSupabaseInvoices, reconcileInvoices, clearSupabaseClientsJobsCrm, reconcileClients, reconcileJobs, reconcileContacts, reconcileActivities, reconcileFollowUps, fetchOnboardingDefs, setOnboardingTaskDefEnabled } from '@/lib/pipeline';
 
 const SEV_STYLE = {
   error: 'bg-red-100 text-red-800 border-red-200',
@@ -27,6 +27,8 @@ export default function AdminTools() {
   const [resetting, setResetting] = useState(false);
   const [report, setReport] = useState(null);
   const [fixableIssues, setFixableIssues] = useState([]);
+  // Slice 6: the onboarding task toggles (admin-only, like the reset).
+  const [onboardingDefs, setOnboardingDefs] = useState([]);
 
   const FIXABLE_TYPES = ['orphan_assignment_ref', 'hours_mismatch', 'past_end_active'];
 
@@ -40,6 +42,28 @@ export default function AdminTools() {
   useEffect(() => {
     runValidation();
   }, [runValidation]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const defs = await fetchOnboardingDefs();
+        if (mounted) setOnboardingDefs(defs);
+      } catch {
+        // Toggles stay empty on outage.
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const toggleOnboardingDef = async (taskKey, enabled) => {
+    try {
+      const row = await setOnboardingTaskDefEnabled(taskKey, enabled);
+      setOnboardingDefs((prev) => prev.map((d) => (d.task_key === taskKey ? row : d)));
+    } catch {
+      addToast({ type: 'error', message: 'Could not save that toggle — the shared store is unreachable.' });
+    }
+  };
 
   const handleReset = async () => {
     if (!canReset) return;
@@ -143,6 +167,34 @@ export default function AdminTools() {
               </button>
             </div>
           </div>
+        )}
+      </section>
+
+      <section className="bg-white border rounded-lg p-5 space-y-4">
+        <h2 className="text-lg font-medium">Onboarding Tasks</h2>
+        <p className="text-sm text-gray-600">
+          Which onboarding tasks the portal shows new hires. A task turned off here is hidden from the checklist; anyone who already completed it keeps their record.
+        </p>
+        {onboardingDefs.length === 0 ? (
+          <p className="text-sm text-gray-500">No onboarding tasks found — the task list has not been seeded.</p>
+        ) : (
+          <div className="space-y-2">
+            {onboardingDefs.map((d) => (
+              <label key={d.task_key} className="flex items-center gap-3 border rounded p-3">
+                <input
+                  type="checkbox"
+                  checked={d.enabled}
+                  disabled={!canReset}
+                  onChange={(e) => toggleOnboardingDef(d.task_key, e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <span>{d.label}</span>
+              </label>
+            ))}
+          </div>
+        )}
+        {!canReset && (
+          <p className="text-sm text-gray-500">Onboarding task toggles are an admin action — sign in as an admin to change them.</p>
         )}
       </section>
 
