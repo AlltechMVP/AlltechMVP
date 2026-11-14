@@ -1,5 +1,26 @@
-
 import React, { useState, useEffect } from 'react';
+import AccessDenied from '@/components/ui/AccessDenied.jsx';
+import {
+  fetchPersons, fetchJobs, fetchTimesheets, fetchApplications, isRlsDenied,
+} from '@/lib/pipeline';
+import { getCandidates, getJobs, getTimesheets, getJobById } from '@/utils/storage';
+
+// Recent pipeline transitions, newest first, as feed items.
+function buildActivity(entries) {
+  const items = [];
+  for (const e of entries) {
+    for (const h of e.history || []) {
+      items.push({
+        type: h.to === 'Active Assignment' || h.to === 'Assigned' ? 'job' : 'candidate',
+        text: `${e.name} — ${e.jobTitle || '—'}: ${h.from} → ${h.to}${h.note ? ` (${h.note})` : ''}`,
+        timestamp: h.at || null,
+      });
+    }
+  }
+  return items
+    .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
+    .slice(0, 8);
+}
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -9,37 +30,54 @@ export default function AdminDashboard() {
   });
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
-  const useSupabase = false; // TODO: Enable when integrating with Supabase
+  const [denied, setDenied] = useState(false);
 
   useEffect(() => {
-    try {
-      // Initialize mock data if not present
-      if (!localStorage.getItem("mockAdminStats")) {
-        localStorage.setItem("mockAdminStats", JSON.stringify({
-          totalCandidates: 143,
-          activeJobs: 12,
-          submittedTimesheets: 58
-        }));
+    let mounted = true;
+    (async () => {
+      try {
+        const [persons, jobs, sheets, apps] = await Promise.all([
+          fetchPersons(), fetchJobs(), fetchTimesheets(), fetchApplications(),
+        ]);
+        if (!mounted) return;
+        setStats({
+          totalCandidates: persons.length,
+          activeJobs: jobs.filter((j) => j.status === 'Open').length,
+          submittedTimesheets: sheets.filter((t) => t.status === 'Submitted').length,
+        });
+        setActivity(buildActivity(apps.map((a) => ({
+          name: a.name, jobTitle: a.jobTitle, history: a.history,
+        }))));
+      } catch (err) {
+        // An RLS denial is not an outage — show the denied state, never
+        // fall back to the unscoped demo store for a denied reader.
+        if (isRlsDenied(err)) {
+          if (mounted) setDenied(true);
+          return;
+        }
+        if (!mounted) return;
+        // Offline fallback: demo store. Persons are deduped by email —
+        // the demo candidates collection holds one row per person-order.
+        const demoPersons = getCandidates();
+        const emails = new Set(
+          demoPersons.map((c) => (c.email || '').trim().toLowerCase()).filter(Boolean)
+        );
+        setStats({
+          totalCandidates: emails.size,
+          activeJobs: getJobs().filter((j) => j.status === 'Open').length,
+          submittedTimesheets: getTimesheets().filter((t) => t.status === 'Submitted').length,
+        });
+        setActivity(buildActivity(demoPersons.map((c) => {
+          const job = c.submittedJobId ? getJobById(c.submittedJobId) : null;
+          return { name: c.name, jobTitle: job?.title || '—', history: c.statusHistory || [] };
+        })));
+      } finally {
+        if (mounted) setLoading(false);
       }
-
-      if (!localStorage.getItem("mockAdminActivity")) {
-        localStorage.setItem("mockAdminActivity", JSON.stringify([
-          { type: "candidate", text: "Jane Doe marked ready", timestamp: "2024-04-29T14:00Z" },
-          { type: "job", text: "Client approved candidate John Smith", timestamp: "2024-04-29T13:45Z" },
-          { type: "system", text: "New recruiter added: Alex Moore", timestamp: "2024-04-29T13:30Z" }
-        ]));
-      }
-
-      const storedStats = JSON.parse(localStorage.getItem("mockAdminStats")) || {};
-      const storedActivity = JSON.parse(localStorage.getItem("mockAdminActivity")) || [];
-      
-      setStats(storedStats);
-      setActivity(storedActivity);
-    } catch (err) {
-      console.error("Failed to load admin data:", err);
-    } finally {
-      setLoading(false);
-    }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const getTypeColor = (type) => {
@@ -59,9 +97,9 @@ export default function AdminDashboard() {
   };
 
   const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit'
+    if (!timestamp) return '';
+    return new Date(timestamp).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
     });
   };
 
@@ -69,10 +107,14 @@ export default function AdminDashboard() {
     return <div className="p-6">Loading</div>;
   }
 
+  if (denied) {
+    return <AccessDenied />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-6 space-y-6">
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
-      
+
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg shadow p-4 text-center">
@@ -98,12 +140,12 @@ export default function AdminDashboard() {
               <div key={index} className={`border-l-4 pl-4 ${getTypeColor(item.type)} py-2`}>
                 <p className="text-sm">
                   {getTypeIcon(item.type)} {item.text}
-                  <span className="text-gray-400 ml-2">{formatTime(item.timestamp)}</span>
                 </p>
+                <p className="text-xs text-gray-500 mt-1">{formatTime(item.timestamp)}</p>
               </div>
             ))
           ) : (
-            <p className="text-gray-500 text-center py-4">No recent activity</p>
+            <p className="text-sm text-gray-500">No recent activity.</p>
           )}
         </div>
       </div>
