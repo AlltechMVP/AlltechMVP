@@ -149,7 +149,7 @@ export default function CandidateDetail() {
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[recruitingStage] || 'bg-gray-100'}`}>{recruitingStage}</span>
             )}
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[status] || 'bg-gray-100'}`}>{status}</span>
-            {isEmployee(candidate.id) && (
+            {isEmployee(candidate.demoCandidateId || candidate.id) && (
               <span className="px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800">Employee</span>
             )}
           </span>
