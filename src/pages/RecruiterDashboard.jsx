@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { fetchApplications, isRlsDenied } from "@/lib/pipeline";
+import { getCandidates, getJobById } from "@/utils/storage";
 
 const RecruiterDashboard = () => {
   const [candidates, setCandidates] = useState([]);
+  // Applications still in Applied status: someone applied (or was
+  // submitted) and nobody has started screening them yet. The banner
+  // clears itself as the team moves them on — no seen/ack flag needed.
+  const [newApplicants, setNewApplicants] = useState([]);
 
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -10,6 +17,49 @@ const RecruiterDashboard = () => {
       if (!error) setCandidates(data);
     };
     fetchCandidates();
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const apps = await fetchApplications();
+        if (!mounted) return;
+        const fresh = apps
+          .filter((a) => a.status === "Applied")
+          .sort(
+            (a, b) =>
+              new Date(b.submittedAt || b.lastActionAt || 0) -
+              new Date(a.submittedAt || a.lastActionAt || 0)
+          );
+        setNewApplicants(fresh);
+      } catch (err) {
+        // An RLS denial is not an outage — show nothing, never fall back
+        // to the unscoped demo store for a denied reader.
+        if (isRlsDenied(err)) return;
+        if (!mounted) return;
+        // Offline fallback: demo-store pipeline rows (job via the order).
+        const demo = getCandidates()
+          .filter((c) => (c.status || "") === "Applied")
+          .map((c) => {
+            const job = c.submittedJobId ? getJobById(c.submittedJobId) : null;
+            const last = (c.statusHistory || []).slice(-1)[0];
+            return {
+              id: c.id,
+              name: c.name,
+              jobTitle: job?.title || "—",
+              clientName: job?.client_name || "—",
+              status: "Applied",
+              submittedAt: c.submittedAt || last?.at || null,
+            };
+          })
+          .sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0));
+        setNewApplicants(demo);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const exportCSV = () => {
@@ -115,6 +165,32 @@ const RecruiterDashboard = () => {
           Export to CSV
         </button>
       </div>
+      {newApplicants.length > 0 && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-amber-900">
+              {newApplicants.length} new applicant{newApplicants.length === 1 ? "" : "s"} waiting for review
+            </h2>
+            <Link to="/recruiter/board" className="text-sm text-blue-600 underline">
+              View pipeline →
+            </Link>
+          </div>
+          <ul className="mt-2 space-y-1">
+            {newApplicants.slice(0, 5).map((a) => (
+              <li key={a.id} className="text-sm text-amber-800">
+                {a.name} — {a.jobTitle}
+                {a.clientName && a.clientName !== "—" ? ` · ${a.clientName}` : ""}
+                {a.submittedAt ? ` — applied ${new Date(a.submittedAt).toLocaleDateString()}` : ""}
+              </li>
+            ))}
+          </ul>
+          {newApplicants.length > 5 && (
+            <p className="mt-1 text-xs text-amber-700">
+              + {newApplicants.length - 5} more in the pipeline
+            </p>
+          )}
+        </div>
+      )}
       {renderCandidates()}
     </div>
   );
