@@ -3,7 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { fetchAssignments, syncTimesheetToSupabase } from "@/lib/pipeline";
 import {
   getTimesheets, setTimesheets, getAssignments,
-  applyTimesheetCompliance, uid, now,
+  applyTimesheetCompliance, uid, now, fridayOfCurrentWeek,
 } from "@/utils/storage";
 
 // Slice 7: candidate time entry, rewritten. The old version was broken in
@@ -22,16 +22,6 @@ import {
 // the reconcile creates demo twins for it and those twins sync up as NEW
 // Supabase rows (one submission became three timesheets).
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-// Friday of the Mon-Sun week containing today (the week-ending date the
-// demo seed uses for its timesheets).
-function fridayOfCurrentWeek() {
-  const d = new Date();
-  const day = d.getDay(); // 0 Sun .. 6 Sat
-  const offset = day === 0 ? -2 : 5 - day;
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
-}
 
 // Local-date formatter (YYYY-MM-DD). Using toISOString() here would mix a
 // local-midnight date with a UTC output and shift the day for timezones
@@ -72,6 +62,7 @@ const TimesheetEntry = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [weekNote, setWeekNote] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -132,6 +123,27 @@ const TimesheetEntry = () => {
     return () => { mounted = false; };
   }, []);
 
+  // Prefill from the auto-created Draft for this assignment + week (see
+  // ensureCurrentWeekTimesheets in storage.js): the candidate fills in
+  // the Draft instead of starting blank. A non-Draft row for the week is
+  // shown, not edited — the submit still rejects it as a duplicate.
+  useEffect(() => {
+    if (!assignmentId || !weekEnding) return;
+    const existing = getTimesheets().find(
+      (t) => String(t.assignmentId) === String(assignmentId) && t.weekEnding === weekEnding
+    );
+    if (existing && existing.status === "Draft") {
+      setHours(Array.from({ length: 7 }, (_, i) => {
+        const h = existing.entries?.[i]?.hours;
+        return h ? String(h) : "";
+      }));
+      setWeekNote("A draft timecard is waiting for this week — fill in your hours and submit.");
+    } else {
+      setHours(Array(7).fill(""));
+      setWeekNote(existing ? `A timesheet for this week is already ${existing.status}.` : "");
+    }
+  }, [assignmentId, weekEnding]);
+
   const handleChange = (index, value) => {
     const newHours = [...hours];
     newHours[index] = value;
@@ -159,11 +171,13 @@ const TimesheetEntry = () => {
       return;
     }
     // One timesheet per assignment + week: a second submit for the same
-    // week is a duplicate, not a new timesheet.
+    // week is a duplicate, not a new timesheet — UNLESS the existing row
+    // is the auto-created Draft, which the candidate fills in and submits
+    // (same row, same id) instead of creating a second timesheet.
     const existing = getTimesheets().find(
       (t) => String(t.assignmentId) === String(assignmentId) && t.weekEnding === weekEnding
     );
-    if (existing) {
+    if (existing && existing.status !== "Draft") {
       setSubmitError("A timesheet for this assignment and week already exists.");
       return;
     }
@@ -176,24 +190,41 @@ const TimesheetEntry = () => {
     // clientApprovalStatus to 'Submitted' so the client can approve it.
     const timestamp = now();
     const dates = generateWeekDates(weekEnding);
-    const row = {
-      id: uid(),
-      assignmentId,
-      weekEnding,
-      entries: dates.map((d, i) => ({ date: d, hours: numeric[i] })),
-      totalHours: numeric.reduce((s, h) => s + h, 0),
-      status: "Submitted",
-      clientApprovalStatus: "Not Submitted",
-      payrollStatus: "Not Ready",
-      exceptions: [],
-      compliance: {},
-      submittedAt: timestamp,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-    applyTimesheetCompliance(row);
+    const entries = dates.map((d, i) => ({ date: d, hours: numeric[i] }));
+    const total = numeric.reduce((s, h) => s + h, 0);
     const all = getTimesheets();
-    all.push(row);
+    let row;
+    if (existing) {
+      row = {
+        ...existing,
+        entries,
+        totalHours: total,
+        status: "Submitted",
+        submittedAt: timestamp,
+        updatedAt: timestamp,
+      };
+      applyTimesheetCompliance(row);
+      const idx = all.findIndex((t) => t.id === existing.id);
+      if (idx !== -1) all[idx] = row;
+    } else {
+      row = {
+        id: uid(),
+        assignmentId,
+        weekEnding,
+        entries,
+        totalHours: total,
+        status: "Submitted",
+        clientApprovalStatus: "Not Submitted",
+        payrollStatus: "Not Ready",
+        exceptions: [],
+        compliance: {},
+        submittedAt: timestamp,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      applyTimesheetCompliance(row);
+      all.push(row);
+    }
     setTimesheets(all);
     // Fire-and-forget sync (never throws); the demo write above already
     // succeeded, and the recruiter/client read it from Supabase.
@@ -276,6 +307,9 @@ const TimesheetEntry = () => {
               required
             />
           </label>
+          {weekNote && (
+            <p className="text-sm text-gray-600 bg-blue-50 border border-blue-100 rounded p-2">{weekNote}</p>
+          )}
           {DAYS.map((day, i) => (
             <div key={day}>
               <label className="block text-sm font-medium">{day}</label>
