@@ -26,7 +26,11 @@ export default function DataTable({ columns, rows, pageSize = 10, searchable = t
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const start = (page - 1) * pageSize;
+  // Clamp the page: when a filter (or a fresh row set) shrinks the list
+  // below the current page, show the last available page instead of an
+  // empty one ("11-1 of 1", "Page 2 / 1").
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * pageSize;
   const pageRows = filtered.slice(start, start + pageSize);
 
   const onSort = (key) => setSort((s) => ({ key, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }));
@@ -78,11 +82,11 @@ export default function DataTable({ columns, rows, pageSize = 10, searchable = t
           {total === 0 ? '0 results' : `${start + 1}-${Math.min(start + pageSize, total)} of ${total}`}
         </span>
         <div className="flex items-center gap-1">
-          <button className="border rounded px-2 py-1" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+          <button className="border rounded px-2 py-1" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage === 1}>
             Prev
           </button>
-          <span>Page {page} / {totalPages}</span>
-          <button className="border rounded px-2 py-1" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+          <span>Page {safePage} / {totalPages}</span>
+          <button className="border rounded px-2 py-1" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}>
             Next
           </button>
         </div>
