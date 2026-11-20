@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   getAssignments, getTimesheets, setTimesheets,
   getTimesheetById, getAssignmentById, getCandidateById, getJobById,
-  uid, now, runTimesheetCompliance, applyTimesheetCompliance
+  uid, now, runTimesheetCompliance, applyTimesheetCompliance,
+  fridayOfCurrentWeek,
 } from '@/utils/storage';
 import { syncTimesheetToSupabase, reconcileTimesheets } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
@@ -48,7 +49,11 @@ export default function TimesheetForm() {
 
   const [assignments, setAssignmentsList] = useState([]);
   const [assignmentId, setAssignmentId] = useState('');
-  const [weekEnding, setWeekEnding] = useState('');
+  // New timesheets default to the current week's Friday ending (the same
+  // helper the candidate time-entry form uses) instead of a blank field.
+  // Edit mode keeps the blank initial value — the mount effect fills it
+  // from the stored record.
+  const [weekEnding, setWeekEnding] = useState(() => (isEdit ? '' : fridayOfCurrentWeek()));
   const [entries, setEntries] = useState([]);
   const [status, setStatus] = useState('Draft');
   const [approverNote, setApproverNote] = useState('');

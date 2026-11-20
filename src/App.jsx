@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import AppRoutes from '@/routes/index.jsx';
 import { validateSystem, getSeedVersion, getExpectedSeedVersion, seedIfMissing, reconcileAll } from '@/utils/storage';
@@ -8,15 +8,14 @@ export default function App() {
   const [healthBanner, setHealthBanner] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
 
-  useEffect(() => {
-    seedIfMissing();
-    reconcileAll();
-
+  // Re-read the seed version and the validator from the (local) demo
+  // store. Runs on mount and again after a demo reset — the banners are
+  // app-level state, so without the refresh a stale "1 error" count (or
+  // a stale version warning) would linger until a full page reload.
+  const refreshBanners = useCallback(() => {
     const current = getSeedVersion();
     const expected = getExpectedSeedVersion();
-    if (current && current !== expected) {
-      setVersionBanner(true);
-    }
+    setVersionBanner(Boolean(current && current !== expected));
 
     try {
       const result = validateSystem();
@@ -25,15 +24,26 @@ export default function App() {
         console.info(
           `[System Validator] ${result.errors.length} error(s), ${result.warnings.length} warning(s). Visit /tools for details.`
         );
-        if (result.errors.length > 0) {
-          setHealthBanner(true);
-          setErrorCount(result.errors.length);
-        }
       }
+      setHealthBanner(result.errors.length > 0);
+      setErrorCount(result.errors.length);
     } catch (e) {
       console.warn('[System Validator] Failed to run:', e);
     }
   }, []);
+
+  useEffect(() => {
+    seedIfMissing();
+    reconcileAll();
+    refreshBanners();
+  }, [refreshBanners]);
+
+  // The demo reset lives in AdminTools (a routed child) — it dispatches
+  // this event once the fresh seed is in place.
+  useEffect(() => {
+    window.addEventListener('alltech:demo-reset', refreshBanners);
+    return () => window.removeEventListener('alltech:demo-reset', refreshBanners);
+  }, [refreshBanners]);
 
   return (
     <>

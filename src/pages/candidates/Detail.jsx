@@ -7,7 +7,7 @@ import {
 } from '@/utils/storage';
 import { fetchApplication, fetchOnboardingTasks, syncCandidateToSupabase, isRlsDenied } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
-import { AccessDenied } from '@/components/ui';
+import { AccessDenied, Loader } from '@/components/ui';
 
 const STATUS_COLORS = {
   'Applied': 'bg-gray-100 text-gray-800',
@@ -66,6 +66,9 @@ export default function CandidateDetail() {
   // Slice 7: an RLS denial is not an outage — show the denied state and
   // never fall back to the unscoped demo store.
   const [denied, setDenied] = useState(false);
+  // The detail loads async — show a loader first instead of flashing
+  // "Candidate not found." before the first rows arrive.
+  const [loading, setLoading] = useState(true);
 
   const load = async () => {
     try {
@@ -88,6 +91,8 @@ export default function CandidateDetail() {
       setCandidate(demo ? mapDemoCandidate(demo) : null);
       setUsingFallback(true);
       setOnboardingProgress(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -95,6 +100,14 @@ export default function CandidateDetail() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  if (loading) {
+    return (
+      <div className="p-4">
+        <Loader label="Loading candidate…" />
+      </div>
+    );
+  }
 
   if (denied) {
     return <AccessDenied />;
