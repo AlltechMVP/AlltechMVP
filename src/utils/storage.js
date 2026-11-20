@@ -244,10 +244,24 @@ export function getJobsForClient(clientId) {
   return getJobs().filter(j => j.clientId === clientId);
 }
 
+// Job ids arrive in two shapes: the demo legacy id ('job-002') and the
+// Supabase numeric id ('2', from URL params and Supabase-mapped jobs).
+// The demo store keys everything by the legacy id, so normalize to it
+// before comparing or storing — otherwise a row stored under '2' is
+// invisible to every strict comparison against 'job-002' (Admin Reports
+// per-job counts, the CSV export's job titles). Falls back to the raw
+// value when the job isn't in the demo store yet.
+function resolveDemoJobId(jobId) {
+  if (jobId == null) return jobId;
+  const found = getJobs().find((j) => String(j.id) === String(jobId) || String(j.supabaseJobId) === String(jobId));
+  return found ? found.id : jobId;
+}
+
 export function getSubmittedCandidatesForJob(jobId) {
   const candidates = getCandidates();
+  const normalized = resolveDemoJobId(jobId);
   return candidates.filter(c => {
-    if (c.submittedJobId !== jobId) return false;
+    if (resolveDemoJobId(c.submittedJobId) !== normalized) return false;
     const status = normalizeStatus(c.status);
     if (['Submitted', 'Interview'].includes(status)) return true;
     if (c.clientDecision) return true;
@@ -334,8 +348,9 @@ export function submitCandidateToJob(candidateId, jobId, by) {
   const person = rows.find((c) => c.id === candidateId);
   if (!person) return null;
   const normalizedEmail = (person.email || '').trim().toLowerCase();
+  const normalizedJobId = resolveDemoJobId(jobId);
   const existing = rows.find(
-    (c) => String(c.submittedJobId) === String(jobId) && (c.email || '').trim().toLowerCase() === normalizedEmail
+    (c) => resolveDemoJobId(c.submittedJobId) === normalizedJobId && (c.email || '').trim().toLowerCase() === normalizedEmail
   );
   if (existing) return { candidate: existing, alreadySubmitted: true };
   const timestamp = now();
@@ -345,7 +360,7 @@ export function submitCandidateToJob(candidateId, jobId, by) {
     email: normalizedEmail,
     phone: person.phone || '',
     status: 'Applied',
-    submittedJobId: jobId,
+    submittedJobId: normalizedJobId,
     statusHistory: [{ at: timestamp, from: 'New', to: 'Applied', by: by || 'recruiter', note: 'Submitted by recruiter' }],
     lastActionAt: timestamp,
   };
@@ -445,7 +460,7 @@ function queueJobSync(demoJob) {
 // Demo store is the canonical write path; each write queues a Supabase
 // sync (fire-and-forget) so the record is shared with other sessions.
 
-export function createCompany({ name, industry, location, contactName, contactEmail, contactPhone, status } = {}) {
+export function createCompany({ name, industry, location, contactName, contactEmail, contactPhone, contactTitle, status } = {}) {
   const timestamp = now();
   const client = {
     id: uid(),
@@ -468,7 +483,7 @@ export function createCompany({ name, industry, location, contactName, contactEm
       name: (contactName || '').trim() || (contactEmail || '').trim(),
       email: (contactEmail || '').trim().toLowerCase(),
       phone: (contactPhone || '').trim(),
-      title: '',
+      title: (contactTitle || '').trim(),
       isPrimary: true,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -567,9 +582,10 @@ export function convertCompanyToClient(clientId, by) {
 export function applyToJob(jobId, { name, email, phone } = {}, by) {
   const normalizedEmail = (email || '').trim().toLowerCase();
   if (!jobId || !normalizedEmail || !(name || '').trim()) return null;
+  const normalizedJobId = resolveDemoJobId(jobId);
   // Duplicate for THIS job?
   const existing = getCandidates().find(
-    (c) => String(c.submittedJobId) === String(jobId) && (c.email || '').trim().toLowerCase() === normalizedEmail
+    (c) => resolveDemoJobId(c.submittedJobId) === normalizedJobId && (c.email || '').trim().toLowerCase() === normalizedEmail
   );
   if (existing) return { candidate: existing, alreadyApplied: true };
   // Find-or-create the PERSON by email: reuse the existing person's
@@ -585,7 +601,7 @@ export function applyToJob(jobId, { name, email, phone } = {}, by) {
     email: normalizedEmail,
     phone: (phone || '').trim() || (person?.phone || ''),
     status: 'Applied',
-    submittedJobId: jobId,
+    submittedJobId: normalizedJobId,
     statusHistory: [{ at: timestamp, from: 'New', to: 'Applied', by: by || normalizedEmail, note: 'Applied' }],
     lastActionAt: timestamp,
   };
