@@ -196,16 +196,26 @@ export default function PayrollQueue() {
     // 2026-11-12: INV-2026-009 existed but both timesheets had
     // invoice_id NULL until a later reconcile fixed them).
     const results = await Promise.all(created.map((inv) => syncInvoiceToSupabase(inv)));
-    const syncedIds = new Set(
-      created.filter((_, i) => results[i] !== 'failed').map((inv) => inv.id)
-    );
+    // Only invoices whose sync confirmed ('created' | 'demo' |
+    // 'supabase') count as shared. A 'failed' or 'skipped' invoice is
+    // local-only: its timesheets must not sync yet either, or their
+    // invoice stamp would land as NULL (the invoice row does not exist
+    // in Supabase for the lookup to resolve).
+    const syncedInvoices = created.filter((_, i) => results[i] !== 'failed' && results[i] !== 'skipped');
+    const failedInvoices = created.filter((_, i) => results[i] === 'failed' || results[i] === 'skipped');
+    const syncedIds = new Set(syncedInvoices.map((inv) => inv.id));
     getTimesheets()
       .filter((t) => t.invoiceId && syncedIds.has(t.invoiceId))
       .forEach((t) => syncTimesheetToSupabase(t));
     setData(getTimesheets().map(mapDemoRow));
     setSelected(new Set());
-    const summary = created.map(i => `${i.invoiceNumber} (${i.clientName}, $${i.total.toFixed(2)})`).join(', ');
-    addToast({ type: 'success', message: `Created ${created.length} invoice${created.length > 1 ? 's' : ''}: ${summary}` });
+    if (syncedInvoices.length > 0) {
+      const summary = syncedInvoices.map(i => `${i.invoiceNumber} (${i.clientName}, $${i.total.toFixed(2)})`).join(', ');
+      addToast({ type: 'success', message: `Created ${syncedInvoices.length} invoice${syncedInvoices.length > 1 ? 's' : ''}: ${summary}` });
+    }
+    if (failedInvoices.length > 0) {
+      addToast({ type: 'error', message: `${failedInvoices.length} invoice${failedInvoices.length > 1 ? 's' : ''} saved locally but not to the shared store: ${failedInvoices.map((i) => i.invoiceNumber).join(', ')}` });
+    }
     if (missing.length > 0) {
       addToast({ type: 'info', message: `Skipped ${missing.length} paid timesheet${missing.length > 1 ? 's' : ''} with no bill rate: ${missing.map((m) => m.label).join('; ')}` });
     }

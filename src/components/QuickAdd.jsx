@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getClients, getContacts, createCompany } from '@/utils/storage';
+import { syncClientToSupabase, syncContactToSupabase } from '@/lib/pipeline';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
 const inputCls = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -54,13 +55,32 @@ export function QuickAddForm({ onCancel, onCreated }) {
     return hits;
   }, [form.name, form.contactEmail]);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
       setError('Company name is required.');
       return;
     }
-    const { client } = createCompany(form);
+    const { client, contact } = createCompany(form);
+    // The demo write above already queued fire-and-forget syncs; await
+    // the same syncs here and only report success once Supabase confirms,
+    // so a failed shared save is never presented as a saved company.
+    const clientSync = await syncClientToSupabase(client);
+    if (clientSync === 'failed' || clientSync === 'skipped') {
+      const msg = `Could not save ${client.name} to the shared store — it is saved locally only. Check your connection and try again.`;
+      setError(msg);
+      addToast({ message: msg, kind: 'error' });
+      return;
+    }
+    if (contact) {
+      const contactSync = await syncContactToSupabase(contact);
+      if (contactSync === 'failed' || contactSync === 'skipped') {
+        const msg = `${client.name} is saved to the shared store, but the primary contact could not be saved — it is stored locally only. Your entries are still here; try again.`;
+        setError(msg);
+        addToast({ message: msg, kind: 'error' });
+        return;
+      }
+    }
     addToast({ message: `${client.name} added as a ${client.status}.`, kind: 'success' });
     if (onCreated) onCreated(client);
     else navigate(`/companies/${client.id}`);

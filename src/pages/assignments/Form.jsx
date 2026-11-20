@@ -267,8 +267,19 @@ export default function AssignmentForm() {
     // Sync the assignment row itself to Supabase before navigating, so
     // the list the user lands on re-fetches after the sync has landed
     // (a fire-and-forget sync here loses the race and the new
-    // assignment only appears after a manual reload).
-    if (savedAssignment) await syncAssignmentToSupabase(savedAssignment);
+    // assignment only appears after a manual reload). On failure, stay
+    // on the form with the entries intact so the user can retry.
+    if (savedAssignment) {
+      const assignmentSync = await syncAssignmentToSupabase(savedAssignment);
+      if (assignmentSync === 'failed') {
+        addToast({ type: 'error', message: 'Assignment saved locally, but it could not be saved to the shared store. Your entries are still here — try again.' });
+        return;
+      }
+      if (assignmentSync === 'skipped') {
+        addToast({ type: 'error', message: 'Assignment saved locally. It will sync to the shared store once the candidate and order records sync — your entries are still here.' });
+        return;
+      }
+    }
     const preservedNote = otherActive.length > 0
       ? ` Note: ${selectedCandidate?.name || 'This candidate'} already had an Active assignment (${otherActiveJob?.title || 'another order'}) — it was preserved, not ended.`
       : '';

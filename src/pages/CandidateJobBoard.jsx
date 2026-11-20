@@ -92,7 +92,7 @@ export default function CandidateJobBoard() {
     setFormError('');
   };
 
-  const submitApply = (e) => {
+  const submitApply = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim()) {
       setFormError('Name and email are required to apply.');
@@ -103,14 +103,36 @@ export default function CandidateJobBoard() {
       addToast({ message: 'Could not submit the application. Please try again.', kind: 'error' });
       return;
     }
-    if (!result.alreadyApplied) {
-      addToast({ message: 'Application submitted — you are now in the recruiter pipeline as Applied.', kind: 'success' });
-      syncCandidateToSupabase(result.candidate)
-        .then(() => refreshApplied(userEmail || form.email))
-        .catch(() => {});
-    } else {
+    if (result.alreadyApplied) {
+      // A re-submit after a failed sync lands here (the application
+      // mirror already exists locally) — confirm the shared save again
+      // rather than assuming it shared.
+      const syncResult = await syncCandidateToSupabase(result.candidate);
+      if (syncResult === 'failed' || syncResult === 'skipped') {
+        addToast({ message: 'Your application is saved locally, but it could not be sent to the shared store. Your details are still here — try again.', kind: 'error' });
+        return;
+      }
       addToast({ message: 'You already applied to this job.', kind: 'success' });
+      setAppliedJobIds((prev) => (prev.includes(String(applyingJob.id)) ? prev : [...prev, String(applyingJob.id)]));
+      setApplyingJob(null);
+      setSelectedJob(null);
+      return;
     }
+    // Confirm the shared save before reporting success — the application
+    // is in the local store either way, but the recruiter pipeline only
+    // sees it once the sync lands. On failure the form stays open with
+    // the entered details intact so the user can retry.
+    const syncResult = await syncCandidateToSupabase(result.candidate);
+    if (syncResult === 'failed') {
+      addToast({ message: 'Your application is saved locally, but it could not be sent to the shared store. Your details are still here — try again.', kind: 'error' });
+      return;
+    }
+    if (syncResult === 'skipped') {
+      addToast({ message: 'Your application is saved locally. It will reach the recruiter pipeline once the order record syncs — your details are still here.', kind: 'error' });
+      return;
+    }
+    addToast({ message: 'Application submitted — you are now in the recruiter pipeline as Applied.', kind: 'success' });
+    refreshApplied(userEmail || form.email);
     setAppliedJobIds((prev) => (prev.includes(String(applyingJob.id)) ? prev : [...prev, String(applyingJob.id)]));
     setApplyingJob(null);
     setSelectedJob(null);

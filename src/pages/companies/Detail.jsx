@@ -8,7 +8,7 @@ import {
 import {
   fetchClients, fetchContacts, fetchActivities, fetchFollowUps, fetchJobs,
   reconcileClients, reconcileContacts, reconcileActivities, reconcileFollowUps,
-  reconcileJobs, isRlsDenied,
+  reconcileJobs, syncActivityToSupabase, syncFollowUpToSupabase, isRlsDenied,
 } from '@/lib/pipeline';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { useCapabilities } from '@/lib/capabilities';
@@ -129,7 +129,7 @@ export default function CompanyDetail() {
     addToast({ message: `Contact ${created.name} added.`, kind: 'success' });
   };
 
-  const handleLogActivity = (e) => {
+  const handleLogActivity = async (e) => {
     e.preventDefault();
     if (!activityForm.subject.trim()) {
       addToast({ message: 'A subject is required to log an activity.', kind: 'error' });
@@ -143,12 +143,23 @@ export default function CompanyDetail() {
       body: activityForm.body,
       by: userEmail,
     });
+    // The activity is in the local timeline already; only clear the form
+    // and call it logged once Supabase confirms the shared save.
+    const syncResult = await syncActivityToSupabase(created);
+    if (syncResult === 'failed') {
+      addToast({ message: 'Activity saved locally, but it could not be saved to the shared store. Your entry is still here — try again.', kind: 'error' });
+      return;
+    }
+    if (syncResult === 'skipped') {
+      addToast({ message: 'Activity saved locally. It will sync to the shared store once this company record syncs — your entry is still here.', kind: 'error' });
+      return;
+    }
     setActivities((prev) => [created, ...prev]);
     setActivityForm({ type: 'call', contactId: '', subject: '', body: '' });
     addToast({ message: 'Activity logged.', kind: 'success' });
   };
 
-  const handleScheduleFollowUp = (e) => {
+  const handleScheduleFollowUp = async (e) => {
     e.preventDefault();
     if (!followUpForm.title.trim()) {
       addToast({ message: 'A title is required to schedule a follow-up.', kind: 'error' });
@@ -160,6 +171,17 @@ export default function CompanyDetail() {
       dueDate: followUpForm.dueDate,
       ownerEmail: followUpForm.ownerEmail || userEmail,
     });
+    // The follow-up is in the local list already; only clear the form and
+    // call it scheduled once Supabase confirms the shared save.
+    const syncResult = await syncFollowUpToSupabase(created);
+    if (syncResult === 'failed') {
+      addToast({ message: 'Follow-up saved locally, but it could not be saved to the shared store. Your entry is still here — try again.', kind: 'error' });
+      return;
+    }
+    if (syncResult === 'skipped') {
+      addToast({ message: 'Follow-up saved locally. It will sync to the shared store once this company record syncs — your entry is still here.', kind: 'error' });
+      return;
+    }
     setFollowUps((prev) => [...prev, created]);
     setFollowUpForm({ title: '', dueDate: defaultDueDate(), ownerEmail: userEmail });
     addToast({ message: 'Follow-up scheduled.', kind: 'success' });

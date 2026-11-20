@@ -187,16 +187,27 @@ export default function TimesheetForm() {
     }
 
     setTimesheets(all);
-    setStatus(newStatus);
     if (noteOverride !== undefined) setApproverNote(noteOverride);
     if (savedRecord) {
-      setPayrollStatus(savedRecord.payrollStatus || 'Not Ready');
-      setLiveExceptions(savedRecord.exceptions || []);
       // Sync the timesheet row itself to Supabase before navigating, so
       // the list the user lands on re-fetches after the sync has landed
       // (a fire-and-forget sync here loses the race and the new
-      // timesheet only appears after a manual reload).
-      await syncTimesheetToSupabase(savedRecord);
+      // timesheet only appears after a manual reload). The form's
+      // displayed status only updates after the sync confirms: a
+      // Submitted status locks the form, so updating it first would
+      // leave the user unable to retry after a failed save.
+      const syncResult = await syncTimesheetToSupabase(savedRecord);
+      if (syncResult === 'failed') {
+        addToast({ type: 'error', message: 'Timesheet saved locally, but it could not be saved to the shared store. Your entries are still here — try again.' });
+        return;
+      }
+      if (syncResult === 'skipped') {
+        addToast({ type: 'error', message: 'Timesheet saved locally. It will sync to the shared store once the assignment record syncs — your entries are still here.' });
+        return;
+      }
+      setStatus(newStatus);
+      setPayrollStatus(savedRecord.payrollStatus || 'Not Ready');
+      setLiveExceptions(savedRecord.exceptions || []);
     }
 
     let msg = `Timesheet ${newStatus === 'Draft' ? 'saved' : newStatus.toLowerCase()}.`;
