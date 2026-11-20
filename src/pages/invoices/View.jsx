@@ -6,7 +6,7 @@ import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { useCapabilities } from '@/lib/capabilities';
 import { useDemoClientId } from '@/lib/useDemoClientId';
 import { useAuth } from '@/context/AuthContext.jsx';
-import { AccessDenied } from '@/components/ui';
+import { AccessDenied, Loader } from '@/components/ui';
 
 const statusBadge = (s) => {
   const cls = {
@@ -38,6 +38,10 @@ export default function InvoiceView() {
   const [invoice, setInvoice] = useState(null);
   const [payments, setPayments] = useState([]);
   const [usingFallback, setUsingFallback] = useState(false);
+  // While the invoice is still loading, show a loader — the old code
+  // rendered "Invoice not found." on the first paint before the fetch
+  // had a chance to resolve.
+  const [loading, setLoading] = useState(true);
   // Slice 7: an RLS denial is not an outage — show the denied state and
   // never fall back to the unscoped demo store.
   const [denied, setDenied] = useState(false);
@@ -72,6 +76,8 @@ export default function InvoiceView() {
   };
 
   const reload = async () => {
+    setLoading(true);
+    try {
     let demo;
     try {
       demo = await resolveDemoInvoice();
@@ -94,6 +100,9 @@ export default function InvoiceView() {
       setInvoice({ ...demo, demoInvoiceId: demo.id });
       setPayments(getPaymentsForInvoice(demo.id));
       setUsingFallback(true);
+    }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -157,6 +166,7 @@ export default function InvoiceView() {
 
   if (denied) return <AccessDenied />;
   if (role === 'client' && invoice && invoice.clientId !== demoClientId) return <AccessDenied />;
+  if (loading) return <div className="p-6"><Loader label="Loading invoice…" /></div>;
   if (!invoice) return <div className="p-6">Invoice not found. <Link to="/invoices" className="text-blue-600 hover:underline">Back to Invoices</Link></div>;
 
   const balanceDue = invoice.balanceDue ?? (invoice.total - (invoice.amountPaid || 0));

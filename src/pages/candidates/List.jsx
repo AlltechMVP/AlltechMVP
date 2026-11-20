@@ -9,7 +9,7 @@ import {
   fetchApplications, reconcilePipeline, syncCandidateToSupabase, isRlsDenied,
 } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
-import { Empty, AccessDenied } from '@/components/ui';
+import { Empty, AccessDenied, Loader } from '@/components/ui';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { useCapabilities } from '@/lib/capabilities';
 import { useNavigate } from 'react-router-dom';
@@ -94,6 +94,9 @@ export default function CandidatesList() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [data, setData] = useState([]);
   const [decisions, setDecisions] = useState([]);
+  // The list loads async — show a loader on mount instead of flashing
+  // "No candidates found" before the first rows arrive.
+  const [loading, setLoading] = useState(true);
   const [showDecisions, setShowDecisions] = useState(true);
   const [usingFallback, setUsingFallback] = useState(false);
   // Slice 7: an RLS denial is not an outage — show the denied state and
@@ -139,6 +142,7 @@ export default function CandidatesList() {
     let mounted = true;
     (async () => {
       try {
+      try {
         await loadFromSupabase();
         if (mounted) setUsingFallback(false);
       } catch (err) {
@@ -156,6 +160,9 @@ export default function CandidatesList() {
           if (isRlsDenied(err2)) { if (mounted) setDenied(true); return; }
           if (mounted) { loadFromDemo(); setUsingFallback(true); }
         }
+      }
+      } finally {
+        if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
@@ -368,7 +375,9 @@ export default function CandidatesList() {
         )}
       </div>
 
-      {rows.length === 0 ? (
+      {loading ? (
+        <div className="py-8"><Loader label="Loading candidates…" /></div>
+      ) : rows.length === 0 ? (
         <Empty title="No candidates found" hint="Candidates will appear here as they enter the pipeline." />
       ) : (
         <DataTable columns={columns} rows={rows} pageSize={10} />
