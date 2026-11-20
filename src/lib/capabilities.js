@@ -3,7 +3,7 @@
 // App-layer capability helper (Slice 7 of the ATS/CRM milestone).
 // GENERATED DEFAULTS — DEFAULT_CAPABILITIES below is emitted verbatim
 // from the DB seed in ~/workspace/supabase-restore/flexperm-ddl.py
-// (197 rows, 57 named capabilities, 55 granted to at least one role;
+// (215 rows, 57 named capabilities, 55 granted to at least one role;
 // sensitive.view + payments.reverse are reserved with nobody by default).
 // Do NOT hand-edit the map: re-run ~/workspace/gen-capabilities.py after
 // any re-seed and diff the output. The DB (role_has_capability(), Slice 4)
@@ -24,7 +24,7 @@ import { ROLE_ROUTES } from '@/utils/roleUtils';
 
 /* global setTimeout, clearTimeout */
 
-export const ALL_ROLES = ["admin", "ceo", "cfo", "director", "branch-manager", "sales-rep", "sales-manager", "recruiter", "candidate", "client", "backoffice"];
+export const ALL_ROLES = ["admin", "admin_assistant", "ceo", "cfo", "director", "branch-manager", "sales-rep", "sales-manager", "recruiter", "candidate", "client", "backoffice"];
 
 export const ADMIN_FLOOR_CAPABILITIES = ['permissions.manage', 'roles.assign'];
 
@@ -99,10 +99,16 @@ export const DEFAULT_CAPABILITIES = {
     "dashboard.director.view", "dashboard.sales_manager.view", "dashboard.sales_rep.view", "demo.reset",
     "invoices.delete", "invoices.manage", "invoices.view", "jobs.delete",
     "jobs.manage", "jobs.view", "kb.manage", "kb.view",
-    "permissions.manage", "pipeline.delete", "pipeline.manage", "pipeline.view",
-    "reports.view", "roles.assign", "roles.audit.view", "settings.manage",
-    "timesheets.approve_internal", "timesheets.delete", "timesheets.submit", "timesheets.view",
-    "users.deactivate", "users.invite",
+    "payroll.prepare", "payroll.view", "permissions.manage", "pipeline.delete",
+    "pipeline.manage", "pipeline.view", "reports.view", "roles.assign",
+    "roles.audit.view", "settings.manage", "timesheets.approve_internal", "timesheets.delete",
+    "timesheets.submit", "timesheets.view", "users.deactivate", "users.invite",
+  ],
+  "admin_assistant": [
+    "assignments.manage", "assignments.view", "candidates.quickadd", "candidates.search",
+    "clients.manage", "clients.view", "crm.manage", "dashboard.recruiter.view",
+    "jobs.manage", "jobs.view", "kb.view", "pipeline.manage",
+    "pipeline.view", "timesheets.approve_internal", "timesheets.submit", "timesheets.view",
   ],
   "ceo": [
     "ar.view", "assignments.manage", "assignments.view", "candidates.quickadd",
