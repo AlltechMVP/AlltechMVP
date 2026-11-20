@@ -127,6 +127,14 @@ export default function PayrollQueue() {
   }, []);
 
   const updatePayrollStatus = async (row, newStatus) => {
+    // Finalize split: Mark In Payroll needs payroll.prepare, Mark Paid
+    // needs payroll.finalize (backoffice only). The buttons are disabled
+    // without the capability; this guard is the same check for any caller.
+    const required = newStatus === 'Paid' ? 'payroll.finalize' : 'payroll.prepare';
+    if (!hasCapability(required)) {
+      addToast({ type: 'error', message: newStatus === 'Paid' ? 'Marking a timesheet Paid is a backoffice-only finalize step.' : 'You do not have permission to mark timesheets In Payroll.' });
+      return;
+    }
     // Resolve the demo row (the canonical write path) from the row's twin;
     // if there is no twin yet, reconcile first — it creates one.
     let all = getTimesheets();
@@ -267,6 +275,8 @@ export default function PayrollQueue() {
         return (
           <button
             onClick={() => updatePayrollStatus(row, 'In Payroll')}
+            disabled={!hasCapability('payroll.prepare')}
+            title={!hasCapability('payroll.prepare') ? 'You do not have permission to mark timesheets In Payroll.' : ''}
             className="bg-indigo-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-indigo-700"
           >
             Mark In Payroll
@@ -277,6 +287,8 @@ export default function PayrollQueue() {
         return (
           <button
             onClick={() => updatePayrollStatus(row, 'Paid')}
+            disabled={!hasCapability('payroll.finalize')}
+            title={!hasCapability('payroll.finalize') ? 'Marking a timesheet Paid is a backoffice-only finalize step.' : ''}
             className="bg-green-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-green-700"
           >
             Mark Paid
