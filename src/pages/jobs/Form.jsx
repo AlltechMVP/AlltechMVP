@@ -169,8 +169,19 @@ export default function JobForm() {
     // Sync the job row itself to Supabase before navigating, so the
     // list the user lands on re-fetches after the sync has landed
     // (a fire-and-forget sync here loses the race and the new order
-    // only appears after a manual reload).
-    if (savedJob) await syncJobToSupabase(savedJob);
+    // only appears after a manual reload). On failure, stay on the
+    // form with the entries intact so the user can retry.
+    if (savedJob) {
+      const syncResult = await syncJobToSupabase(savedJob);
+      if (syncResult === 'failed') {
+        addToast({ type: 'error', message: 'Order saved locally, but it could not be saved to the shared store. Your entries are still here — try again.' });
+        return;
+      }
+      if (syncResult === 'skipped') {
+        addToast({ type: 'error', message: 'Order saved locally. It will sync to the shared store once the client record syncs — your entries are still here.' });
+        return;
+      }
+    }
     addToast({ type: 'success', message: isEdit ? 'Order updated.' : 'Order created.' });
     if (!isEdit && fromClientId) navigate(`/companies/${fromClientId}`);
     else navigate('/jobs');

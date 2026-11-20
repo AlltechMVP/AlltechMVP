@@ -138,10 +138,25 @@ export default function JobCandidates() {
       return;
     }
     if (result.alreadySubmitted) {
+      // A re-submit after a failed sync lands here (the mirror already
+      // exists locally) — sync it again rather than assuming it shared.
+      const syncResult = await syncCandidateToSupabase(result.candidate);
+      if (syncResult === 'failed' || syncResult === 'skipped') {
+        addToast({ type: 'error', message: `${person.name} is submitted locally, but the shared save did not confirm — the order will not show this submission in other sessions yet. Try again.` });
+        return;
+      }
       addToast({ message: `${person.name} is already on this order.`, kind: 'success' });
       return;
     }
-    await syncCandidateToSupabase(result.candidate);
+    const syncResult = await syncCandidateToSupabase(result.candidate);
+    if (syncResult === 'failed') {
+      addToast({ type: 'error', message: `${person.name} is submitted locally, but the shared save failed — the order will not show this submission in other sessions yet. Try again.` });
+      return;
+    }
+    if (syncResult === 'skipped') {
+      addToast({ type: 'error', message: `${person.name} is submitted locally. The submission will sync to the shared store once the order record syncs — try again then.` });
+      return;
+    }
     await load();
     addToast({ message: `${person.name} submitted to ${job?.title || 'this order'} as Applied.`, kind: 'success' });
   };

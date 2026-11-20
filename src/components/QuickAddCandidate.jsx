@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   findCandidateByEmail, createCandidate, submitCandidateToJob,
 } from '@/utils/storage';
-import { syncCandidateToSupabase } from '@/lib/pipeline';
+import { syncCandidateToSupabase, syncPersonToSupabase } from '@/lib/pipeline';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 
@@ -46,12 +46,29 @@ export function QuickAddCandidateForm({ jobId, jobTitle, onCancel, onCreated }) 
     let submitted = false;
     if (jobId) {
       const result = submitCandidateToJob(candidate.id, jobId, session?.user?.email || 'recruiter');
-      if (result && !result.alreadySubmitted) {
+      if (result) {
         submitted = true;
         candidate = result.candidate;
-        await syncCandidateToSupabase(candidate);
-      } else if (result?.alreadySubmitted) {
-        submitted = true;
+        // Await the shared save and branch on it. A re-submit after a
+        // failed sync finds the existing mirror (alreadySubmitted) — sync
+        // it again rather than assuming it shared.
+        const syncResult = await syncCandidateToSupabase(candidate);
+        if (syncResult === 'failed') {
+          addToast({ message: `Could not save ${candidate.name} to the shared store — the submission is saved locally only. Your entries are still here; try again.`, kind: 'error' });
+          return;
+        }
+        if (syncResult === 'skipped') {
+          addToast({ message: `${candidate.name} is saved locally. The submission will sync to the shared store once the order record syncs — your entries are still here.`, kind: 'error' });
+          return;
+        }
+      }
+    } else {
+      // Talent-pool-only add: confirm the person record is shared before
+      // reporting success.
+      const personSync = await syncPersonToSupabase(candidate);
+      if (personSync === 'failed' || personSync === 'skipped') {
+        addToast({ message: `Could not save ${candidate.name} to the shared store — the record is saved locally only. Your entries are still here; try again.`, kind: 'error' });
+        return;
       }
     }
     if (created.alreadyExists && !submitted) {
