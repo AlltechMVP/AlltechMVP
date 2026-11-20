@@ -924,11 +924,15 @@ export function runTimesheetCompliance(ts) {
     exceptions.push({ msg: `Overtime: ${total} hours exceeds 40-hour threshold`, blocking: false });
   }
 
-  const longDays = entries.filter(e => (Number(e.hours) || 0) >= 6);
-  if (longDays.length > 0) {
-    compliance.mealBreakMissing = true;
-    exceptions.push({ msg: `Possible meal break exception on ${longDays.length} day(s) with 6+ hours (demo)`, blocking: false });
-  }
+  // No meal-break check here: the timesheet entries flow records no
+  // meal-break data (no input, no field on entries, no seed data), so
+  // "6+ hours with no recorded break" was true for every normal
+  // full-time day and the warning fired on 100% of 8-hour timesheets
+  // with no way for anyone to resolve it. (The punch-clock flow in
+  // TimeEntry.jsx records breakStart/breakEnd on the timesheet itself
+  // and has its own break checks; this entries-model check is not
+  // that.) Re-add a meal-break exception only when entries actually
+  // carry meal-break data to evaluate.
 
   return { exceptions, compliance };
 }

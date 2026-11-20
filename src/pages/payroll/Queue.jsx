@@ -152,8 +152,22 @@ export default function PayrollQueue() {
     const updated = { ...all[idx], payrollStatus: newStatus, updatedAt: now() };
     all[idx] = updated;
     setTimesheets(all);
-    // Sync the flip up (fire-and-forget; the demo write already succeeded).
-    syncTimesheetToSupabase(updated);
+    // Await the sync before advancing the visible row — the row's status
+    // is the payroll state of record, and a failed sync must leave the
+    // row where it was so the flip can be retried (the demo write above
+    // already succeeded, and the flip is idempotent on the same row; a
+    // later reconcile re-syncs it). Same pattern as the shared-save fix
+    // in timekeeping/Form.jsx: displayed status only advances after the
+    // sync confirms.
+    const syncResult = await syncTimesheetToSupabase(updated);
+    if (syncResult === 'failed') {
+      addToast({ type: 'error', message: `Timesheet saved locally as "${newStatus}", but it could not be saved to the shared store. The row still shows the previous status — try again.` });
+      return;
+    }
+    if (syncResult === 'skipped') {
+      addToast({ type: 'error', message: `Timesheet saved locally as "${newStatus}". It will sync to the shared store once the assignment record syncs — the row still shows the previous status.` });
+      return;
+    }
     // Update the visible row in place — do not refetch, the sync may not
     // have landed yet and a stale fetch would overwrite the new status.
     setData((prev) => prev.map((r) => (r.id === row.id ? { ...r, payrollStatus: newStatus } : r)));
@@ -285,7 +299,16 @@ export default function PayrollQueue() {
         Simulated payroll — no real money moves. Marking a timesheet Paid only changes its status; invoices created here are drafts.
       </p>
 
-      {missingRates.length > 0 && (
+      {/* The box is a stable function of current state: it lists the
+          unbillable Paid timesheets when any are missing a rate, and
+          shows an all-clear line whenever Paid timesheets are waiting
+          to be invoiced but none is missing a rate — so it no longer
+          appears in one state and vanishes in the other (the only Paid
+          uninvoiced timesheet in the demo, ts-005, has a $95 bill rate,
+          so the box used to disappear entirely after a reload even
+          though billable rows were still waiting). It renders nothing
+          only when there are no Paid uninvoiced timesheets at all. */}
+      {missingRates.length > 0 ? (
         <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
           <p className="font-medium mb-1">Missing bill rate — {missingRates.length} paid timesheet{missingRates.length > 1 ? 's' : ''} cannot be invoiced yet:</p>
           <ul className="list-disc list-inside">
@@ -294,7 +317,11 @@ export default function PayrollQueue() {
             ))}
           </ul>
         </div>
-      )}
+      ) : billableCount > 0 ? (
+        <p className="text-xs text-green-800 bg-green-50 border border-green-200 rounded px-3 py-2 mb-4">
+          No timesheets are missing a bill rate. All selected timesheets can be invoiced.
+        </p>
+      ) : null}
 
       {usingFallback && (
         <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
