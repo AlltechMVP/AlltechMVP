@@ -10,6 +10,7 @@ import Logout from '@/pages/Logout.jsx';
 import ProtectedRoute from '@/components/protected/ProtectedRoute.jsx';
 import Loader from '@/components/ui/Loader.jsx';
 import { flagEnabled } from '@/config/flags.js';
+import { INTERNAL_ROLES } from '@/utils/roleUtils';
 
 const RecruiterBoard = lazy(() => import('@/pages/recruiter/Board.jsx'));
 const ClientJobs = lazy(() => import('@/pages/client/Jobs.jsx'));
@@ -269,11 +270,13 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Previously unrouted pages */}
+          {/* Scheduler (2026-11-20 nav-leak fix: internal-only; the
+              sidebar link is gated on isInternalRole, and this gate closes
+              the typed URL for client/candidate too) */}
           <Route
             path="scheduler"
             element={
-              <ProtectedRoute allowedCapabilities={[]}>
+              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
                 <Scheduler />
               </ProtectedRoute>
             }
@@ -313,7 +316,7 @@ export default function AppRoutes() {
           <Route
             path="assignments/tracker"
             element={
-              <ProtectedRoute allowedCapabilities={[]}>
+              <ProtectedRoute allowedCapabilities={["assignments.view"]}>
                 <AssignmentTracker />
               </ProtectedRoute>
             }
@@ -390,11 +393,13 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Assignments (accessible to all authenticated users) */}
+          {/* Assignments (2026-11-20 nav-leak fix: gated on assignments.view,
+              the same capability the sidebar link uses, so typed URLs deny
+              non-internal roles too) */}
           <Route
             path="assignments"
             element={
-              <ProtectedRoute allowedCapabilities={[]}>
+              <ProtectedRoute allowedCapabilities={["assignments.view"]}>
                 <AssignmentsList />
               </ProtectedRoute>
             }
@@ -402,7 +407,7 @@ export default function AppRoutes() {
           <Route
             path="assignments/new"
             element={
-              <ProtectedRoute allowedCapabilities={[]}>
+              <ProtectedRoute allowedCapabilities={["assignments.view"]}>
                 <AssignmentForm />
               </ProtectedRoute>
             }
@@ -410,7 +415,7 @@ export default function AppRoutes() {
           <Route
             path="assignments/:id"
             element={
-              <ProtectedRoute allowedCapabilities={[]}>
+              <ProtectedRoute allowedCapabilities={["assignments.view"]}>
                 <AssignmentForm />
               </ProtectedRoute>
             }
@@ -442,11 +447,13 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Candidates Pipeline (accessible to all authenticated users) */}
+          {/* Candidates Pipeline (2026-11-20 nav-leak fix: gated on
+              pipeline.view, the same capability the sidebar link uses, so
+              typed URLs deny non-internal roles too) */}
           <Route
             path="candidates"
             element={
-              <ProtectedRoute allowedCapabilities={[]}>
+              <ProtectedRoute allowedCapabilities={["pipeline.view"]}>
                 <CandidatesList />
               </ProtectedRoute>
             }
@@ -462,17 +469,21 @@ export default function AppRoutes() {
           <Route
             path="candidates/:id"
             element={
-              <ProtectedRoute allowedCapabilities={[]}>
+              <ProtectedRoute allowedCapabilities={["pipeline.view"]}>
                 <CandidateDetail />
               </ProtectedRoute>
             }
           />
 
-          {/* Job Candidates View */}
+          {/* Job Candidates View (2026-11-20 nav-leak fix: gated on
+              pipeline.view — "View candidate pipeline / job candidates" —
+              so typed URLs deny non-internal roles too. The client portal
+              equivalent /client/jobs/:jobId/candidates keeps its own
+              client.portal.view gate.) */}
           <Route
             path="jobs/:jobId/candidates"
             element={
-              <ProtectedRoute allowedCapabilities={[]}>
+              <ProtectedRoute allowedCapabilities={["pipeline.view"]}>
                 <JobCandidates />
               </ProtectedRoute>
             }
@@ -516,11 +527,13 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Tools (accessible to all authenticated users) */}
+          {/* Tools (2026-11-20 nav-leak fix: internal-only; the sidebar
+              link is gated on isInternalRole, and this gate closes the typed
+              URL for client/candidate too) */}
           <Route
             path="tools"
             element={
-              <ProtectedRoute allowedCapabilities={[]}>
+              <ProtectedRoute allowedRoles={INTERNAL_ROLES}>
                 <AdminTools />
               </ProtectedRoute>
             }

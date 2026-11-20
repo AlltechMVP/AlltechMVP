@@ -3,7 +3,7 @@
 // App-layer capability helper (Slice 7 of the ATS/CRM milestone).
 // GENERATED DEFAULTS — DEFAULT_CAPABILITIES below is emitted verbatim
 // from the DB seed in ~/workspace/supabase-restore/flexperm-ddl.py
-// (215 rows, 57 named capabilities, 55 granted to at least one role;
+// (208 rows, 57 named capabilities, 55 granted to at least one role;
 // sensitive.view + payments.reverse are reserved with nobody by default).
 // Do NOT hand-edit the map: re-run ~/workspace/gen-capabilities.py after
 // any re-seed and diff the output. The DB (role_has_capability(), Slice 4)
@@ -156,14 +156,12 @@ export const DEFAULT_CAPABILITIES = {
     "timesheets.view",
   ],
   "candidate": [
-    "assignments.view", "candidate.apply", "candidate.profile.edit", "candidate.profile.view",
-    "clients.view", "dashboard.candidate.view", "jobs.view", "kb.view",
-    "pipeline.view", "timesheets.submit", "timesheets.view",
+    "candidate.apply", "candidate.profile.edit", "candidate.profile.view", "clients.view",
+    "dashboard.candidate.view", "kb.view", "timesheets.submit", "timesheets.view",
   ],
   "client": [
-    "ar.view", "assignments.view", "client.portal.view", "clients.view",
-    "dashboard.client.view", "invoices.view", "jobs.view", "kb.view",
-    "pipeline.decide_client", "pipeline.view", "timesheets.approve_client", "timesheets.view",
+    "client.portal.view", "clients.view", "dashboard.client.view", "invoices.view",
+    "kb.view", "pipeline.decide_client", "timesheets.approve_client", "timesheets.view",
   ],
   "backoffice": [
     "ar.view", "assignments.manage", "assignments.view", "candidates.quickadd",
