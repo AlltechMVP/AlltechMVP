@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useCapabilities } from "@/lib/capabilities";
+import { isInternalRole } from "@/utils/roleUtils";
 import QuickAdd from "@/components/QuickAdd.jsx";
 import QuickAddCandidate from "@/components/QuickAddCandidate.jsx";
 
@@ -9,12 +10,15 @@ const linkCls = (active) =>
 
 // Slice 7 (ATS/CRM milestone): every nav entry is gated on the SAME
 // capability its route requires, so the sidebar never shows a link the
-// user cannot open. Auth-only routes (no capability) are shown to all
-// signed-in users. Capabilities resolve per EFFECTIVE role (useAuth's
-// role: roleOverride in dev/Demo Mode, else the signed-in account's
-// profile role), so the Demo Mode persona switcher re-gates the nav.
+// user cannot open. Scheduler and Tools are internal-only (isInternalRole)
+// rather than capability-gated: no capability combination yields exactly
+// the internal staff set for those pages. Capabilities resolve per
+// EFFECTIVE role (useAuth's role: roleOverride in dev/Demo Mode, else the
+// signed-in account's profile role), so the Demo Mode persona switcher
+// re-gates the nav. Section headings render only when at least one link
+// beneath them is visible (2026-11-20 nav-leak fix).
 export default function Sidebar() {
-  const { hasCapability } = useCapabilities();
+  const { hasCapability, role } = useCapabilities();
   const { pathname } = useLocation();
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddCandidateOpen, setQuickAddCandidateOpen] = useState(false);
@@ -25,6 +29,15 @@ export default function Sidebar() {
     || can('client.portal.view') || can('timesheets.approve_client');
   const showCrmSection = can('crm.manage') || can('candidates.quickadd')
     || can('candidates.search') || can('jobs.manage');
+  // Invoices lives under Operations for internal roles but inside the
+  // Client Portal section for the client role (it is a shared, scoped page).
+  const showRecruitingSection = can('pipeline.view') || can('jobs.view');
+  const showOperationsSection = can('assignments.view') || can('timesheets.approve_internal')
+    || can('payroll.view', 'payroll.prepare')
+    || (can('invoices.view') && role !== 'client') || can('ar.view')
+    || isInternalRole(role);
+  const showAdminSection = isInternalRole(role) || can('reports.view', 'dashboard.admin.view')
+    || can('roles.assign') || can('permissions.manage') || can('settings.manage');
 
   return (
     <aside className="w-64 bg-gray-100 p-4 h-full print:hidden">
@@ -65,6 +78,9 @@ export default function Sidebar() {
             {can('timesheets.approve_client') && (
               <li><Link to="/client/timecards" className={linkCls(pathname === '/client/timecards')}>Timecards</Link></li>
             )}
+            {can('invoices.view') && role === 'client' && (
+              <li><Link to="/invoices" className={linkCls(pathname.startsWith('/invoices'))}>Invoices</Link></li>
+            )}
           </>
         )}
         {can('dashboard.director.view') && (
@@ -83,7 +99,9 @@ export default function Sidebar() {
           <li><Link to="/finance/reports" className={linkCls(pathname === '/finance/reports')}>Finance Reports</Link></li>
         )}
 
-        <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Recruiting</li>
+        {showRecruitingSection && (
+          <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Recruiting</li>
+        )}
         {can('pipeline.view') && (
           <li><Link to="/candidates" className={linkCls(pathname.startsWith('/candidates'))}>Candidate Pipeline</Link></li>
         )}
@@ -112,7 +130,9 @@ export default function Sidebar() {
           </>
         )}
 
-        <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Operations</li>
+        {showOperationsSection && (
+          <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Operations</li>
+        )}
         {can('assignments.view') && (
           <>
             <li><Link to="/assignments" className={linkCls(pathname.startsWith('/assignments'))}>Assignments</Link></li>
@@ -122,7 +142,7 @@ export default function Sidebar() {
         {can('timesheets.approve_internal') && (
           <li><Link to="/timekeeping" className={linkCls(pathname.startsWith('/timekeeping'))}>Timekeeping</Link></li>
         )}
-        {can('timesheets.submit') && (
+        {can('timesheets.submit') && role !== 'candidate' && (
           <li><Link to="/timekeeping/entry" className={linkCls(pathname === '/timekeeping/entry')}>Timecard Entry</Link></li>
         )}
         {can('payroll.view', 'payroll.prepare') && (
@@ -131,13 +151,15 @@ export default function Sidebar() {
             <li><Link to="/payroll" className={linkCls(pathname === '/payroll')}>Payroll Summary</Link></li>
           </>
         )}
-        {can('invoices.view') && (
+        {can('invoices.view') && role !== 'client' && (
           <li><Link to="/invoices" className={linkCls(pathname.startsWith('/invoices'))}>Invoices</Link></li>
         )}
         {can('ar.view') && (
           <li><Link to="/ar-aging" className={linkCls(pathname === '/ar-aging')}>AR Aging</Link></li>
         )}
-        <li><Link to="/scheduler" className={linkCls(pathname === '/scheduler')}>Scheduler</Link></li>
+        {isInternalRole(role) && (
+          <li><Link to="/scheduler" className={linkCls(pathname === '/scheduler')}>Scheduler</Link></li>
+        )}
 
         <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Resources</li>
         {can('kb.view') && (
@@ -154,8 +176,12 @@ export default function Sidebar() {
           </>
         )}
 
-        <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin</li>
-        <li><Link to="/tools" className={linkCls(pathname === '/tools')}>Tools</Link></li>
+        {showAdminSection && (
+          <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin</li>
+        )}
+        {isInternalRole(role) && (
+          <li><Link to="/tools" className={linkCls(pathname === '/tools')}>Tools</Link></li>
+        )}
         {can('reports.view', 'dashboard.admin.view') && (
           <li><Link to="/admin/reports" className={linkCls(pathname === '/admin/reports')}>Admin Reports</Link></li>
         )}
