@@ -214,12 +214,12 @@ export default function InvoiceView() {
 
   return (
     <div className="p-6 max-w-4xl">
-      <div className="mb-4">
+      <div className="mb-4 print:hidden">
         <Link to="/invoices" className="text-blue-600 hover:underline text-sm">&larr; Back to Invoices</Link>
       </div>
 
       {usingFallback && (
-        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4 print:hidden">
           Showing local demo data — the shared invoice is unreachable right now. Changes here will sync when it comes back.
         </p>
       )}
@@ -232,8 +232,11 @@ export default function InvoiceView() {
           </div>
           <div className="text-right">
             {statusBadge(invoice.status)}
+            <button onClick={() => window.print()} className="mt-2 ml-auto block border px-3 py-1.5 rounded text-sm hover:bg-gray-50 print:hidden">
+              Print
+            </button>
             {invoice.status === 'Draft' && canSend && (
-              <button onClick={sendInvoice} className="mt-2 ml-auto block bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">
+              <button onClick={sendInvoice} className="mt-2 ml-auto block bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700 print:hidden">
                 Send Invoice
               </button>
             )}
@@ -324,7 +327,7 @@ export default function InvoiceView() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Payment History</h2>
           {balanceDue > 0 && invoice.status !== 'Void' && invoice.status !== 'Draft' && canPost && (
-            <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+            <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 print:hidden">
               {showForm ? 'Cancel' : 'Post Payment'}
             </button>
           )}
@@ -361,7 +364,7 @@ export default function InvoiceView() {
         )}
 
         {showForm && (
-          <form onSubmit={handleSubmitPayment} className="mt-4 border-t pt-4">
+          <form onSubmit={handleSubmitPayment} className="mt-4 border-t pt-4 print:hidden">
             <h3 className="font-medium mb-3">Post Payment</h3>
             {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-2 rounded mb-3">{error}</div>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

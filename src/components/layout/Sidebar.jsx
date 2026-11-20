@@ -27,7 +27,7 @@ export default function Sidebar() {
     || can('candidates.search') || can('jobs.manage');
 
   return (
-    <aside className="w-64 bg-gray-100 p-4 h-full">
+    <aside className="w-64 bg-gray-100 p-4 h-full print:hidden">
       <h2 className="font-semibold mb-4">Navigation</h2>
       <ul className="space-y-1">
         {can('dashboard.recruiter.view') && (

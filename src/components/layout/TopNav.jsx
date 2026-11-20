@@ -39,7 +39,7 @@ export default function TopNav() {
   }, []);
 
   return (
-    <header className="w-full border-b bg-white/70 backdrop-blur">
+    <header className="w-full border-b bg-white/70 backdrop-blur print:hidden">
       <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
         <div className="font-semibold">Alltech</div>
         {isDemoMode && (
