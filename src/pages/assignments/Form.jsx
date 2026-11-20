@@ -42,6 +42,17 @@ export default function AssignmentForm() {
       // from real assignment rates). Merge them in by legacy id so the
       // rate pre-fill below works for seeded orders too.
       let demoJobs = getJobs();
+      // Seeded assignments carry the real pay rates for their orders —
+      // use them as a last resort so the pre-fill works even on a store
+      // seeded before jobs carried payRate, or when the shared pay_rate
+      // is empty (the job sync writes pay_rate from the demo job, so a
+      // seed without payRate NULLs the backfilled value on sync).
+      const assignmentPay = new Map();
+      getAssignments().forEach((a) => {
+        if (a.jobId && a.payRate != null && !assignmentPay.has(String(a.jobId))) {
+          assignmentPay.set(String(a.jobId), a.payRate);
+        }
+      });
       try {
         const shared = await fetchJobs();
         const byLegacy = new Map(shared.map((j) => [String(j.legacyId), j]));
@@ -58,6 +69,12 @@ export default function AssignmentForm() {
       } catch {
         // Shared store unreachable — demo rates only; manual entry still works.
       }
+      // Fill any pay rate still missing from an existing assignment for
+      // that order, whichever source the job came from.
+      demoJobs = demoJobs.map((j) => ({
+        ...j,
+        payRate: j.payRate ?? assignmentPay.get(String(j.id)) ?? null,
+      }));
       setJobs(demoJobs);
 
       if (isEdit) {
