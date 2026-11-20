@@ -707,9 +707,9 @@ const SEED_CANDIDATES = [
 ];
 
 const SEED_JOBS = [
-  { id: 'job-001', title: 'Senior React Developer', client_name: 'Acme Corp', location: 'Remote', rate: 85, openings: 2, status: 'Open' },
-  { id: 'job-002', title: 'DevOps Engineer', client_name: 'TechStart Inc', location: 'Austin, TX', rate: 95, openings: 1, status: 'Open' },
-  { id: 'job-003', title: 'QA Analyst', client_name: 'DataFlow LLC', location: 'Chicago, IL', rate: 55, openings: 3, status: 'Open' },
+  { id: 'job-001', title: 'Senior React Developer', client_name: 'Acme Corp', location: 'Remote', rate: 85, payRate: 75, openings: 2, status: 'Open' },
+  { id: 'job-002', title: 'DevOps Engineer', client_name: 'TechStart Inc', location: 'Austin, TX', rate: 95, payRate: 80, openings: 1, status: 'Open' },
+  { id: 'job-003', title: 'QA Analyst', client_name: 'DataFlow LLC', location: 'Chicago, IL', rate: 55, payRate: 50, openings: 3, status: 'Open' },
   { id: 'job-004', title: 'Project Manager', client_name: 'Acme Corp', location: 'New York, NY', rate: 75, openings: 1, status: 'Open' },
 ];
 
@@ -1153,9 +1153,9 @@ export function seedDemoData() {
   ];
 
   const demoJobs = [
-    { id: 'job-001', title: 'Senior React Developer', client_name: 'Acme Corp', clientId: 'client-001', location: 'Remote', rate: 85, openings: 2, status: 'Open' },
-    { id: 'job-002', title: 'DevOps Engineer', client_name: 'TechStart Inc', clientId: 'client-002', location: 'Austin, TX', rate: 95, openings: 1, status: 'Open' },
-    { id: 'job-003', title: 'QA Analyst', client_name: 'DataFlow LLC', clientId: 'client-003', location: 'Chicago, IL', rate: 55, openings: 3, status: 'Open' },
+    { id: 'job-001', title: 'Senior React Developer', client_name: 'Acme Corp', clientId: 'client-001', location: 'Remote', rate: 85, payRate: 75, openings: 2, status: 'Open' },
+    { id: 'job-002', title: 'DevOps Engineer', client_name: 'TechStart Inc', clientId: 'client-002', location: 'Austin, TX', rate: 95, payRate: 80, openings: 1, status: 'Open' },
+    { id: 'job-003', title: 'QA Analyst', client_name: 'DataFlow LLC', clientId: 'client-003', location: 'Chicago, IL', rate: 55, payRate: 50, openings: 3, status: 'Open' },
     { id: 'job-004', title: 'Project Manager', client_name: 'Acme Corp', clientId: 'client-001', location: 'New York, NY', rate: 75, openings: 1, status: 'Open' },
     { id: 'job-005', title: 'Data Scientist', client_name: 'Insight Analytics', clientId: 'client-004', location: 'San Francisco, CA', rate: 110, openings: 2, status: 'Open' },
     { id: 'job-006', title: 'UX Designer', client_name: 'TechStart Inc', clientId: 'client-002', location: 'Remote', rate: 70, openings: 1, status: 'Closed' },
