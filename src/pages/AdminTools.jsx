@@ -102,6 +102,10 @@ export default function AdminTools() {
       }
       addToast({ type: 'success', message: 'Demo data reset.' });
       runValidation();
+      // The app-level health/version banners are computed once at mount
+      // — tell App to re-read the fresh seed so a stale "1 error" count
+      // doesn't linger until a full page reload.
+      window.dispatchEvent(new Event('alltech:demo-reset'));
       navigate('/candidates');
     } finally {
       setResetting(false);

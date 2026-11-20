@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { getAssignments, getCandidateById, getJobById } from '@/utils/storage';
 import { fetchAssignments, reconcileAssignments, isRlsDenied } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
-import { Empty, AccessDenied } from '@/components/ui';
+import { Empty, AccessDenied, Loader } from '@/components/ui';
 
 const STATUS_OPTIONS = ['All', 'Active', 'Ended', 'On Hold'];
 
@@ -58,6 +58,10 @@ function mapDemoRow(a) {
 export default function AssignmentsList() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [data, setData] = useState([]);
+  // The list loads async — show a loader on mount instead of flashing
+  // "No assignments found" before the first rows arrive (including after
+  // creating an assignment, when the form navigates back here).
+  const [loading, setLoading] = useState(true);
   const [usingFallback, setUsingFallback] = useState(false);
   // Slice 7: an RLS denial is not an outage — show the denied state and
   // never fall back to the unscoped demo store.
@@ -83,6 +87,7 @@ export default function AssignmentsList() {
     let mounted = true;
     (async () => {
       try {
+      try {
         await loadFromSupabase();
         if (mounted) setUsingFallback(false);
       } catch (err) {
@@ -98,6 +103,9 @@ export default function AssignmentsList() {
           if (isRlsDenied(err2)) { if (mounted) setDenied(true); return; }
           if (mounted) { loadFromDemo(); setUsingFallback(true); }
         }
+      }
+      } finally {
+        if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
@@ -172,7 +180,9 @@ export default function AssignmentsList() {
         </select>
       </div>
 
-      {rows.length === 0 ? (
+      {loading ? (
+        <div className="py-8"><Loader label="Loading assignments…" /></div>
+      ) : rows.length === 0 ? (
         <Empty title="No assignments found" hint="Create your first assignment to get started." />
       ) : (
         <DataTable columns={columns} rows={rows} pageSize={10} />

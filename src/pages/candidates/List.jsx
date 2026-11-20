@@ -188,6 +188,14 @@ export default function CandidatesList() {
     }
     const result = changeCandidateStatus(demoId, newStatus, { note });
     if (result) {
+      // Show the new status in this row right away: the shared-store
+      // reload below round-trips through Supabase and can return the
+      // pre-change row on its first pass, so the text would otherwise
+      // lag one render behind the toast. The reload still runs and
+      // confirms (or corrects) the row from the server.
+      setData((prev) => prev.map((r) => (String(r.id) === String(applicationId)
+        ? { ...r, status: normalizeStatus(result) }
+        : r)));
       const updated = getCandidateById(demoId);
       if (updated) await syncCandidateToSupabase(updated);
       try {
