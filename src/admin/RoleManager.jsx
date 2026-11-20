@@ -69,7 +69,7 @@ export default function RoleManager() {
     }
   };
 
-  const roles = ["admin", "ceo", "cfo", "director", "branch-manager", "sales-rep", "sales-manager", "recruiter", "candidate", "client", "backoffice"];
+  const roles = ["admin", "admin_assistant", "ceo", "cfo", "director", "branch-manager", "sales-rep", "sales-manager", "recruiter", "candidate", "client", "backoffice"];
 
   return (
     <div className="p-6" role="region" aria-label="User Role Management">

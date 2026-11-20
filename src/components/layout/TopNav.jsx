@@ -18,6 +18,7 @@ const DEV_ROLES = [
   { value: 'sales-manager', label: 'Sales Mgr' },
   { value: 'backoffice', label: 'Backoffice' },
   { value: 'admin', label: 'Admin' },
+  { value: 'admin_assistant', label: 'Admin Asst' },
 ];
 
 export default function TopNav() {

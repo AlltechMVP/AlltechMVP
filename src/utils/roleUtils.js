@@ -2,7 +2,7 @@
 // src/utils/roleUtils.js
 
 export const INTERNAL_ROLES = [
-  'admin', 'ceo', 'cfo', 'director', 'branch-manager',
+  'admin', 'admin_assistant', 'ceo', 'cfo', 'director', 'branch-manager',
   'sales-rep', 'sales-manager', 'recruiter', 'backoffice',
 ];
 
@@ -14,6 +14,7 @@ export function isInternalRole(role) {
 
 export const ROLE_ROUTES = {
   admin: '/admin',
+  admin_assistant: '/recruiter',
   ceo: '/ceo',
   cfo: '/cfo',
   director: '/director',
