@@ -18,6 +18,15 @@ import { Empty, AccessDenied } from '@/components/ui';
 const inputCls = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
 
+// Default follow-up due date: a week out, in local YYYY-MM-DD form (the
+// native date input ships blank otherwise).
+function defaultDueDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 // Company record: details, contacts, activity timeline, follow-ups, and
 // orders. Reads come from Supabase (shared across sessions) with a demo
 // fallback; writes go to the demo store first and sync write-through.
@@ -43,7 +52,7 @@ export default function CompanyDetail() {
 
   const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', title: '' });
   const [activityForm, setActivityForm] = useState({ type: 'call', contactId: '', subject: '', body: '' });
-  const [followUpForm, setFollowUpForm] = useState({ title: '', dueDate: '', ownerEmail: userEmail });
+  const [followUpForm, setFollowUpForm] = useState({ title: '', dueDate: defaultDueDate(), ownerEmail: userEmail });
 
   useEffect(() => {
     let mounted = true;
@@ -152,7 +161,7 @@ export default function CompanyDetail() {
       ownerEmail: followUpForm.ownerEmail || userEmail,
     });
     setFollowUps((prev) => [...prev, created]);
-    setFollowUpForm({ title: '', dueDate: '', ownerEmail: userEmail });
+    setFollowUpForm({ title: '', dueDate: defaultDueDate(), ownerEmail: userEmail });
     addToast({ message: 'Follow-up scheduled.', kind: 'success' });
   };
 

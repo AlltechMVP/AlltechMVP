@@ -19,6 +19,7 @@ export function QuickAddForm({ onCancel, onCreated }) {
     industry: '',
     location: '',
     contactName: '',
+    contactTitle: '',
     contactEmail: '',
     contactPhone: '',
     status: 'Prospect',
@@ -118,9 +119,15 @@ export function QuickAddForm({ onCancel, onCreated }) {
       <div className="border-t pt-4">
         <p className="text-sm font-medium text-gray-700 mb-3">Primary contact</p>
         <div className="space-y-4">
-          <div>
-            <label className={labelCls}>Contact name</label>
-            <input type="text" value={form.contactName} onChange={(e) => update('contactName', e.target.value)} className={inputCls} placeholder="e.g. Alex Rivera" />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Contact name</label>
+              <input type="text" value={form.contactName} onChange={(e) => update('contactName', e.target.value)} className={inputCls} placeholder="e.g. Alex Rivera" />
+            </div>
+            <div>
+              <label className={labelCls}>Title / role</label>
+              <input type="text" value={form.contactTitle} onChange={(e) => update('contactTitle', e.target.value)} className={inputCls} placeholder="e.g. Hiring Manager" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

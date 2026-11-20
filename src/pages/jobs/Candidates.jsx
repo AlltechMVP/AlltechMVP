@@ -142,8 +142,8 @@ export default function JobCandidates() {
       return;
     }
     await syncCandidateToSupabase(result.candidate);
-    addToast({ message: `${person.name} submitted to ${job?.title || 'this order'} as Applied.`, kind: 'success' });
     await load();
+    addToast({ message: `${person.name} submitted to ${job?.title || 'this order'} as Applied.`, kind: 'success' });
   };
 
   const handleAction = async (applicationId, newStatus) => {
