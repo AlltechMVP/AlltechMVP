@@ -72,6 +72,10 @@ export default function PayrollQueue() {
   const [statusFilter, setStatusFilter] = useState('Ready');
   const [data, setData] = useState([]);
   const [usingFallback, setUsingFallback] = useState(false);
+  // Per-timesheet invoice selection: demo timesheet ids the user checked
+  // for billing. Nothing is checked by default — invoicing is deliberate,
+  // so a bulk click can no longer sweep in a Paid timesheet nobody picked.
+  const [selected, setSelected] = useState(() => new Set());
   // Slice 7: an RLS denial is not an outage — show the denied state and
   // never fall back to the unscoped demo store.
   const [denied, setDenied] = useState(false);
@@ -158,12 +162,24 @@ export default function PayrollQueue() {
 
   const billableCount = data.filter(t => t.payrollStatus === 'Paid' && !t.invoiceId && (t.totalHours || 0) > 0).length;
 
+  // A row is selectable for invoicing when it is a Paid, uninvoiced
+  // timesheet with hours and a local demo row to bill from.
+  const isBillable = (row) => row.payrollStatus === 'Paid' && !row.invoiceId && (row.totalHours || 0) > 0 && !!row.demoTimesheetId;
+  const billableIds = () => data.filter(isBillable).map((t) => t.demoTimesheetId);
+  const toggleSelect = (demoId) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(demoId)) next.delete(demoId); else next.add(demoId);
+    return next;
+  });
+  const selectAllBillable = () => setSelected(new Set(billableIds()));
+  const clearSelection = () => setSelected(new Set());
+
   // Slice 1 (ATS/CRM milestone): paid timesheets that cannot be invoiced
   // because no bill rate resolves — shown before the user generates a draft.
   const missingRates = useMemo(() => getUnbillablePaidTimesheets(), [data]);
 
   const createInvoices = async () => {
-    const created = createInvoicesFromPaidTimesheets();
+    const created = createInvoicesFromPaidTimesheets([...selected]);
     const missing = created.missingRates || [];
     if (created.length === 0) {
       if (missing.length > 0) {
@@ -187,6 +203,7 @@ export default function PayrollQueue() {
       .filter((t) => t.invoiceId && syncedIds.has(t.invoiceId))
       .forEach((t) => syncTimesheetToSupabase(t));
     setData(getTimesheets().map(mapDemoRow));
+    setSelected(new Set());
     const summary = created.map(i => `${i.invoiceNumber} (${i.clientName}, $${i.total.toFixed(2)})`).join(', ');
     addToast({ type: 'success', message: `Created ${created.length} invoice${created.length > 1 ? 's' : ''}: ${summary}` });
     if (missing.length > 0) {
@@ -201,6 +218,17 @@ export default function PayrollQueue() {
   }, [data, statusFilter]);
 
   const columns = [
+    { key: 'bill', header: 'Bill', render: (_, row) => {
+      if (!isBillable(row)) return <span className="text-gray-300">-</span>;
+      return (
+        <input
+          type="checkbox"
+          checked={selected.has(row.demoTimesheetId)}
+          onChange={() => toggleSelect(row.demoTimesheetId)}
+          aria-label={`Select ${row.candidate} timesheet for invoicing`}
+        />
+      );
+    }},
     { key: 'candidate', header: 'Candidate' },
     { key: 'job', header: 'Job' },
     { key: 'weekEnding', header: 'Week Ending' },
@@ -279,13 +307,19 @@ export default function PayrollQueue() {
             {s}
           </button>
         ))}
+        {billableCount > 0 && (
+          <>
+            <button onClick={selectAllBillable} className="text-xs text-blue-600 hover:underline">Select all</button>
+            <button onClick={clearSelection} className="text-xs text-blue-600 hover:underline">Clear</button>
+          </>
+        )}
         <button
           onClick={createInvoices}
-          disabled={billableCount === 0 || !hasCapability('invoices.manage')}
-          title={hasCapability('invoices.manage') ? '' : 'You do not have permission to create invoices.'}
+          disabled={selected.size === 0 || !hasCapability('invoices.manage')}
+          title={!hasCapability('invoices.manage') ? 'You do not have permission to create invoices.' : selected.size === 0 ? 'Select paid timesheets to invoice.' : ''}
           className="ml-auto bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-500"
         >
-          Create invoices ({billableCount} ready)
+          Create invoices ({selected.size} selected)
         </button>
       </div>
 

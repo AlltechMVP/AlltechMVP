@@ -109,19 +109,29 @@ export function getUnbillablePaidTimesheets() {
   return missing;
 }
 
-export function createInvoicesFromPaidTimesheets() {
+export function createInvoicesFromPaidTimesheets(selectedIds) {
   const today = new Date();
   const issuedAt = today.toISOString().slice(0, 10);
   const due = new Date(today.getTime() + 30 * 86400000);
   const dueDate = due.toISOString().slice(0, 10);
   const year = today.getFullYear();
 
+  // Per-timesheet selection: when the caller passes demo timesheet ids,
+  // only those rows are billed (and only their missing rates are
+  // reported). With no selection, the old bulk behaviour bills every
+  // billable Paid timesheet.
+  const selected = Array.isArray(selectedIds) ? new Set(selectedIds.map(String)) : null;
+
   // Slice 1 (ATS/CRM milestone): unbillable timesheets are reported, not billed.
   const missingRates = getUnbillablePaidTimesheets();
   const missingIds = new Set(missingRates.map((m) => m.timesheetId));
+  const selectedMissing = selected
+    ? missingRates.filter((m) => selected.has(String(m.timesheetId)))
+    : missingRates;
 
   const billable = getTimesheets().filter(
     (t) => t.payrollStatus === 'Paid' && !t.invoiceId && (t.totalHours || 0) > 0 && !missingIds.has(t.id)
+      && (!selected || selected.has(String(t.id)))
   );
 
   const byClient = {};
@@ -148,7 +158,7 @@ export function createInvoicesFromPaidTimesheets() {
   const groups = Object.values(byClient).filter((g) => g.items.length > 0);
   if (groups.length === 0) {
     const none = [];
-    none.missingRates = missingRates;
+    none.missingRates = selectedMissing;
     return none;
   }
 
@@ -192,7 +202,7 @@ export function createInvoicesFromPaidTimesheets() {
 
   setInvoices(invoices);
   setTimesheets(allTimesheets);
-  created.missingRates = missingRates;
+  created.missingRates = selectedMissing;
   return created;
 }
 
