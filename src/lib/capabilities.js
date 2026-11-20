@@ -304,7 +304,6 @@ const CAP_TO_ROUTE = {};
 Object.entries(ROLE_ROUTES).forEach(([r, route]) => {
   CAP_TO_ROUTE[`dashboard.${r.replace('-', '_')}.view`] = route;
 });
-CAP_TO_ROUTE['dashboard.client.view'] = '/client/approvals';
 
 export function getFallbackRoute(role, hasCapability) {
   const own = ROLE_ROUTES[role];
