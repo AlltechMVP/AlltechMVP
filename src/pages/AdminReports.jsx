@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   getCandidates,
+  getDistinctCandidateCount,
   getJobs,
   getAssignments,
   getTimesheets,
@@ -66,7 +67,7 @@ function AdminReports() {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         <div className="border rounded p-4">
           <p className="text-sm text-gray-500">Total Candidates</p>
-          <p className="text-2xl font-semibold">{candidates.length}</p>
+          <p className="text-2xl font-semibold">{getDistinctCandidateCount()}</p>
         </div>
         <div className="border rounded p-4">
           <p className="text-sm text-gray-500">Open Jobs</p>

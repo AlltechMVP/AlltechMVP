@@ -285,6 +285,21 @@ export function findCandidateByEmail(email) {
   return getCandidates().find((c) => (c.email || '').trim().toLowerCase() === normalized) || null;
 }
 
+// Distinct people in the demo store, by email. The candidates rows are
+// per-(person, job) application mirrors, so the raw row count overstates
+// the headcount whenever someone is on more than one order. Rows with no
+// email are counted individually (they cannot be matched to a person).
+export function getDistinctCandidateCount() {
+  const emails = new Set();
+  let noEmail = 0;
+  getCandidates().forEach((c) => {
+    const e = (c.email || '').trim().toLowerCase();
+    if (e) emails.add(e);
+    else noEmail += 1;
+  });
+  return emails.size + noEmail;
+}
+
 // Quick Add Candidate: create a candidate RECORD only — no application,
 // no login access (login access is provisioned separately, never by
 // Quick Add). Find-or-create by email: if a person with this email
@@ -1181,7 +1196,7 @@ export function validateSystem() {
   const timesheets = getTimesheets();
   const errors = [];
   const warnings = [];
-  const stats = { candidates: candidates.length, assignments: assignments.length, timesheets: timesheets.length, jobs: getJobs().length };
+  const stats = { candidates: getDistinctCandidateCount(), assignments: assignments.length, timesheets: timesheets.length, jobs: getJobs().length };
 
   candidates.forEach(c => {
     if (c.activeAssignmentId) {

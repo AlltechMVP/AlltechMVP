@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   clearAlltechKeys, seedDemoData, validateSystem, applySafeFixes,
   getSeedVersion, getExpectedSeedVersion,
-  getCandidates, getJobs, getAssignments, getTimesheets
+  getDistinctCandidateCount, getJobs, getAssignments, getTimesheets
 } from '@/utils/storage';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { useCapabilities } from '@/lib/capabilities';
@@ -265,7 +265,7 @@ export default function AdminTools() {
         <h2 className="text-lg font-medium">Data Summary</h2>
         <div className="text-sm text-gray-600 space-y-1">
           <p>Seed version: <strong>{currentVersion || 'not set'}</strong></p>
-          <p>Candidates: <strong>{getCandidates().length}</strong></p>
+          <p>Candidates: <strong>{getDistinctCandidateCount()}</strong></p>
           <p>Jobs: <strong>{getJobs().length}</strong></p>
           <p>Assignments: <strong>{getAssignments().length}</strong></p>
           <p>Timesheets: <strong>{getTimesheets().length}</strong></p>
