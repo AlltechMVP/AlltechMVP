@@ -113,10 +113,18 @@ export default function AssignmentForm() {
       } else {
         const prefill = getAssignmentPrefill();
         if (prefill) {
+          // The job arrives pre-selected here, so fill the rates from it
+          // the same way handleJobChange does when the user picks the
+          // job — the old code set jobId only and the rates stayed blank.
+          const preJob = prefill.jobId
+            ? demoJobs.find((j) => String(j.id) === String(prefill.jobId))
+            : null;
           setForm(prev => ({
             ...prev,
             candidateId: prefill.candidateId || '',
             jobId: prefill.jobId || '',
+            payRate: prev.payRate === '' && preJob?.payRate != null ? String(preJob.payRate) : prev.payRate,
+            billRate: prev.billRate === '' && preJob?.rate != null ? String(preJob.rate) : prev.billRate,
           }));
           clearAssignmentPrefill();
           addToast({ type: 'info', message: 'Candidate and job pre-filled from client decision.' });

@@ -9,7 +9,7 @@ import { useAuth } from '@/context/AuthContext.jsx';
 import { useToasts } from '@/components/ui/ToastProvider.jsx';
 import { useCapabilities } from '@/lib/capabilities';
 import DataTable from '@/components/table/DataTable.jsx';
-import { Empty, AccessDenied } from '@/components/ui';
+import { Empty, AccessDenied, Loader } from '@/components/ui';
 
 // Slice 1 (thin): jobs + applications read from Supabase (shared across
 // sessions) with a demo-store fallback when Supabase is unreachable, so a
@@ -18,6 +18,9 @@ import { Empty, AccessDenied } from '@/components/ui';
 export default function JobsList() {
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
+  // The jobs load async — show a loader on mount instead of flashing
+  // "No jobs found" before the first rows arrive.
+  const [loading, setLoading] = useState(true);
   const [appliedJobIds, setAppliedJobIds] = useState([]);
   const [applyingJob, setApplyingJob] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', phone: '' });
@@ -81,6 +84,7 @@ export default function JobsList() {
         if (isRlsDenied(err)) { if (mounted) setDenied(true); }
         else if (mounted) { setJobs(getJobs()); setUsingFallback(true); }
       }
+      if (mounted) setLoading(false);
       if (mounted) refreshApplications(userEmail);
     })();
     return () => { mounted = false; };
@@ -170,6 +174,10 @@ export default function JobsList() {
 
   if (denied) {
     return <AccessDenied />;
+  }
+
+  if (loading) {
+    return <div className="p-4"><Loader label="Loading jobs…" /></div>;
   }
 
   if (jobs.length === 0) {

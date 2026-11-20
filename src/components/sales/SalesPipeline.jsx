@@ -11,13 +11,16 @@ const SalesPipeline = () => {
   };
 
   return (
-    <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-      {Object.entries(pipeline).map(([stage, count]) => (
-        <div key={stage} className="border p-4 rounded shadow bg-white">
-          <h2 className="text-lg font-semibold">{stage}</h2>
-          <p className="text-3xl font-bold mt-2">{count}</p>
-        </div>
-      ))}
+    <div className="p-6">
+      <h1 className="text-xl font-semibold mb-4">Sales Pipeline</h1>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {Object.entries(pipeline).map(([stage, count]) => (
+          <div key={stage} className="border p-4 rounded shadow bg-white">
+            <h2 className="text-lg font-semibold">{stage}</h2>
+            <p className="text-3xl font-bold mt-2">{count}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

@@ -39,11 +39,6 @@ export default function ForgotPassword() {
               password reset link is on its way. Check your inbox (and spam
               folder).
             </p>
-            <p className="text-sm text-center text-gray-600 mt-4">
-              <Link to="/login" className="text-blue-600 hover:text-blue-500">
-                Back to sign in
-              </Link>
-            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
