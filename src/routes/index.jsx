@@ -363,7 +363,7 @@ export default function AppRoutes() {
           <Route
             path="payroll"
             element={
-              <ProtectedRoute allowedCapabilities={["payroll.view", "payroll.prepare"]}>
+              <ProtectedRoute allowedCapabilities={["payroll.view"]}>
                 <PayrollView />
               </ProtectedRoute>
             }
@@ -489,11 +489,11 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Payroll Queue (slice 7: backoffice only) */}
+          {/* Payroll Queue (finalize split: view opens it, prepare/finalize gate the flips) */}
           <Route
             path="payroll-queue"
             element={
-              <ProtectedRoute allowedCapabilities={["payroll.view", "payroll.prepare"]}>
+              <ProtectedRoute allowedCapabilities={["payroll.view"]}>
                 <PayrollQueue />
               </ProtectedRoute>
             }
