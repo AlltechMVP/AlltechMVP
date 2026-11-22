@@ -234,7 +234,6 @@ export default function CandidateJobBoard() {
                   <p className="text-sm text-gray-600 mb-2">
                     {job.client_name || '—'} | {job.location || '—'}
                     {job.rate ? ` | $${job.rate}/hr` : ''}
-                    {job.payRate ? ` (pay $${job.payRate}/hr)` : ''}
                   </p>
                   {job.openings ? <p className="text-sm text-gray-600 mb-2">{job.openings} opening{job.openings === 1 ? '' : 's'}</p> : null}
                   {requirements.length > 0 && (
@@ -298,7 +297,6 @@ export default function CandidateJobBoard() {
               <div className="mb-6">
                 <p className="text-lg text-gray-700 mb-2">{selectedJob.client_name || ''} — {selectedJob.location || ''}</p>
                 {selectedJob.rate ? <p className="text-gray-600">Bill Rate: ${selectedJob.rate}/hr</p> : null}
-                {selectedJob.payRate ? <p className="text-gray-600">Pay Rate: ${selectedJob.payRate}/hr</p> : null}
                 {selectedJob.openings ? <p className="text-gray-600">Openings: {selectedJob.openings}</p> : null}
               </div>
 

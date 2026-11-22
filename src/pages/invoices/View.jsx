@@ -216,7 +216,7 @@ export default function InvoiceView() {
     setInvoices(all);
     // Sync the status flip up (fire-and-forget; the demo write succeeded).
     syncInvoiceToSupabase(all[idx]);
-    addToast('Invoice sent.', 'success');
+    addToast('Invoice marked as Sent. Email delivery isn\'t set up yet.', 'success');
     // Show the demo result in place — do not refetch, the sync may not
     // have landed yet and a stale fetch would overwrite the new status.
     setInvoice({ ...all[idx], demoInvoiceId: all[idx].id });
@@ -247,7 +247,7 @@ export default function InvoiceView() {
             </button>
             {invoice.status === 'Draft' && canSend && (
               <button onClick={sendInvoice} className="mt-2 ml-auto block bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700 print:hidden">
-                Send Invoice
+                Mark as Sent
               </button>
             )}
           </div>
