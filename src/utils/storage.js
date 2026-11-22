@@ -1237,16 +1237,23 @@ export function validateSystem() {
     }
   });
 
-  const activeByCand = {};
+  // Multiple Active assignments are legal when they are for DIFFERENT
+  // jobs (ATS milestone: placement preserves unrelated Active assignments
+  // — e.g. Sarah Chen holds Senior React + Harborline at once). Only
+  // flag a genuine duplicate: 2+ Active assignments for the SAME job.
+  const activeByCandJob = {};
   assignments.forEach(a => {
     if (a.status === 'Active') {
-      activeByCand[a.candidateId] = (activeByCand[a.candidateId] || 0) + 1;
+      const key = `${a.candidateId}|${a.jobId || ''}`;
+      activeByCandJob[key] = (activeByCandJob[key] || 0) + 1;
     }
   });
-  Object.entries(activeByCand).forEach(([candId, count]) => {
+  Object.entries(activeByCandJob).forEach(([key, count]) => {
     if (count > 1) {
+      const [candId, jobId] = key.split('|');
       const cand = candidates.find(c => c.id === candId);
-      errors.push({ type: 'multi_active_assignment', severity: 'error', msg: `Candidate "${cand?.name || candId}" has ${count} active assignments (should be 1)`, candidateId: candId });
+      const job = getJobs().find(j => j.id === jobId);
+      errors.push({ type: 'multi_active_assignment', severity: 'error', msg: `Candidate "${cand?.name || candId}" has ${count} active assignments for the same job "${job?.title || jobId}"`, candidateId: candId });
     }
   });
 
