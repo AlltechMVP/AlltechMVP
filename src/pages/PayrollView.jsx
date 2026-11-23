@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   getTimesheets, getAssignmentById, getCandidateById, getJobById,
 } from '@/utils/storage';
-import { reconcileTimesheets, isRlsDenied } from '@/lib/pipeline';
+import { fetchSettledOrLocal, reconcileTimesheets, isRlsDenied } from '@/lib/pipeline';
 import { Empty, AccessDenied } from '@/components/ui';
 
 // Payroll Summary reads live timesheets — Supabase first, demo-store
@@ -50,10 +50,16 @@ function PayrollView() {
         // the raw fetch first and the reconcile second flashed two
         // different row sets in sequence — the first paint's rows
         // disagreed with the totals until the reconcile landed.
-        const fresh = await reconcileTimesheets();
+        //
+        // The shared read must not silently paint an empty table: a fetch
+        // that goes out before the auth session settles is filtered by
+        // RLS to [] with HTTP 200 and no error. fetchSettledOrLocal
+        // retries once after the session settles and otherwise falls back
+        // to the demo store instead of painting "No timesheets yet".
+        const { rows: fresh, usingFallback: fb } = await fetchSettledOrLocal(reconcileTimesheets, getTimesheets);
         if (!mounted) return;
         setRows(fresh.map(toRow));
-        setUsingFallback(false);
+        setUsingFallback(fb);
       } catch (err) {
         if (isRlsDenied(err)) { if (mounted) setDenied(true); return; }
         if (mounted) { setRows(getTimesheets().map(toRow)); setUsingFallback(true); }
@@ -70,7 +76,14 @@ function PayrollView() {
   }
 
   // Newest week first; the queue shows the same rows, so the two pages agree.
-  const sorted = [...rows].sort((a, b) => String(b.week).localeCompare(String(a.week)));
+  // The sort is fully deterministic — week, then employee, job, id — so
+  // rows in the same week cannot flip order between loads when the fetch
+  // returns them in a different order (updated_at shifts as rows sync).
+  const sorted = [...rows].sort((a, b) =>
+    String(b.week).localeCompare(String(a.week))
+    || String(a.employee).localeCompare(String(b.employee))
+    || String(a.job).localeCompare(String(b.job))
+    || String(a.id).localeCompare(String(b.id)));
   const totalHours = sorted.reduce((s, r) => s + (r.hours || 0), 0);
   const totalAmount = sorted.reduce((s, r) => s + (r.total || 0), 0);
 

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getInvoices, getClients } from '@/utils/storage';
-import { reconcileInvoices, isRlsDenied } from '@/lib/pipeline';
+import { reconcileInvoices, fetchSettledOrLocal, isRlsDenied } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
 import { AccessDenied } from '@/components/ui';
 
@@ -54,7 +54,7 @@ function computeAgingBuckets(invoices) {
     else c.d90plus += bal;
   });
 
-  return Object.values(clientMap).sort((a, b) => b.openAR - a.openAR);
+  return Object.values(clientMap).sort((a, b) => b.openAR - a.openAR || String(a.clientName).localeCompare(String(b.clientName)));
 }
 
 const fmt = (v) => `$${(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -94,9 +94,16 @@ export default function ArAging() {
         // different row sets in sequence — the same first-load flicker
         // the payroll pages had — and the two renders could disagree on
         // buckets when the seed dates differed between stores.
-        const rows = await reconcileInvoices();
+        //
+        // The shared read must not silently paint $0: the demo RLS policy
+        // filters unauthenticated requests with HTTP 200 and no error, so
+        // a fetch that goes out before the auth session settles looks
+        // exactly like "no rows". fetchSettledOrLocal retries once after
+        // the session settles and otherwise falls back to the demo store
+        // (the designed fallback) instead of painting an empty page.
+        const { rows, usingFallback } = await fetchSettledOrLocal(reconcileInvoices, getInvoices);
         apply(attachDemoTwins(rows));
-        setUsingFallback(false);
+        setUsingFallback(usingFallback);
       } catch (err) {
         if (isRlsDenied(err)) { if (mounted) setDenied(true); return; }
         if (mounted) { apply(getInvoices()); setUsingFallback(true); }

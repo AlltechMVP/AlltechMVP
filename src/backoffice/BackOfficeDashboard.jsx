@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   getTimesheets, getInvoices, getAssignmentById, getCandidateById, getJobById,
 } from '@/utils/storage';
-import { reconcileTimesheets, reconcileInvoices, isRlsDenied } from '@/lib/pipeline';
+import { fetchSettledOrLocal, reconcileTimesheets, reconcileInvoices, isRlsDenied } from '@/lib/pipeline';
 import { AccessDenied } from '@/components/ui';
 
 // Back Office Dashboard reads live data — Supabase first, demo-store
@@ -33,6 +33,7 @@ export default function BackOfficeDashboard() {
   const [timesheets, setTimesheets] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [usingFallback, setUsingFallback] = useState(false);
   const [denied, setDenied] = useState(false);
 
   useEffect(() => {
@@ -43,10 +44,20 @@ export default function BackOfficeDashboard() {
         // the raw fetch first and the reconcile second flashed two
         // different totals in sequence — the same first-load flicker the
         // payroll summary had.
-        const [ts, inv] = await Promise.all([reconcileTimesheets(), reconcileInvoices()]);
+        //
+        // The shared reads must not silently paint $0: a fetch that goes
+        // out before the auth session settles is filtered by RLS to []
+        // with HTTP 200 and no error. fetchSettledOrLocal retries once
+        // after the session settles and otherwise falls back to the demo
+        // store instead of painting empty totals.
+        const [tsRes, invRes] = await Promise.all([
+          fetchSettledOrLocal(reconcileTimesheets, getTimesheets),
+          fetchSettledOrLocal(reconcileInvoices, getInvoices),
+        ]);
         if (!mounted) return;
-        setTimesheets(ts);
-        setInvoices(inv);
+        setTimesheets(tsRes.rows);
+        setInvoices(invRes.rows);
+        setUsingFallback(tsRes.usingFallback || invRes.usingFallback);
         setLoading(false);
       } catch (err) {
         if (isRlsDenied(err)) { if (mounted) { setDenied(true); setLoading(false); } return; }
@@ -54,6 +65,7 @@ export default function BackOfficeDashboard() {
         if (mounted) {
           setTimesheets(getTimesheets());
           setInvoices(getInvoices());
+          setUsingFallback(true);
           setLoading(false);
         }
       }
@@ -73,16 +85,23 @@ export default function BackOfficeDashboard() {
   };
 
   const recentTimesheets = [...timesheets]
-    .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))
+    .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || ''))
+      || String(a.id).localeCompare(String(b.id)))
     .slice(0, 5);
   const recentInvoices = [...invoices]
-    .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))
+    .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || ''))
+      || String(a.id).localeCompare(String(b.id)))
     .slice(0, 5);
 
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-6">Back Office Dashboard</h2>
 
+      {usingFallback && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+          Showing local demo data — the shared timesheets and invoices are unreachable right now.
+        </p>
+      )}
       {loading ? (
         <p className="text-gray-500 text-sm">Loading…</p>
       ) : (

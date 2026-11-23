@@ -5,7 +5,7 @@ import {
   getContacts, setContacts, getActivities, setActivities,
   getFollowUps, setFollowUps,
   getTimesheets, setTimesheets, getInvoices, setInvoices,
-  getPayments, setPayments,
+  getPayments, setPayments, ensureCurrentWeekTimesheets,
 } from '@/utils/storage';
 
 // ---------------------------------------------------------------------------
@@ -77,6 +77,39 @@ function throwChecked(error) {
   if (!error) return;
   if (isRlsDenied(error)) throw asDeniedError(error);
   throw error;
+}
+
+// Settled shared read with a silent-empty guard. A shared fetch that
+// returns [] is indistinguishable from "no rows" — but the demo RLS policy
+// filters unauthenticated requests with HTTP 200 and no error, so a fetch
+// that goes out before the auth session settles looks exactly like "no
+// rows", and a page painting only from it shows $0 (or "No timesheets
+// yet") with no fallback and no retry. If the shared result is empty
+// while the demo store holds rows, settle the session and try once more;
+// if it is still empty (or the call times out — a hung reconcile must not
+// leave the page at $0 forever), fall back to the demo store, which is the
+// designed fallback for unreachable shared data. RLS denials still throw
+// so callers show AccessDenied instead of leaking unscoped local rows.
+export async function fetchSettledOrLocal(reconcileFn, getLocalRows, { timeoutMs = 20000 } = {}) {
+  const withTimeout = (promise) => Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('settled-load timeout')), timeoutMs)),
+  ]);
+  try {
+    let rows = await withTimeout(reconcileFn());
+    if ((!rows || rows.length === 0) && getLocalRows().length > 0) {
+      // The shared read saw nothing the demo store does not have — most
+      // likely it went out before the auth session settled. Settle the
+      // session (getSession awaits client initialization) and retry once.
+      try { await supabase.auth.getSession(); } catch { /* ignore — the fallback below still applies */ }
+      rows = await withTimeout(reconcileFn());
+    }
+    if (!rows || rows.length === 0) return { rows: getLocalRows(), usingFallback: true };
+    return { rows, usingFallback: false };
+  } catch (err) {
+    if (isRlsDenied(err)) throw err;
+    return { rows: getLocalRows(), usingFallback: true };
+  }
 }
 
 function mapJob(j) {
@@ -1819,7 +1852,7 @@ export async function reconcileTimesheets() {
   const demoRows = getTimesheets();
   await Promise.all(demoRows.map((d) => syncTimesheetToSupabase(d)));
 
-  const rows = await fetchTimesheets();
+  let rows = await fetchTimesheets();
   const demoByKey = new Map();
   for (const d of getTimesheets()) {
     if (d.supabaseTimesheetId) demoByKey.set(String(d.supabaseTimesheetId), d);
@@ -1874,7 +1907,47 @@ export async function reconcileTimesheets() {
     setTimesheets(demoTimesheets);
   }
 
+  // Current-week Drafts for assignments twinned in this load did not exist
+  // when App's ensureCurrentWeekTimesheets ran on mount — the twinned
+  // assignment was not in the demo store yet — so the fetched set is
+  // missing them on first paint (the Warehouse 11-27 Draft appeared only
+  // after a reload). Mint them now that the twins exist, and include any
+  // demo-store row the fetch does not already hold, so the first paint is
+  // the settled set. The Draft stays local-only until submitted (#5); the
+  // next reconcile syncs it up the way a reload does today.
+  ensureCurrentWeekTimesheets();
+  const fetchedKeys = new Set(
+    rows.map((t) => `${t.assignmentSupabaseId || t.assignmentId}|${t.weekEnding}`)
+  );
+  const extras = getTimesheets()
+    .filter((d) => d.assignmentId && d.weekEnding && !fetchedKeys.has(`${d.assignmentId}|${d.weekEnding}`))
+    .map(enrichDemoTimesheet);
+  if (extras.length > 0) {
+    rows = dedupeTimesheets([...rows, ...extras]);
+  }
+
   return rows;
+}
+
+// A demo-store timesheet minted after the fetch (a current-week Draft) has
+// no candidate/job names on it — the mapped rows carry them. Resolve the
+// names from the demo store so every consumer (PayrollView, Queue,
+// Timecards) sees one shape.
+function enrichDemoTimesheet(d) {
+  const assignment = getAssignments().find((a) => a.id === d.assignmentId);
+  const candidate = assignment ? getCandidates().find((c) => c.id === assignment.candidateId) : null;
+  const job = assignment ? getJobs().find((j) => j.id === assignment.jobId) : null;
+  const client = job ? getClients().find((c) => c.id === job.clientId) : null;
+  return {
+    ...d,
+    candidateName: candidate?.name || '—',
+    candidateEmail: candidate?.email || '',
+    jobTitle: job?.title || '—',
+    clientName: client?.name || '—',
+    clientLegacyId: job?.clientId || null,
+    assignmentSupabaseId: assignment?.supabaseAssignmentId || null,
+    legacyId: d.id,
+  };
 }
 
 /** Demo reset support: clear Supabase timesheets + timecards (re-synced after). */
