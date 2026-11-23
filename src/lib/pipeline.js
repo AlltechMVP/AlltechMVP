@@ -1554,7 +1554,33 @@ export async function fetchTimesheets() {
     .select(TIMESHEET_SELECT)
     .order('updated_at', { ascending: false }));
   throwChecked(error);
-  return (data || []).map(mapTimesheet);
+  return dedupeTimesheets((data || []).map(mapTimesheet));
+}
+
+// One timesheet per assignment + week by design (#5: a single Draft per
+// Active assignment per current week; the submit path fills that Draft
+// rather than minting another). Legacy Supabase rows can still hold
+// several 0-hour Drafts for the same assignment + week — each fresh
+// browser minted its own before the sync guard in syncTimesheetToSupabase
+// — so collapse them here. Within a key the submitted row wins over a
+// Draft regardless of updated_at (a Draft is the placeholder for the
+// timesheet the submitted row already is); among rows of the same kind
+// the first — the list arrives updated_at-descending, so the newest —
+// wins. Rows with no assignment or week pass through untouched.
+function dedupeTimesheets(rows) {
+  const best = new Map();
+  const unkeyed = [];
+  for (const t of rows) {
+    const asg = t.assignmentSupabaseId || t.assignmentId;
+    if (!asg || !t.weekEnding) { unkeyed.push(t); continue; }
+    const key = `${asg}|${t.weekEnding}`;
+    const prev = best.get(key);
+    if (!prev) { best.set(key, t); continue; }
+    const prevSubmitted = prev.status !== 'Draft' || prev.submittedAt;
+    const curSubmitted = t.status !== 'Draft' || t.submittedAt;
+    if (curSubmitted && !prevSubmitted) best.set(key, t);
+  }
+  return [...best.values(), ...unkeyed];
 }
 
 export async function fetchTimesheet(id) {
@@ -1689,6 +1715,26 @@ export async function syncTimesheetToSupabase(demo) {
     if (!candidateUuid) return 'skipped';
     const assignmentSupabaseId = await resolveAssignmentSupabaseId(demo.assignmentId);
     if (!assignmentSupabaseId) return 'skipped';
+    // #5: a never-submitted Draft is local-only until the candidate submits
+    // it. The reconcile push-up used to sync every demo Draft to Supabase,
+    // so each fresh browser minted its own shared Draft row for the same
+    // assignment + week (three 0-hour Drafts per assignment in the live
+    // demo DB). A Draft syncs up only when no shared row exists yet for
+    // that assignment + week — the first browser creates the one shared
+    // copy (and a demo reset re-creates the seed), later browsers skip and
+    // keep their Draft local. A Draft this browser already synced (same
+    // legacy_id) still updates normally, and a reopened row (submittedAt
+    // set) is not a never-submitted Draft, so it syncs too.
+    if (demo.status === 'Draft' && !demo.submittedAt) {
+      const { data: sameWeek, error: sameWeekError } = await withRetry(() => supabase
+        .from('timesheets')
+        .select('id,legacy_id')
+        .eq('assignment_id', assignmentSupabaseId)
+        .eq('week_ending', demo.weekEnding)
+        .limit(5));
+      if (sameWeekError) throw sameWeekError;
+      if (sameWeek && sameWeek.some((r) => String(r.legacy_id) !== String(demo.id))) return 'skipped';
+    }
     // Slice 5: carry the invoice stamp (null when uninvoiced).
     const invoiceSupabaseId = demo.invoiceId
       ? await resolveInvoiceSupabaseId(demo.invoiceId)
@@ -1785,6 +1831,15 @@ export async function reconcileTimesheets() {
 
   if (missing.length > 0) {
     const demoTimesheets = getTimesheets();
+    // The demo store may already hold a row for this assignment + week
+    // (its own local Draft, or a twin from an earlier reconcile) — a
+    // second row for the same week is a duplicate, not a missing row, so
+    // no twin is created for it. The submitted row still reaches
+    // Supabase-rendered pages through the deduped fetch above; the local
+    // Draft stays until it is submitted, which is the #5 local-only rule.
+    const demoWeekKeys = new Set(
+      demoTimesheets.map((d) => `${d.assignmentId}|${d.weekEnding}`)
+    );
     for (const t of missing) {
       // fetchAssignment already returns the mapped assignment shape.
       const mappedAsg = t.assignmentSupabaseId
@@ -1793,6 +1848,7 @@ export async function reconcileTimesheets() {
       if (!mappedAsg) continue;
       const demoAssignmentId = ensureDemoAssignment(mappedAsg);
       if (!demoAssignmentId) continue;
+      if (demoWeekKeys.has(`${demoAssignmentId}|${t.weekEnding}`)) continue;
       demoTimesheets.push({
         id: t.legacyId || crypto.randomUUID(),
         assignmentId: demoAssignmentId,
@@ -1813,6 +1869,7 @@ export async function reconcileTimesheets() {
         updatedAt: t.updatedAt,
         supabaseTimesheetId: t.id,
       });
+      demoWeekKeys.add(`${demoAssignmentId}|${t.weekEnding}`);
     }
     setTimesheets(demoTimesheets);
   }

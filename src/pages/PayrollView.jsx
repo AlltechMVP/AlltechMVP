@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   getTimesheets, getAssignmentById, getCandidateById, getJobById,
 } from '@/utils/storage';
-import { fetchTimesheets, reconcileTimesheets, isRlsDenied } from '@/lib/pipeline';
+import { reconcileTimesheets, isRlsDenied } from '@/lib/pipeline';
 import { Empty, AccessDenied } from '@/components/ui';
 
 // Payroll Summary reads live timesheets — Supabase first, demo-store
@@ -45,27 +45,20 @@ function PayrollView() {
     let mounted = true;
     (async () => {
       try {
-        const fetched = await fetchTimesheets();
+        // One settled render: reconcile first (pushes this browser's demo
+        // rows up, pulls shared rows down), then paint once. Rendering
+        // the raw fetch first and the reconcile second flashed two
+        // different row sets in sequence — the first paint's rows
+        // disagreed with the totals until the reconcile landed.
+        const fresh = await reconcileTimesheets();
         if (!mounted) return;
-        setRows(fetched.map(toRow));
+        setRows(fresh.map(toRow));
         setUsingFallback(false);
-        setLoading(false);
-        reconcileTimesheets()
-          .then((fresh) => { if (mounted) setRows(fresh.map(toRow)); })
-          .catch(() => {});
       } catch (err) {
-        if (isRlsDenied(err)) { if (mounted) { setDenied(true); setLoading(false); } return; }
-        try {
-          const fresh = await reconcileTimesheets();
-          if (!mounted) return;
-          setRows(fresh.map(toRow));
-          setUsingFallback(false);
-        } catch (err2) {
-          if (isRlsDenied(err2)) { if (mounted) setDenied(true); }
-          else if (mounted) { setRows(getTimesheets().map(toRow)); setUsingFallback(true); }
-        } finally {
-          if (mounted) setLoading(false);
-        }
+        if (isRlsDenied(err)) { if (mounted) setDenied(true); return; }
+        if (mounted) { setRows(getTimesheets().map(toRow)); setUsingFallback(true); }
+      } finally {
+        if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
