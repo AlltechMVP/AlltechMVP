@@ -1147,6 +1147,16 @@ export function fridayOfCurrentWeek(date = new Date()) {
 
 export function seedDemoData() {
   const ts = now();
+  // Seed rows must NEVER win last-write-wins over shared Supabase rows:
+  // a fresh browser's seed is synthetic data stamped "now", not a user
+  // edit, so syncing it up reverted live rows (2026-11-23: Marcus
+  // Johnson's Paid timesheets ts-003/ts-004 were overwritten with the
+  // seed's Ready/Not Ready, and ts-001's week was re-anchored). The seed's
+  // updatedAt is therefore a fixed old date — older than any live row —
+  // so the shared row always wins and the demo store adopts it. createdAt
+  // stays "now" (the seed row really was generated then); only updatedAt
+  // drives the sync comparison.
+  const seedUpdatedAt = '2026-01-01T09:00:00Z';
 
   const demoCandidates = [
     { id: 'cand-001', name: 'Sarah Chen', email: 'sarah.chen@email.com', phone: '555-0101', status: 'Active Assignment', submittedJobId: 'job-001', activeAssignmentId: 'asgn-001', currentJobId: 'job-001', statusHistory: [{ at: daysAgo(30) + 'T09:00:00Z', from: 'Applied', to: 'Reviewed', by: 'recruiter' }, { at: daysAgo(25) + 'T09:00:00Z', from: 'Reviewed', to: 'Submitted', by: 'recruiter' }, { at: daysAgo(20) + 'T09:00:00Z', from: 'Submitted', to: 'Interview', by: 'recruiter' }, { at: daysAgo(15) + 'T09:00:00Z', from: 'Interview', to: 'Hired', by: 'recruiter' }] },
@@ -1180,8 +1190,8 @@ export function seedDemoData() {
   const we3 = weeksAgoFriday(3);
 
   const demoAssignments = [
-    { id: 'asgn-001', candidateId: 'cand-001', jobId: 'job-001', status: 'Active', startDate: daysAgo(14), payRate: 75, billRate: 85, notes: '', createdAt: daysAgo(14) + 'T09:00:00Z', updatedAt: ts },
-    { id: 'asgn-002', candidateId: 'cand-002', jobId: 'job-002', status: 'Active', startDate: daysAgo(10), payRate: 80, billRate: 95, notes: '', createdAt: daysAgo(10) + 'T09:00:00Z', updatedAt: ts },
+    { id: 'asgn-001', candidateId: 'cand-001', jobId: 'job-001', status: 'Active', startDate: daysAgo(14), payRate: 75, billRate: 85, notes: '', createdAt: daysAgo(14) + 'T09:00:00Z', updatedAt: seedUpdatedAt },
+    { id: 'asgn-002', candidateId: 'cand-002', jobId: 'job-002', status: 'Active', startDate: daysAgo(10), payRate: 80, billRate: 95, notes: '', createdAt: daysAgo(10) + 'T09:00:00Z', updatedAt: seedUpdatedAt },
     { id: 'asgn-003', candidateId: 'cand-008', jobId: 'job-002', status: 'Ended', startDate: daysAgo(60), endDate: daysAgo(30), payRate: 80, billRate: 95, notes: 'Contract completed', createdAt: daysAgo(60) + 'T09:00:00Z', updatedAt: daysAgo(30) + 'T09:00:00Z' },
     { id: 'asgn-004', candidateId: 'cand-008', jobId: 'job-003', status: 'Ended', startDate: daysAgo(90), endDate: daysAgo(61), payRate: 50, billRate: 55, notes: 'Project concluded', createdAt: daysAgo(90) + 'T09:00:00Z', updatedAt: daysAgo(61) + 'T09:00:00Z' },
   ];
@@ -1189,10 +1199,10 @@ export function seedDemoData() {
   const mkEntries = (hrs) => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d, i) => ({ day: d, hours: hrs[i] || 0 }));
 
   const demoTimesheets = [
-    { id: 'ts-001', assignmentId: 'asgn-001', weekEnding: we1, status: 'Draft', clientApprovalStatus: 'Not Submitted', entries: mkEntries([8,8,8,8,8,0,0]), totalHours: 40, payrollStatus: 'Not Ready', exceptions: [], compliance: {}, createdAt: ts, updatedAt: ts },
-    { id: 'ts-002', assignmentId: 'asgn-001', weekEnding: we2, status: 'Submitted', clientApprovalStatus: 'Submitted', entries: mkEntries([8,8,8,8,4,0,0]), totalHours: 36, payrollStatus: 'Not Ready', exceptions: [], compliance: {}, createdAt: ts, updatedAt: ts, submittedAt: daysAgo(5) + 'T17:00:00Z', invoiceId: 'inv-002' },
-    { id: 'ts-003', assignmentId: 'asgn-002', weekEnding: we2, status: 'Approved', clientApprovalStatus: 'Approved', entries: mkEntries([8,8,8,8,8,0,0]), totalHours: 40, payrollStatus: 'Ready', payrollReadyAt: daysAgo(3) + 'T09:00:00Z', exceptions: [], compliance: {}, createdAt: ts, updatedAt: ts, submittedAt: daysAgo(6) + 'T17:00:00Z', approvedAt: daysAgo(3) + 'T09:00:00Z', clientDecidedAt: daysAgo(4) + 'T09:00:00Z' },
-    { id: 'ts-004', assignmentId: 'asgn-002', weekEnding: we3, status: 'Submitted', clientApprovalStatus: 'Submitted', entries: mkEntries([8,8,0,8,8,0,0]), totalHours: 32, payrollStatus: 'Not Ready', exceptions: [], compliance: {}, createdAt: ts, updatedAt: ts, submittedAt: daysAgo(4) + 'T17:00:00Z' },
+    { id: 'ts-001', assignmentId: 'asgn-001', weekEnding: we1, status: 'Draft', clientApprovalStatus: 'Not Submitted', entries: mkEntries([8,8,8,8,8,0,0]), totalHours: 40, payrollStatus: 'Not Ready', exceptions: [], compliance: {}, createdAt: ts, updatedAt: seedUpdatedAt },
+    { id: 'ts-002', assignmentId: 'asgn-001', weekEnding: we2, status: 'Submitted', clientApprovalStatus: 'Submitted', entries: mkEntries([8,8,8,8,4,0,0]), totalHours: 36, payrollStatus: 'Not Ready', exceptions: [], compliance: {}, createdAt: ts, updatedAt: seedUpdatedAt, submittedAt: daysAgo(5) + 'T17:00:00Z', invoiceId: 'inv-002' },
+    { id: 'ts-003', assignmentId: 'asgn-002', weekEnding: we2, status: 'Approved', clientApprovalStatus: 'Approved', entries: mkEntries([8,8,8,8,8,0,0]), totalHours: 40, payrollStatus: 'Ready', payrollReadyAt: daysAgo(3) + 'T09:00:00Z', exceptions: [], compliance: {}, createdAt: ts, updatedAt: seedUpdatedAt, submittedAt: daysAgo(6) + 'T17:00:00Z', approvedAt: daysAgo(3) + 'T09:00:00Z', clientDecidedAt: daysAgo(4) + 'T09:00:00Z' },
+    { id: 'ts-004', assignmentId: 'asgn-002', weekEnding: we3, status: 'Submitted', clientApprovalStatus: 'Submitted', entries: mkEntries([8,8,0,8,8,0,0]), totalHours: 32, payrollStatus: 'Not Ready', exceptions: [], compliance: {}, createdAt: ts, updatedAt: seedUpdatedAt, submittedAt: daysAgo(4) + 'T17:00:00Z' },
     { id: 'ts-005', assignmentId: 'asgn-003', weekEnding: weeksAgoFriday(5), status: 'Approved', clientApprovalStatus: 'Approved', entries: mkEntries([8,8,8,8,8,0,0]), totalHours: 40, payrollStatus: 'Paid', payrollReadyAt: daysAgo(40) + 'T09:00:00Z', exceptions: [], compliance: {}, createdAt: daysAgo(45) + 'T09:00:00Z', updatedAt: daysAgo(35) + 'T09:00:00Z', approvedAt: daysAgo(40) + 'T09:00:00Z', clientDecidedAt: daysAgo(41) + 'T09:00:00Z' },
   ];
 

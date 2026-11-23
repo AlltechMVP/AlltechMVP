@@ -102,8 +102,25 @@ export default function ArAging() {
         // the session settles and otherwise falls back to the demo store
         // (the designed fallback) instead of painting an empty page.
         const { rows, usingFallback } = await fetchSettledOrLocal(reconcileInvoices, getInvoices);
-        apply(attachDemoTwins(rows));
-        setUsingFallback(usingFallback);
+        let finalRows = attachDemoTwins(rows);
+        let fb = usingFallback;
+        // The shared read must never paint $0 while the demo store holds
+        // open invoices: the 2026-11-23 live run showed $0 with no
+        // fallback note, and the fetch path could not be made to
+        // reproduce it with a valid session (it computes $21,150) — so
+        // whatever raced there, the page now checks the COMPUTED result,
+        // not just the row count. If the reconciled rows bucket to
+        // nothing but the local store has open receivables, fall back to
+        // the local rows and say so instead of painting an empty page.
+        if (!fb && computeAgingBuckets(finalRows).length === 0) {
+          const local = getInvoices();
+          if (computeAgingBuckets(local).length > 0) {
+            finalRows = attachDemoTwins(local);
+            fb = true;
+          }
+        }
+        apply(finalRows);
+        setUsingFallback(fb);
       } catch (err) {
         if (isRlsDenied(err)) { if (mounted) setDenied(true); return; }
         if (mounted) { apply(getInvoices()); setUsingFallback(true); }
