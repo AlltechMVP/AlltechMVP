@@ -201,10 +201,13 @@ export default function TimesheetForm() {
         addToast({ type: 'error', message: 'Timesheet saved locally, but it could not be saved to the shared store. Your entries are still here — try again.' });
         return;
       }
-      if (syncResult === 'skipped') {
+      if (syncResult === 'skipped' && newStatus !== 'Draft') {
         addToast({ type: 'error', message: 'Timesheet saved locally. It will sync to the shared store once the assignment record syncs — your entries are still here.' });
         return;
       }
+      // A skipped sync on a Draft save is not a failure: never-submitted
+      // Drafts are local-only until submitted (#5), so there is nothing
+      // to sync yet — the save below stands as-is.
       setStatus(newStatus);
       setPayrollStatus(savedRecord.payrollStatus || 'Not Ready');
       setLiveExceptions(savedRecord.exceptions || []);

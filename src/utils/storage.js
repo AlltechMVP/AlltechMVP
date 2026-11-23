@@ -1104,6 +1104,16 @@ function daysAgo(n) {
   return d.toISOString().slice(0, 10);
 }
 
+// Add n days to a YYYY-MM-DD date in UTC (same convention as daysAgo).
+// Used where a seed date must sit relative to another seed date — e.g.
+// an invoice issued the day after the week it bills — instead of a
+// daysAgo() that only holds for one seed-day-of-week.
+function addDaysTo(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
 function weeksAgoFriday(n) {
   // Friday of the week n weeks ago, computed in UTC so the result is the
   // same no matter the browser's timezone or the time of day. (The old
@@ -1180,7 +1190,7 @@ export function seedDemoData() {
 
   const demoTimesheets = [
     { id: 'ts-001', assignmentId: 'asgn-001', weekEnding: we1, status: 'Draft', clientApprovalStatus: 'Not Submitted', entries: mkEntries([8,8,8,8,8,0,0]), totalHours: 40, payrollStatus: 'Not Ready', exceptions: [], compliance: {}, createdAt: ts, updatedAt: ts },
-    { id: 'ts-002', assignmentId: 'asgn-001', weekEnding: we2, status: 'Submitted', clientApprovalStatus: 'Submitted', entries: mkEntries([8,8,8,8,4,0,0]), totalHours: 36, payrollStatus: 'Not Ready', exceptions: [], compliance: {}, createdAt: ts, updatedAt: ts, submittedAt: daysAgo(5) + 'T17:00:00Z' },
+    { id: 'ts-002', assignmentId: 'asgn-001', weekEnding: we2, status: 'Submitted', clientApprovalStatus: 'Submitted', entries: mkEntries([8,8,8,8,4,0,0]), totalHours: 36, payrollStatus: 'Not Ready', exceptions: [], compliance: {}, createdAt: ts, updatedAt: ts, submittedAt: daysAgo(5) + 'T17:00:00Z', invoiceId: 'inv-002' },
     { id: 'ts-003', assignmentId: 'asgn-002', weekEnding: we2, status: 'Approved', clientApprovalStatus: 'Approved', entries: mkEntries([8,8,8,8,8,0,0]), totalHours: 40, payrollStatus: 'Ready', payrollReadyAt: daysAgo(3) + 'T09:00:00Z', exceptions: [], compliance: {}, createdAt: ts, updatedAt: ts, submittedAt: daysAgo(6) + 'T17:00:00Z', approvedAt: daysAgo(3) + 'T09:00:00Z', clientDecidedAt: daysAgo(4) + 'T09:00:00Z' },
     { id: 'ts-004', assignmentId: 'asgn-002', weekEnding: we3, status: 'Submitted', clientApprovalStatus: 'Submitted', entries: mkEntries([8,8,0,8,8,0,0]), totalHours: 32, payrollStatus: 'Not Ready', exceptions: [], compliance: {}, createdAt: ts, updatedAt: ts, submittedAt: daysAgo(4) + 'T17:00:00Z' },
     { id: 'ts-005', assignmentId: 'asgn-003', weekEnding: weeksAgoFriday(5), status: 'Approved', clientApprovalStatus: 'Approved', entries: mkEntries([8,8,8,8,8,0,0]), totalHours: 40, payrollStatus: 'Paid', payrollReadyAt: daysAgo(40) + 'T09:00:00Z', exceptions: [], compliance: {}, createdAt: daysAgo(45) + 'T09:00:00Z', updatedAt: daysAgo(35) + 'T09:00:00Z', approvedAt: daysAgo(40) + 'T09:00:00Z', clientDecidedAt: daysAgo(41) + 'T09:00:00Z' },
@@ -1188,7 +1198,7 @@ export function seedDemoData() {
 
   const demoInvoices = [
     { id: 'inv-001', clientId: 'client-001', clientName: 'Acme Corp', invoiceNumber: 'INV-2026-001', issuedAt: daysAgo(45), dueDate: daysAgo(15), total: 3400, amountPaid: 3400, balanceDue: 0, status: 'Paid', paidAt: daysAgo(10) + 'T09:00:00Z', lineItems: [{ description: 'Sarah Chen - Senior React Developer (40hrs @ $85)', hours: 40, rate: 85, amount: 3400 }], createdAt: daysAgo(45) + 'T09:00:00Z', updatedAt: daysAgo(10) + 'T09:00:00Z' },
-    { id: 'inv-002', clientId: 'client-001', clientName: 'Acme Corp', invoiceNumber: 'INV-2026-002', issuedAt: daysAgo(30), dueDate: daysAgo(0), total: 3060, amountPaid: 1000, balanceDue: 2060, status: 'Sent', lineItems: [{ description: 'Sarah Chen - Senior React Developer (36hrs @ $85)', hours: 36, rate: 85, amount: 3060 }], createdAt: daysAgo(30) + 'T09:00:00Z', updatedAt: daysAgo(5) + 'T09:00:00Z' },
+    { id: 'inv-002', clientId: 'client-001', clientName: 'Acme Corp', invoiceNumber: 'INV-2026-002', issuedAt: addDaysTo(we2, 1), dueDate: daysAgo(0), total: 3060, amountPaid: 1000, balanceDue: 2060, status: 'Sent', lineItems: [{ description: 'Sarah Chen - Senior React Developer (36hrs @ $85)', hours: 36, rate: 85, amount: 3060, timesheetId: 'ts-002' }], createdAt: addDaysTo(we2, 1) + 'T09:00:00Z', updatedAt: daysAgo(5) + 'T09:00:00Z' },
     { id: 'inv-003', clientId: 'client-002', clientName: 'TechStart Inc', invoiceNumber: 'INV-2026-003', issuedAt: daysAgo(60), dueDate: daysAgo(30), total: 3800, amountPaid: 0, balanceDue: 3800, status: 'Sent', lineItems: [{ description: 'Marcus Johnson - DevOps Engineer (40hrs @ $95)', hours: 40, rate: 95, amount: 3800 }], createdAt: daysAgo(60) + 'T09:00:00Z', updatedAt: daysAgo(60) + 'T09:00:00Z' },
     { id: 'inv-004', clientId: 'client-002', clientName: 'TechStart Inc', invoiceNumber: 'INV-2026-004', issuedAt: daysAgo(40), dueDate: daysAgo(10), total: 3040, amountPaid: 0, balanceDue: 3040, status: 'Sent', lineItems: [{ description: 'Marcus Johnson - DevOps Engineer (32hrs @ $95)', hours: 32, rate: 95, amount: 3040 }], createdAt: daysAgo(40) + 'T09:00:00Z', updatedAt: daysAgo(40) + 'T09:00:00Z' },
     { id: 'inv-005', clientId: 'client-003', clientName: 'DataFlow LLC', invoiceNumber: 'INV-2026-005', issuedAt: daysAgo(100), dueDate: daysAgo(70), total: 2200, amountPaid: 0, balanceDue: 2200, status: 'Sent', lineItems: [{ description: 'Robert Lee - DevOps Engineer (40hrs @ $55)', hours: 40, rate: 55, amount: 2200 }], createdAt: daysAgo(100) + 'T09:00:00Z', updatedAt: daysAgo(100) + 'T09:00:00Z' },
@@ -1511,7 +1521,32 @@ export function reconcileAll() {
 export function ensureCurrentWeekTimesheets() {
   const friday = fridayOfCurrentWeek();
   const today = new Date().toISOString().slice(0, 10);
-  const sheets = getTimesheets();
+  let sheets = getTimesheets();
+  // A browser's demo store can hold several rows for one assignment +
+  // the current week: its own local Draft plus twins of other browsers'
+  // Drafts pulled in before the fetch dedupe existed. Collapse them to
+  // one row per assignment for the current week — the submitted row if
+  // there is one, else the first Draft. Only never-submitted 0-hour
+  // Drafts are dropped; anything with hours or a submission is kept.
+  const groups = {};
+  for (const t of sheets) {
+    if (t.weekEnding !== friday) continue;
+    (groups[t.assignmentId] ||= []).push(t);
+  }
+  const dropIds = new Set();
+  for (const rows of Object.values(groups)) {
+    if (rows.length < 2) continue;
+    const submitted = rows.filter((t) => t.status !== 'Draft' || t.submittedAt);
+    const keeper = submitted[0] || rows[0];
+    for (const t of rows) {
+      if (t === keeper) continue;
+      if (t.status === 'Draft' && !t.submittedAt && (t.totalHours || 0) === 0) dropIds.add(t.id);
+    }
+  }
+  if (dropIds.size > 0) {
+    sheets = sheets.filter((t) => !dropIds.has(t.id));
+    setTimesheets(sheets);
+  }
   let created = 0;
   for (const a of getAssignments()) {
     if (a.status !== 'Active') continue;

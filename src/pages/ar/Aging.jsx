@@ -1,10 +1,18 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getInvoices, getClients } from '@/utils/storage';
-import { fetchInvoices, reconcileInvoices, isRlsDenied } from '@/lib/pipeline';
+import { reconcileInvoices, isRlsDenied } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
 import { AccessDenied } from '@/components/ui';
 
+// AR Aging buckets, by DUE DATE (the invoice's dueDate, falling back to
+// issuedAt only when no due date exists): Current = not yet due or up to
+// 30 days past due; 31–60 / 61–90 / 90+ by days past due. Total Open AR
+// is the sum of Balance Due over every invoice the Invoices list shows —
+// all statuses except Paid/Void, Drafts included — so the two pages
+// reconcile. (Drafts used to be excluded here while the list counted
+// their balances, which understated Open AR by exactly the Draft
+// balances: INV-2026-009 + INV-2026-010.)
 function computeAgingBuckets(invoices) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -12,7 +20,7 @@ function computeAgingBuckets(invoices) {
   const clientMap = {};
 
   invoices.forEach(inv => {
-    if (inv.status === 'Paid' || inv.status === 'Void' || inv.status === 'Draft') return;
+    if (inv.status === 'Paid' || inv.status === 'Void') return;
     const bal = inv.balanceDue ?? ((inv.total || 0) - (inv.amountPaid || 0));
     if (bal <= 0) return;
 
@@ -81,22 +89,17 @@ export default function ArAging() {
     };
     (async () => {
       try {
-        const rows = await fetchInvoices();
+        // One settled render: reconcile first, then paint once. Rendering
+        // the raw fetch first and the reconcile second flashed two
+        // different row sets in sequence — the same first-load flicker
+        // the payroll pages had — and the two renders could disagree on
+        // buckets when the seed dates differed between stores.
+        const rows = await reconcileInvoices();
         apply(attachDemoTwins(rows));
         setUsingFallback(false);
-        reconcileInvoices()
-          .then((fresh) => { apply(attachDemoTwins(fresh)); })
-          .catch(() => {});
       } catch (err) {
         if (isRlsDenied(err)) { if (mounted) setDenied(true); return; }
-        try {
-          const rows = await reconcileInvoices();
-          apply(attachDemoTwins(rows));
-          setUsingFallback(false);
-        } catch (err2) {
-          if (isRlsDenied(err2)) { if (mounted) setDenied(true); return; }
-          if (mounted) { apply(getInvoices()); setUsingFallback(true); }
-        }
+        if (mounted) { apply(getInvoices()); setUsingFallback(true); }
       }
     })();
     return () => { mounted = false; };
@@ -116,7 +119,7 @@ export default function ArAging() {
   const drillInvoices = useMemo(() => {
     if (!drillClient) return [];
     return invoices
-      .filter(i => i.clientId === drillClient && i.status !== 'Paid' && i.status !== 'Void' && i.status !== 'Draft' && (i.balanceDue ?? ((i.total || 0) - (i.amountPaid || 0))) > 0)
+      .filter(i => i.clientId === drillClient && i.status !== 'Paid' && i.status !== 'Void' && (i.balanceDue ?? ((i.total || 0) - (i.amountPaid || 0))) > 0)
       .sort((a, b) => {
         const aDue = new Date(a.dueDate || a.issuedAt);
         const bDue = new Date(b.dueDate || b.issuedAt);

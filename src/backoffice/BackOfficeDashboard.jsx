@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   getTimesheets, getInvoices, getAssignmentById, getCandidateById, getJobById,
 } from '@/utils/storage';
-import { fetchTimesheets, fetchInvoices, reconcileTimesheets, reconcileInvoices, isRlsDenied } from '@/lib/pipeline';
+import { reconcileTimesheets, reconcileInvoices, isRlsDenied } from '@/lib/pipeline';
 import { AccessDenied } from '@/components/ui';
 
 // Back Office Dashboard reads live data — Supabase first, demo-store
@@ -39,13 +39,15 @@ export default function BackOfficeDashboard() {
     let mounted = true;
     (async () => {
       try {
-        const [ts, inv] = await Promise.all([fetchTimesheets(), fetchInvoices()]);
+        // One settled render: reconcile first, then paint once. Rendering
+        // the raw fetch first and the reconcile second flashed two
+        // different totals in sequence — the same first-load flicker the
+        // payroll summary had.
+        const [ts, inv] = await Promise.all([reconcileTimesheets(), reconcileInvoices()]);
         if (!mounted) return;
         setTimesheets(ts);
         setInvoices(inv);
         setLoading(false);
-        reconcileTimesheets().then((fresh) => { if (mounted) setTimesheets(fresh); }).catch(() => {});
-        reconcileInvoices().then((fresh) => { if (mounted) setInvoices(fresh); }).catch(() => {});
       } catch (err) {
         if (isRlsDenied(err)) { if (mounted) { setDenied(true); setLoading(false); } return; }
         // Shared fetch failed: fall back to the local demo store.
