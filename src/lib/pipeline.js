@@ -1604,7 +1604,16 @@ function dedupeTimesheets(rows) {
   const best = new Map();
   const unkeyed = [];
   for (const t of rows) {
-    const asg = t.assignmentSupabaseId || t.assignmentId;
+    // Key on the LEGACY assignment id first: mapped rows carry it as
+    // assignmentId (mapTimesheet sets assignmentId = asg.legacy_id) and
+    // demo-store rows carry it as assignmentId too, so the two shapes
+    // collapse. Keying on assignmentSupabaseId first (the 2026-11-23
+    // aging+flicker fix) broke this: mapped rows key on the Supabase
+    // bigint while demo rows key on the legacy id (their assignment has
+    // no supabaseAssignmentId stamp), so nothing collapsed and the
+    // reconcile painted every timesheet twice. The bigint is only a
+    // fallback for rows whose assignment join failed (assignmentId null).
+    const asg = t.assignmentId || t.assignmentSupabaseId;
     if (!asg || !t.weekEnding) { unkeyed.push(t); continue; }
     const key = `${asg}|${t.weekEnding}`;
     const prev = best.get(key);
@@ -1916,11 +1925,14 @@ export async function reconcileTimesheets() {
   // the settled set. The Draft stays local-only until submitted (#5); the
   // next reconcile syncs it up the way a reload does today.
   ensureCurrentWeekTimesheets();
+  // Same id space as the dedupe above: the fetched (mapped) rows and the
+  // demo-store rows must be keyed on the legacy assignment id, or every
+  // demo row looks "missing" and gets merged on top of the fetched set.
   const fetchedKeys = new Set(
-    rows.map((t) => `${t.assignmentSupabaseId || t.assignmentId}|${t.weekEnding}`)
+    rows.map((t) => `${t.assignmentId || t.assignmentSupabaseId}|${t.weekEnding}`)
   );
   const extras = getTimesheets()
-    .filter((d) => d.assignmentId && d.weekEnding && !fetchedKeys.has(`${d.assignmentId}|${d.weekEnding}`))
+    .filter((d) => d.assignmentId && d.weekEnding && !fetchedKeys.has(`${d.assignmentId || d.assignmentSupabaseId}|${d.weekEnding}`))
     .map(enrichDemoTimesheet);
   if (extras.length > 0) {
     rows = dedupeTimesheets([...rows, ...extras]);
