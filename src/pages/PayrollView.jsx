@@ -3,6 +3,7 @@ import {
   getTimesheets, getAssignmentById, getCandidateById, getJobById,
 } from '@/utils/storage';
 import { fetchSettledOrLocal, reconcileTimesheets, isRlsDenied } from '@/lib/pipeline';
+import { formatMoney } from '@/utils/money';
 import { Empty, AccessDenied } from '@/components/ui';
 
 // Payroll Summary reads live timesheets — Supabase first, demo-store
@@ -119,8 +120,8 @@ function PayrollView() {
                 <td className="p-2 border">{row.job}</td>
                 <td className="p-2 border">{row.week}</td>
                 <td className="p-2 border">{row.hours}</td>
-                <td className="p-2 border">${row.rate.toFixed(2)}</td>
-                <td className="p-2 border">${row.total.toFixed(2)}</td>
+                <td className="p-2 border">{formatMoney(row.rate)}</td>
+                <td className="p-2 border">{formatMoney(row.total)}</td>
                 <td className="p-2 border">{row.status}</td>
               </tr>
             ))}
@@ -130,7 +131,7 @@ function PayrollView() {
               <td className="p-2 border" colSpan={3}>Total</td>
               <td className="p-2 border">{totalHours}</td>
               <td className="p-2 border"></td>
-              <td className="p-2 border">${totalAmount.toFixed(2)}</td>
+              <td className="p-2 border">{formatMoney(totalAmount)}</td>
               <td className="p-2 border"></td>
             </tr>
           </tfoot>

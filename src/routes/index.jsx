@@ -50,7 +50,6 @@ const SalesPipeline = lazy(() => import('@/components/sales/SalesPipeline.jsx'))
 const Scheduler = lazy(() => import('@/pages/Scheduler.jsx'));
 const AccountSettings = lazy(() => import('@/pages/AccountSettings.jsx'));
 const AdminReports = lazy(() => import('@/pages/AdminReports.jsx'));
-const AssignmentTracker = lazy(() => import('@/pages/AssignmentTracker.jsx'));
 const BillingSettings = lazy(() => import('@/pages/BillingSettings.jsx'));
 const CandidateJobBoard = lazy(() => import('@/pages/CandidateJobBoard.jsx'));
 const ClientMetrics = lazy(() => import('@/pages/ClientMetrics.jsx'));
@@ -310,14 +309,6 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowedCapabilities={["permissions.manage"]}>
                 <Permissions />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="assignments/tracker"
-            element={
-              <ProtectedRoute allowedCapabilities={["assignments.view"]}>
-                <AssignmentTracker />
               </ProtectedRoute>
             }
           />

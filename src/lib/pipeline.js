@@ -90,12 +90,23 @@ function throwChecked(error) {
 // leave the page at $0 forever), fall back to the demo store, which is the
 // designed fallback for unreachable shared data. RLS denials still throw
 // so callers show AccessDenied instead of leaking unscoped local rows.
-export async function fetchSettledOrLocal(reconcileFn, getLocalRows, { timeoutMs = 20000 } = {}) {
+export async function fetchSettledOrLocal(reconcileFn, getLocalRows, { timeoutMs = 10000 } = {}) {
   const withTimeout = (promise) => Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error('settled-load timeout')), timeoutMs)),
   ]);
   try {
+    // Settle the session BEFORE the first fetch: in a fresh browser the
+    // first reconcile can go out before the client's session recovery
+    // finishes, and the demo RLS policy silently filters that request to
+    // [] — the page then paid for a full second reconcile. getSession
+    // awaits client initialization, so one cheap call up front makes the
+    // first fetch authenticated. (The empty-retry below stays as a safety
+    // net for a session that settles late anyway.) The 10s timeout bounds
+    // the worst case: the measured happy path is ~1-2s, so 10s is ample
+    // headroom and a stalled shared read still falls back to honest
+    // local data instead of hanging the page.
+    try { await supabase.auth.getSession(); } catch { /* ignore — the fallback below still applies */ }
     let rows = await withTimeout(reconcileFn());
     if ((!rows || rows.length === 0) && getLocalRows().length > 0) {
       // The shared read saw nothing the demo store does not have — most
@@ -324,6 +335,18 @@ async function resolveJobId(demoJobId) {
 // not each insert a person row — serialize the lookup per email so all
 // concurrent callers share the single find-or-create.
 const personLookupInflight = new Map();
+
+// Pick the live person row when an email matches several candidates rows.
+// The apply flow can mint a second row for the same email (observed: an
+// older row on prod, a newer row minted by the demo apply flow that holds
+// the application), so a lookup must never assume exactly one row. The
+// newest row wins: it is the one the current application flow created and
+// the one applications reference. Returns null when there is no row.
+export function pickPersonRow(rows) {
+  if (!rows || rows.length === 0) return null;
+  return [...rows].sort((a, b) =>
+    String(b.created_at || '').localeCompare(String(a.created_at || '')))[0];
+}
 
 async function findOrCreatePerson(demo) {
   const email = (demo.email || '').trim().toLowerCase();

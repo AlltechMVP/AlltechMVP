@@ -134,10 +134,7 @@ export default function Sidebar() {
           <li className="pt-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Operations</li>
         )}
         {can('assignments.view') && (
-          <>
-            <li><Link to="/assignments" className={linkCls(pathname.startsWith('/assignments'))}>Assignments</Link></li>
-            <li><Link to="/assignments/tracker" className={linkCls(pathname === '/assignments/tracker')}>Assignment Tracker</Link></li>
-          </>
+          <li><Link to="/assignments" className={linkCls(pathname.startsWith('/assignments'))}>Assignments</Link></li>
         )}
         {can('timesheets.approve_internal') && (
           <li><Link to="/timekeeping" className={linkCls(pathname.startsWith('/timekeeping'))}>Timekeeping</Link></li>

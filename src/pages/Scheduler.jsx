@@ -1,105 +1,124 @@
-
 import React, { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays, isToday } from 'date-fns';
+import { Link } from 'react-router-dom';
+import { format, addWeeks, subWeeks, addMonths, subMonths, isToday, isSameMonth } from 'date-fns';
+import {
+  getAssignments, getCandidateById, getJobById, getClients,
+} from '@/utils/storage';
+import { fetchSettledOrLocal, reconcileAssignments, isRlsDenied } from '@/lib/pipeline';
+import { assignmentsForDay, monthGridDays, weekDays } from '@/utils/schedule';
+import { Empty, AccessDenied } from '@/components/ui';
 
-const SHIFTS = ['Morning', 'Afternoon', 'Evening'];
-const MOCK_EVENTS = [
-  {
-    id: "evt1",
-    title: "Forklift Assignment - John Smith",
-    date: "2024-05-02",
-    shift: "Morning",
-    location: "Dallas Warehouse"
-  },
-  {
-    id: "evt2", 
-    title: "Unload Shipment - Maria Lopez",
-    date: "2024-05-03",
-    shift: "Evening",
-    location: "Austin Distribution"
+// Scheduler reads LIVE assignments — Supabase first, demo-store fallback
+// when Supabase is unreachable (the same settled pattern as the payroll
+// pages). The old mock events are gone: no fake people, no fake dates, no
+// localStorage-only data anywhere on this page. An Active assignment is
+// shown on every day it covers, from its start date through its end date
+// (ongoing when there is no end date), so the live week shows the people
+// actually working. "Add Job" goes to the real assignment form; the old
+// localStorage-only add/edit modal is gone — assignments are created and
+// edited where assignments live.
+function toScheduleRow(a) {
+  // Mapped (shared) rows already carry names; demo-store rows need the
+  // local lookups. Both shapes normalize to one display row.
+  if (a.candidateName || a.jobTitle) {
+    const client = (a.clientName && a.clientName !== '—') ? a.clientName : '';
+    return {
+      id: String(a.id),
+      detailId: a.legacyId || String(a.id),
+      person: a.candidateName || '—',
+      job: a.jobTitle || '—',
+      client,
+      startDate: a.startDate || null,
+      endDate: a.endDate || null,
+      status: a.status || '—',
+    };
   }
-];
+  const candidate = a.candidateId ? getCandidateById(a.candidateId) : null;
+  const job = a.jobId ? getJobById(a.jobId) : null;
+  const client = job ? getClients().find((c) => c.id === job.clientId) : null;
+  return {
+    id: String(a.id),
+    detailId: String(a.id),
+    person: candidate?.name || '—',
+    job: job?.title || '—',
+    client: client?.name || '',
+    startDate: a.startDate || null,
+    endDate: a.endDate || null,
+    status: a.status || '—',
+  };
+}
 
 export default function Scheduler() {
-  const [events, setEvents] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [usingFallback, setUsingFallback] = useState(false);
+  const [denied, setDenied] = useState(false);
   const [viewMode, setViewMode] = useState('week');
-  const [showModal, setShowModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    date: format(new Date(), 'yyyy-MM-dd'),
-    shift: 'Morning',
-    location: ''
-  });
+  const [cursor, setCursor] = useState(() => new Date());
 
   useEffect(() => {
-    const stored = localStorage.getItem('mockScheduleEvents');
-    if (!stored) {
-      localStorage.setItem('mockScheduleEvents', JSON.stringify(MOCK_EVENTS));
-      setEvents(MOCK_EVENTS);
-      return;
-    }
-    let parsed = [];
-    try { parsed = JSON.parse(stored); } catch { parsed = []; }
-    // Rows saved by the old buggy handleSave were nested ({ formData, id })
-    // or nested arrays ([events, {...}]) — drop anything that isn't a flat
-    // event with a string title and date instead of rendering garbage.
-    const valid = (Array.isArray(parsed) ? parsed : []).filter(
-      (e) => e && typeof e === 'object' && !Array.isArray(e)
-        && typeof e.title === 'string' && typeof e.date === 'string'
-    );
-    setEvents(valid);
+    let mounted = true;
+    (async () => {
+      try {
+        // One settled render: reconcile first (pushes this browser's demo
+        // rows up, pulls shared rows down), then paint once — the same
+        // pattern as PayrollView, so the page never flashes two row sets.
+        const { rows: fresh, usingFallback: fb } = await fetchSettledOrLocal(reconcileAssignments, getAssignments);
+        if (!mounted) return;
+        setRows(fresh.map(toScheduleRow));
+        setUsingFallback(fb);
+      } catch (err) {
+        if (isRlsDenied(err)) { if (mounted) setDenied(true); return; }
+        if (mounted) { setRows(getAssignments().map(toScheduleRow)); setUsingFallback(true); }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const startDate = startOfWeek(new Date());
-  const days = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
+  if (denied) {
+    return <AccessDenied />;
+  }
 
-  const getEventsForDay = (date) => {
-    return events.filter(event => event.date === format(date, 'yyyy-MM-dd'));
+  const days = viewMode === 'week' ? weekDays(cursor) : monthGridDays(cursor);
+  const step = (dir) => {
+    if (viewMode === 'week') setCursor((c) => (dir > 0 ? addWeeks(c, 1) : subWeeks(c, 1)));
+    else setCursor((c) => (dir > 0 ? addMonths(c, 1) : subMonths(c, 1)));
   };
-
-  const handleSave = () => {
-    // Flat event shape: { ...formData, id }. The old code saved
-    // { formData, id } on edit (title/date lived one level too deep, so the
-    // card rendered blank) and [events, {...}] on add (a nested array, so
-    // the new job never rendered and the stored list corrupted).
-    const newEvents = selectedEvent
-      ? events.map(e => e.id === selectedEvent.id ? { ...formData, id: selectedEvent.id } : e)
-      : [...events, { ...formData, id: `evt${Date.now()}` }];
-    
-    setEvents(newEvents);
-    localStorage.setItem('mockScheduleEvents', JSON.stringify(newEvents));
-    resetModal();
-  };
-
-  const handleDelete = (eventId) => {
-    const newEvents = events.filter(e => e.id !== eventId);
-    setEvents(newEvents);
-    localStorage.setItem('mockScheduleEvents', JSON.stringify(newEvents));
-  };
-
-  const resetModal = () => {
-    setShowModal(false);
-    setSelectedEvent(null);
-    setFormData({
-      title: '',
-      date: format(new Date(), 'yyyy-MM-dd'),
-      shift: 'Morning',
-      location: ''
-    });
-  };
-
-  const openEditModal = (event) => {
-    setSelectedEvent(event);
-    setFormData(event);
-    setShowModal(true);
-  };
+  const title = viewMode === 'week'
+    ? `Week of ${format(days[0], 'MMM d, yyyy')}`
+    : format(cursor, 'MMMM yyyy');
+  const activeCount = rows.filter((r) => r.status === 'Active').length;
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-50">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <h1 className="text-2xl font-bold">Scheduler</h1>
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center flex-wrap">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => step(-1)}
+              className="px-2 py-1 border rounded bg-white hover:bg-gray-50"
+              aria-label="Previous period"
+            >
+              ‹
+            </button>
+            <button
+              onClick={() => setCursor(new Date())}
+              className="px-3 py-1 border rounded bg-white hover:bg-gray-50"
+            >
+              Today
+            </button>
+            <button
+              onClick={() => step(1)}
+              className="px-2 py-1 border rounded bg-white hover:bg-gray-50"
+              aria-label="Next period"
+            >
+              ›
+            </button>
+          </div>
           <div className="flex rounded-lg border border-gray-200 p-1 bg-white">
             <button
               className={`px-3 py-1 rounded ${viewMode === 'week' ? 'bg-blue-500 text-white' : ''}`}
@@ -114,129 +133,79 @@ export default function Scheduler() {
               Month View
             </button>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
+          <Link
+            to="/assignments/new"
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
             Add Job
-          </button>
+          </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2">
-        {days.map((day, idx) => (
-          <div key={idx} className="text-center text-sm font-medium">
-            {format(day, 'EEE')}
-          </div>
-        ))}
-      </div>
+      <p className="text-sm text-gray-600 mb-4">
+        {title} · {activeCount} active assignment{activeCount === 1 ? '' : 's'}
+      </p>
 
-      <div className="grid grid-cols-7 gap-2 mt-2">
-        {days.map((day, idx) => (
-          <div
-            key={idx}
-            className={`bg-white border rounded-lg p-2 min-h-[120px] ${
-              isToday(day) ? 'border-blue-500' : ''
-            }`}
-          >
-            <div className="text-right text-xs font-bold mb-2">
-              {format(day, 'd')}
-            </div>
-            <div className="space-y-1">
-              {getEventsForDay(day).map(event => (
+      {usingFallback && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+          Showing local demo data — the shared assignments are unreachable right now.
+        </p>
+      )}
+      {loading ? (
+        <p className="text-gray-500 text-sm">Loading schedule…</p>
+      ) : activeCount === 0 ? (
+        <Empty title="No active assignments" hint="Active assignments appear here on the days they cover, from their start date." />
+      ) : (
+        <>
+          <div className="grid grid-cols-7 gap-2">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+              <div key={d} className="text-center text-sm font-medium">{d}</div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-2 mt-2">
+            {days.map((day, idx) => {
+              const iso = format(day, 'yyyy-MM-dd');
+              const todays = assignmentsForDay(rows, iso);
+              const inMonth = viewMode === 'week' || isSameMonth(day, cursor);
+              return (
                 <div
-                  key={event.id}
-                  className="bg-blue-50 p-2 rounded text-xs border border-blue-100"
+                  key={idx}
+                  className={`bg-white border rounded-lg p-2 min-h-[120px] ${
+                    isToday(day) ? 'border-blue-500' : ''
+                  } ${inMonth ? '' : 'opacity-40'}`}
                 >
-                  <div className="font-medium">{event.title}</div>
-                  <div className="text-gray-500">{event.shift}</div>
-                  <div className="flex gap-2 mt-1">
-                    <button
-                      onClick={() => openEditModal(event)}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDelete(event.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      🗑️
-                    </button>
+                  <div className="text-right text-xs font-bold mb-2">
+                    {format(day, 'd')}
+                  </div>
+                  <div className="space-y-1">
+                    {todays.map((a) => (
+                      <Link
+                        key={a.id}
+                        to={`/assignments/${a.detailId}`}
+                        className="block bg-blue-50 p-2 rounded text-xs border border-blue-100 hover:bg-blue-100"
+                      >
+                        <div className="font-medium">{a.person}</div>
+                        <div className="text-gray-500">{a.job}{a.client ? ` · ${a.client}` : ''}</div>
+                        {a.startDate === iso && (
+                          <div className="text-gray-400">Starts today</div>
+                        )}
+                      </Link>
+                    ))}
+                    {todays.length === 0 && (
+                      <div className="text-gray-300 text-xs">No jobs</div>
+                    )}
                   </div>
                 </div>
-              ))}
-              {getEventsForDay(day).length === 0 && (
-                <div className="text-gray-300 text-xs">No jobs</div>
-              )}
-            </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">
-              {selectedEvent ? 'Edit Job' : 'Add New Job'}
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Job Title</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={e => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full border rounded p-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Date</label>
-                <input
-                  type="date"
-                  value={formData.date}
-                  onChange={e => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full border rounded p-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Shift</label>
-                <select
-                  value={formData.shift}
-                  onChange={e => setFormData({ ...formData, shift: e.target.value })}
-                  className="w-full border rounded p-2"
-                >
-                  {SHIFTS.map(shift => (
-                    <option key={shift} value={shift}>{shift}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Location</label>
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={e => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full border rounded p-2"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={resetModal}
-                className="px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                {selectedEvent ? 'Update' : 'Add'} Job
-              </button>
-            </div>
-          </div>
-        </div>
+          {viewMode === 'month' && (
+            <p className="text-xs text-gray-500 mt-3">
+              Assignments span every day they cover — an assignment with no end date keeps showing until it ends.
+            </p>
+          )}
+        </>
       )}
     </div>
   );
