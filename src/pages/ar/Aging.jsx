@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getInvoices, getClients } from '@/utils/storage';
+import { formatMoney as fmt } from '@/utils/money';
 import { reconcileInvoices, fetchSettledOrLocal, isRlsDenied } from '@/lib/pipeline';
 import DataTable from '@/components/table/DataTable.jsx';
 import { AccessDenied } from '@/components/ui';
@@ -56,8 +57,6 @@ function computeAgingBuckets(invoices) {
 
   return Object.values(clientMap).sort((a, b) => b.openAR - a.openAR || String(a.clientName).localeCompare(String(b.clientName)));
 }
-
-const fmt = (v) => `$${(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
 // Slice 5 (thin): AR aging reads Supabase invoices (shared across
 // sessions) with a demo-store fallback when Supabase is unreachable.

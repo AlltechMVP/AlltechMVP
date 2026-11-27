@@ -3,6 +3,7 @@ import {
   getTimesheets, getInvoices, getAssignmentById, getCandidateById, getJobById,
 } from '@/utils/storage';
 import { fetchSettledOrLocal, reconcileTimesheets, reconcileInvoices, isRlsDenied } from '@/lib/pipeline';
+import { formatMoney } from '@/utils/money';
 import { AccessDenied } from '@/components/ui';
 
 // Back Office Dashboard reads live data — Supabase first, demo-store
@@ -114,12 +115,12 @@ export default function BackOfficeDashboard() {
 
             <div className="p-4 bg-green-100 rounded">
               <div className="text-lg font-semibold">Payroll Total</div>
-              <div className="text-3xl">${metrics.payrollTotal.toFixed(2)}</div>
+              <div className="text-3xl">{formatMoney(metrics.payrollTotal)}</div>
             </div>
 
             <div className="p-4 bg-yellow-100 rounded">
               <div className="text-lg font-semibold">Invoice Total</div>
-              <div className="text-3xl">${metrics.invoiceTotal.toFixed(2)}</div>
+              <div className="text-3xl">{formatMoney(metrics.invoiceTotal)}</div>
             </div>
           </div>
 
@@ -144,7 +145,7 @@ export default function BackOfficeDashboard() {
                   <p className="text-gray-500 text-sm">No invoices yet.</p>
                 ) : recentInvoices.map(inv => (
                   <div key={inv.id} className="p-2 border rounded">
-                    {inv.clientName || '—'} - ${invoiceTotal(inv).toFixed(2)}
+                    {inv.clientName || '—'} - {formatMoney(invoiceTotal(inv))}
                   </div>
                 ))}
               </div>

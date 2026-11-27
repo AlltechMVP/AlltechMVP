@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import { fetchAssignments, syncTimesheetToSupabase } from "@/lib/pipeline";
+import { fetchAssignments, syncTimesheetToSupabase, pickPersonRow } from "@/lib/pipeline";
 import {
   getTimesheets, setTimesheets, getAssignments,
   applyTimesheetCompliance, uid, now, fridayOfCurrentWeek,
@@ -76,12 +76,21 @@ const TimesheetEntry = () => {
         return;
       }
       // The candidate's person row is resolved by EMAIL (the signed JWT
-      // email claim). A candidate can read only their own row.
-      const { data: person, error: personError } = await supabase
+      // email claim). A candidate can read only their own row. Do NOT use
+      // .single() here: the apply flow can mint a second person row for
+      // the same email (observed: an older row on prod, a newer row minted
+      // by the demo apply flow), and .single() errors when the email
+      // matches more than one row — the form then reports "couldn't find
+      // your candidate record" for a candidate who HAS applied. Take the
+      // newest row instead (pickPersonRow): it is the one the current
+      // application flow created and the one applications reference.
+      const { data: persons, error: personError } = await supabase
         .from("candidates")
-        .select("id")
+        .select("id, created_at")
         .eq("email", userEmail)
-        .single();
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const person = pickPersonRow(persons);
       if (!mounted) return;
       if (personError || !person) {
         setLoadError("We couldn't find your candidate record — apply to a job first, then enter time.");
